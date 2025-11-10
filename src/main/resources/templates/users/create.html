@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Créer un Utilisateur - Application de Maintenance</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Variables CSS */
+        :root {
+            --primary-color: #3b82f6;
+            --primary-dark: #1e40af;
+            --secondary-color: #6b7280;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --background-color: #f8fafc;
+            --card-background: #ffffff;
+            --sidebar-background: #1e293b;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--background-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .page {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 20px;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--primary-dark));
+            border-radius: 20px 20px 0 0;
+        }
+
+        .page-header h1 {
+            color: var(--text-primary);
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--text-primary), #64748b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 0;
+        }
+
+        .form-container {
+            background: var(--card-background);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            max-width: 900px;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .horaires-section {
+            margin-top: 2rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .horaires-section h3 {
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.25rem;
+        }
+
+        .horaires-section h4 {
+            color: var(--text-secondary);
+            margin: 1.5rem 0 1rem 0;
+            font-size: 1rem;
+        }
+
+        .apply-schedule-section {
+            background: #fff;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 2px dashed #d1d5db;
+            margin-bottom: 2rem;
+        }
+
+        .days-checkboxes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.75rem;
+            margin: 1rem 0;
+        }
+
+        .days-checkboxes label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: #f9fafb;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .days-checkboxes label:hover {
+            background: #f3f4f6;
+        }
+
+        .days-checkboxes input[type="checkbox"]:checked + span {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .apply-btn {
+            margin-top: 1rem;
+            background: var(--success-color);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .apply-btn:hover {
+            background: #059669;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+        }
+
+        .horaires-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .horaire-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            padding: 1.25rem;
+            background: white;
+            border-radius: 10px;
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s;
+        }
+
+        .horaire-item:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .horaire-item > label:first-child {
+            font-weight: 700;
+            text-transform: capitalize;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #f3f4f6;
+        }
+
+        .horaire-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            background: #f9fafb;
+            border-radius: 6px;
+        }
+
+        .horaire-checkbox input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--success-color);
+        }
+
+        .horaire-checkbox label {
+            font-weight: 500;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .horaire-times {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .horaire-times input {
+            flex: 1;
+            padding: 0.625rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .horaire-times input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .horaire-times span {
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid var(--danger-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div th:replace="~{fragments/menu :: menu}"></div>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1><i class="fas fa-user-plus"></i> Créer un Utilisateur</h1>
+            </div>
+
+            <div class="form-container">
+                <div th:if="${error}" class="alert alert-error">
+                    <i class="fas fa-exclamation-circle"></i> <span th:text="${error}"></span>
+                </div>
+
+                <form th:action="@{/users/create}" method="post">
+                    <div class="form-group">
+                        <label for="nom">Nom *</label>
+                        <input type="text" id="nom" name="nom" required placeholder="Nom de l'utilisateur">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="prenom">Prénom *</label>
+                        <input type="text" id="prenom" name="prenom" required placeholder="Prénom de l'utilisateur">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email *</label>
+                        <input type="email" id="email" name="email" required placeholder="email@example.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Mot de passe *</label>
+                        <input type="password" id="password" name="password" required minlength="6" 
+                               placeholder="Minimum 6 caractères">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="numeroTelephone">Numéro de téléphone *</label>
+                        <input type="tel" id="numeroTelephone" name="numeroTelephone" required placeholder="+33123456789">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="role">Rôle *</label>
+                        <select id="role" name="role" required>
+                            <option value="">Sélectionner un rôle</option>
+                            <option value="admin">Admin</option>
+                            <option value="technicien">Technicien</option>
+                        </select>
+                        <small style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-top: 0.5rem;">
+                            Note: Le rôle superadmin ne peut pas être attribué manuellement
+                        </small>
+                    </div>
+
+                    <!-- Horaires de travail -->
+                    <div class="horaires-section">
+                        <h3><i class="fas fa-clock"></i> Horaires de Travail</h3>
+                        
+                        <div class="apply-schedule-section">
+                            <h4><i class="fas fa-magic"></i> Appliquer un horaire à plusieurs jours</h4>
+                            <div class="days-checkboxes">
+                                <label th:each="jour : ${jours}">
+                                    <input type="checkbox" th:id="'select_' + ${jour}" th:value="${jour}">
+                                    <span th:text="${jour}"></span>
+                                </label>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; margin-top: 1rem;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label for="apply_heureDebut" style="font-size: 0.9rem;">Heure début</label>
+                                    <input type="time" id="apply_heureDebut">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label for="apply_heureFin" style="font-size: 0.9rem;">Heure fin</label>
+                                    <input type="time" id="apply_heureFin">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 0.9rem; visibility: hidden;">Actif</label>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; height: 44px;">
+                                        <input type="checkbox" id="apply_actif" style="width: 20px; height: 20px;">
+                                        <label for="apply_actif" style="font-size: 0.95rem; margin: 0;">Actif</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="apply-btn" onclick="appliquerHoraire()">
+                                <i class="fas fa-check"></i> Appliquer aux jours sélectionnés
+                            </button>
+                        </div>
+                        
+                        <div class="horaires-grid">
+                            <div class="horaire-item" th:each="jour : ${jours}">
+                                <label th:text="${jour}"></label>
+                                <div class="horaire-checkbox">
+                                    <input type="checkbox" th:id="'actif_' + ${jour}" th:name="'actif_' + ${jour}" th:value="true">
+                                    <label th:for="'actif_' + ${jour}" style="font-weight: normal; cursor: pointer;">Actif ce jour</label>
+                                </div>
+                                <div class="horaire-times">
+                                    <input type="time" th:id="'heureDebut_' + ${jour}" th:name="'heureDebut_' + ${jour}" placeholder="Début">
+                                    <span>-</span>
+                                    <input type="time" th:id="'heureFin_' + ${jour}" th:name="'heureFin_' + ${jour}" placeholder="Fin">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <a th:href="@{/users}" class="btn btn-secondary">Annuler</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Créer l'utilisateur
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function appliquerHoraire() {
+            var jours = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+            var heureDebut = document.getElementById('apply_heureDebut').value;
+            var heureFin = document.getElementById('apply_heureFin').value;
+            var actif = document.getElementById('apply_actif').checked;
+            
+            jours.forEach(function(jour) {
+                var checkbox = document.getElementById('select_' + jour);
+                if (checkbox && checkbox.checked) {
+                    document.getElementById('heureDebut_' + jour).value = heureDebut;
+                    document.getElementById('heureFin_' + jour).value = heureFin;
+                    document.getElementById('actif_' + jour).checked = actif;
+                }
+            });
+        }
+    </script>
+</body>
+</html>

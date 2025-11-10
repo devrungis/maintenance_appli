@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+    <!-- Fragment du menu/sidebar -->
+    <nav class="sidebar" th:fragment="menu">
+        <style>
+            :root {
+                --primary-color: #3b82f6;
+                --primary-dark: #1e40af;
+                --secondary-color: #6b7280;
+                --sidebar-background: #1e293b;
+            }
+            .sidebar {
+                width: 250px;
+                background: var(--sidebar-background);
+                color: white;
+                display: flex;
+                flex-direction: column;
+                box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            }
+            .sidebar-header {
+                padding: 1.5rem;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                text-align: center;
+            }
+            .sidebar-header i {
+                font-size: 2rem;
+                margin-bottom: 0.5rem;
+                color: var(--primary-color);
+                display: block;
+            }
+            .sidebar-header h2 {
+                font-size: 1.2rem;
+                font-weight: 600;
+            }
+            .sidebar-menu {
+                flex: 1;
+                padding: 1rem 0;
+                list-style: none;
+            }
+            .menu-item {
+                padding: 1rem 1.5rem;
+                cursor: pointer;
+                transition: background-color 0.2s ease;
+                border-left: 3px solid transparent;
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+            }
+            .menu-item:hover {
+                background: rgba(255, 255, 255, 0.1);
+            }
+            .menu-item.active {
+                background: rgba(59, 130, 246, 0.2);
+                border-left-color: var(--primary-color);
+            }
+            .menu-item a {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                color: white;
+                text-decoration: none;
+                width: 100%;
+            }
+            .menu-item i {
+                width: 20px;
+                font-size: 1.1rem;
+            }
+            .sidebar-footer {
+                padding: 1rem;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            .btn {
+                padding: 0.75rem 1.5rem;
+                border: none;
+                border-radius: 8px;
+                font-size: 0.9rem;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+                text-decoration: none;
+            }
+            .btn-secondary {
+                background: var(--secondary-color);
+                color: white;
+            }
+            .btn-secondary:hover {
+                background: #4b5563;
+            }
+            #enterpriseSelector:hover {
+                background: rgba(255, 255, 255, 0.15);
+            }
+        </style>
+        
+        <div class="sidebar-header">
+            <i class="fas fa-wrench"></i>
+            <h2>Maintenance</h2>
+        </div>
+        <div id="currentEnterpriseInfo" style="padding: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.85rem; color: rgba(255, 255, 255, 0.8);">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <i class="fas fa-building"></i>
+                <strong id="currentEnterpriseName">-</strong>
+            </div>
+            <div id="enterpriseSelector" style="padding: 0.5rem; background: rgba(255, 255, 255, 0.1); border-radius: 4px; cursor: pointer;" onclick="if(typeof window.showEnterpriseSelector === 'function') { window.showEnterpriseSelector(); } else { console.error('showEnterpriseSelector n\'est pas définie'); }">
+                <i class="fas fa-exchange-alt"></i> Changer d'entreprise
+            </div>
+        </div>
+        <ul class="sidebar-menu">
+            <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/dashboard' ? 'active' : ''}">
+                <a th:href="@{/dashboard}">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/machines' ? 'active' : ''}">
+                <a th:href="@{/machines}">
+                    <i class="fas fa-cogs"></i>
+                    <span>Machines</span>
+                </a>
+            </li>
+            <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/categories' ? 'active' : ''}">
+                <a th:href="@{/categories}">
+                    <i class="fas fa-tags"></i>
+                    <span>Catégories</span>
+                </a>
+            </li>
+            <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/alerts' ? 'active' : ''}">
+                <a th:href="@{/alerts}">
+                    <i class="fas fa-bell"></i>
+                    <span>Alertes</span>
+                </a>
+            </li>
+            <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/reports' ? 'active' : ''}">
+                <a th:href="@{/reports}">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Rapports</span>
+                </a>
+            </li>
+            <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/calendar' ? 'active' : ''}">
+                <a th:href="@{/calendar}">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Calendrier</span>
+                </a>
+            </li>
+            <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/inventory' ? 'active' : ''}">
+                <a th:href="@{/inventory}">
+                    <i class="fas fa-boxes"></i>
+                    <span>Stock</span>
+                </a>
+            </li>
+            <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/tickets' ? 'active' : ''}">
+                <a th:href="@{/tickets}">
+                    <i class="fas fa-ticket-alt"></i>
+                    <span>Tickets</span>
+                </a>
+            </li>
+            <!-- Afficher "Utilisateurs" uniquement si l'utilisateur est superadmin -->
+            <li class="menu-item" 
+                th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI != null and #httpServletRequest.requestURI.contains('/users') ? 'active' : ''}"
+                th:if="${userRole != null and userRole == 'superadmin'}">
+                <a th:href="@{/users}">
+                    <i class="fas fa-user-cog"></i>
+                    <span>Utilisateurs</span>
+                </a>
+            </li>
+            <!-- Afficher "Entreprises" uniquement si l'utilisateur est superadmin -->
+            <li class="menu-item" 
+                th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI != null and #httpServletRequest.requestURI.contains('/ent') ? 'active' : ''}"
+                th:if="${userRole != null and #strings.equals(userRole, 'superadmin')}">
+                <a th:href="@{/ent}">
+                    <i class="fas fa-building"></i>
+                    <span>Entreprises</span>
+                </a>
+            </li>
+        </ul>
+        <div class="sidebar-footer">
+            <form th:action="@{/logout}" method="post" style="width: 100%;">
+                <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Déconnexion
+                </button>
+            </form>
+        </div>
+    </nav>
+    <script>
+        console.log('🔵 SCRIPT DU MENU CHARGÉ - Timestamp:', new Date().toISOString());
+        
+        // Initialiser window.enterprises si non défini
+        if (typeof window.enterprises === 'undefined') {
+            window.enterprises = [];
+            console.log('🔵 window.enterprises initialisé à []');
+        } else {
+            console.log('🔵 window.enterprises existe déjà:', window.enterprises);
+        }
+        
+        // Test immédiat de l'endpoint
+        console.log('🔵 Test immédiat de l\'endpoint /ent/api/list...');
+        console.log('🔵 URL complète:', window.location.origin + '/ent/api/list');
+        fetch('/ent/api/list')
+            .then(response => {
+                console.log('🔵 TEST ENDPOINT - Status:', response.status, response.statusText);
+                if (!response.ok) {
+                    console.error('🔵 TEST ENDPOINT - Erreur HTTP:', response.status);
+                    return response.text().then(text => {
+                        console.error('🔵 TEST ENDPOINT - Corps de la réponse:', text);
+                        throw new Error('HTTP ' + response.status);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('🔵 TEST ENDPOINT - Données reçues:', data);
+                console.log('🔵 TEST ENDPOINT - Type:', typeof data, 'Est un array?', Array.isArray(data));
+                console.log('🔵 TEST ENDPOINT - Nombre d\'entreprises:', data ? data.length : 0);
+                if (data && data.length > 0) {
+                    window.enterprises = data;
+                    console.log('🔵 TEST ENDPOINT - window.enterprises mis à jour:', window.enterprises);
+                    console.log('🔵 TEST ENDPOINT - Noms des entreprises:', window.enterprises.map(e => e.nom || e.entrepriseId));
+                } else {
+                    console.warn('🔵 TEST ENDPOINT - Aucune entreprise dans la réponse');
+                }
+            })
+            .catch(error => {
+                console.error('🔵 TEST ENDPOINT - Erreur:', error);
+                console.error('🔵 TEST ENDPOINT - Stack:', error.stack);
+            });
+        
+        // Charger la liste des entreprises au chargement de la page
+        if (document.readyState === 'loading') {
+            console.log('🔵 DOM en cours de chargement, attente de DOMContentLoaded');
+            document.addEventListener('DOMContentLoaded', initializeEnterpriseSelector);
+        } else {
+            // DOM déjà chargé
+            console.log('🔵 DOM déjà chargé, initialisation immédiate');
+            initializeEnterpriseSelector();
+        }
+        
+        function initializeEnterpriseSelector() {
+            console.log('=== Initialisation du sélecteur d\'entreprise ===');
+            console.log('DOMContentLoaded - Début du chargement des entreprises');
+            
+            // Charger l'entreprise sélectionnée depuis localStorage
+            const currentEnterprise = localStorage.getItem('currentEnterprise');
+            if (currentEnterprise) {
+                try {
+                    const enterprise = JSON.parse(currentEnterprise);
+                    const nameElement = document.getElementById('currentEnterpriseName');
+                    if (nameElement) {
+                        nameElement.textContent = enterprise.nom || '-';
+                        console.log('✅ Entreprise actuelle chargée depuis localStorage:', enterprise.nom);
+                    }
+                    
+                    // Mettre à jour aussi l'affichage mobile si présent
+                    const mobileElement = document.getElementById('currentEnterpriseMobile');
+                    if (mobileElement) {
+                        mobileElement.textContent = enterprise.nom || '-';
+                    }
+                } catch (e) {
+                    console.error('❌ Erreur lors du parsing de currentEnterprise:', e);
+                }
+            } else {
+                console.log('ℹ️ Aucune entreprise sélectionnée dans localStorage');
+            }
+            
+            // Charger les entreprises
+            loadEnterprises().then(() => {
+                console.log('✅ Entreprises chargées au démarrage:', window.enterprises);
+                console.log('Nombre d\'entreprises:', window.enterprises.length);
+            }).catch(error => {
+                console.error('❌ Erreur lors du chargement initial:', error);
+            });
+        }
+
+        function loadEnterprises() {
+            console.log('🔵🔵🔵 loadEnterprises APPELÉ - URL: /ent/api/list 🔵🔵🔵');
+            console.log('Timestamp:', new Date().toISOString());
+            return fetch('/ent/api/list', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin'
+            })
+                .then(response => {
+                    console.log('Réponse API reçue - Status:', response.status, response.statusText);
+                    console.log('Headers:', response.headers);
+                    if (!response.ok) {
+                        console.error('Erreur HTTP:', response.status, response.statusText);
+                        return response.text().then(text => {
+                            console.error('Corps de la réponse d\'erreur:', text);
+                            throw new Error('Erreur HTTP: ' + response.status + ' - ' + text);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(enterprises => {
+                    console.log('Données JSON reçues:', enterprises);
+                    window.enterprises = enterprises || [];
+                    console.log('Entreprises chargées dans window.enterprises:', window.enterprises);
+                    console.log('Nombre d\'entreprises:', window.enterprises.length);
+                    if (window.enterprises.length === 0) {
+                        console.warn('⚠️ Aucune entreprise trouvée dans la réponse');
+                    } else {
+                        console.log('✅ Entreprises trouvées:', window.enterprises.map(e => e.nom || e.entrepriseId));
+                    }
+                    return window.enterprises;
+                })
+                .catch(error => {
+                    console.error('❌ Erreur lors du chargement des entreprises:', error);
+                    console.error('Stack trace:', error.stack);
+                    window.enterprises = [];
+                    return [];
+                });
+        }
+
+        // Rendre la fonction accessible globalement
+        window.showEnterpriseSelector = function() {
+            console.log('🔵🔵🔵 showEnterpriseSelector APPELÉ 🔵🔵🔵');
+            console.log('Entreprises actuelles dans window.enterprises:', window.enterprises);
+            console.log('Nombre d\'entreprises:', window.enterprises ? window.enterprises.length : 0);
+            console.log('Type de window.enterprises:', typeof window.enterprises, 'Est un array?', Array.isArray(window.enterprises));
+            
+            // Afficher le modal immédiatement avec un message de chargement
+            if (typeof window.displayEnterpriseModal === 'function') {
+                window.displayEnterpriseModal();
+            } else {
+                console.error('❌ displayEnterpriseModal n\'est pas définie');
+                return;
+            }
+            
+            const list = document.getElementById('selectEnterpriseList');
+            if (!list) {
+                console.error('❌ Element selectEnterpriseList non trouvé');
+                // Réessayer après un court délai
+                setTimeout(() => {
+                    const listRetry = document.getElementById('selectEnterpriseList');
+                    if (listRetry) {
+                        console.log('✅ Element selectEnterpriseList trouvé après délai');
+                        loadAndDisplayEnterprises(listRetry);
+                    } else {
+                        console.error('❌ Element selectEnterpriseList toujours non trouvé après délai');
+                    }
+                }, 100);
+                return;
+            }
+            
+            loadAndDisplayEnterprises(list);
+        };
+        
+        function loadAndDisplayEnterprises(list) {
+            // Afficher le message de chargement
+            list.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> Chargement des entreprises...</p>';
+            
+            console.log('🔵 Appel de loadEnterprises()...');
+            // Recharger les entreprises et mettre à jour le modal
+            loadEnterprises().then(enterprises => {
+                console.log('✅ Entreprises chargées dans showEnterpriseSelector:', enterprises);
+                console.log('Type:', typeof enterprises, 'Est un array?', Array.isArray(enterprises));
+                
+                if (!list) {
+                    console.error('❌ Element selectEnterpriseList non trouvé après chargement');
+                    return;
+                }
+                
+                list.innerHTML = '';
+                
+                if (!enterprises || enterprises.length === 0) {
+                    console.warn('⚠️ Aucune entreprise disponible');
+                    list.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 2rem;">Aucune entreprise disponible. Veuillez contacter un administrateur pour créer une entreprise.</p>';
+                    return;
+                }
+                
+                console.log('📋 Affichage de', enterprises.length, 'entreprises dans le modal');
+                
+                const currentEnterprise = localStorage.getItem('currentEnterprise');
+                let currentEnterpriseId = null;
+                if (currentEnterprise) {
+                    try {
+                        const enterprise = JSON.parse(currentEnterprise);
+                        currentEnterpriseId = enterprise.entrepriseId;
+                    } catch (e) {
+                        console.error('Erreur lors du parsing:', e);
+                    }
+                }
+                
+                enterprises.forEach(enterprise => {
+                    const isCurrent = currentEnterpriseId && enterprise.entrepriseId === currentEnterpriseId;
+                    const item = document.createElement('div');
+                    item.style.cssText = `
+                        padding: 1rem;
+                        border: 2px solid ${isCurrent ? '#3b82f6' : '#e5e7eb'};
+                        border-radius: 8px;
+                        margin-bottom: 0.75rem;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                        background: ${isCurrent ? '#dbeafe' : 'white'};
+                    `;
+                    
+                    const address = [
+                        enterprise.rue || '',
+                        enterprise.codePostal || '',
+                        enterprise.ville || ''
+                    ].filter(Boolean).join(' ');
+                    
+                    item.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <i class="fas fa-building" style="font-size: 1.5rem; color: #3b82f6;"></i>
+                            <div style="flex: 1;">
+                                <h3 style="margin: 0; color: #1f2937;">${enterprise.nom || ''}</h3>
+                                <p style="margin: 0.25rem 0 0 0; color: #6b7280; font-size: 0.85rem;">
+                                    ${address || 'Aucune adresse'}
+                                </p>
+                            </div>
+                            ${isCurrent ? '<i class="fas fa-check-circle" style="color: #10b981; font-size: 1.5rem;"></i>' : ''}
+                        </div>
+                    `;
+                    
+                    item.addEventListener('click', () => switchEnterprise(enterprise));
+                    list.appendChild(item);
+                });
+                
+                console.log('✅ Modal mis à jour avec', enterprises.length, 'entreprises');
+            }).catch(error => {
+                console.error('❌ Erreur lors du chargement des entreprises dans showEnterpriseSelector:', error);
+                if (list) {
+                    list.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 2rem;">Erreur lors du chargement des entreprises. Veuillez réessayer.</p>';
+                }
+            });
+        };
+        
+        window.displayEnterpriseModal = function() {
+            console.log('🔵 displayEnterpriseModal appelé');
+            
+            // Créer ou récupérer le modal
+            let modal = document.getElementById('selectEnterpriseModal');
+            if (!modal) {
+                console.log('🔵 Création du modal...');
+                modal = document.createElement('div');
+                modal.id = 'selectEnterpriseModal';
+                modal.style.cssText = 'display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);';
+                modal.innerHTML = `
+                    <div style="background-color: white; margin: 15% auto; padding: 2rem; border-radius: 8px; width: 80%; max-width: 600px; max-height: 70vh; overflow-y: auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                            <h2 style="margin: 0;">Sélectionner une entreprise</h2>
+                            <span onclick="window.closeEnterpriseModal()" style="font-size: 2rem; cursor: pointer; color: #999;">&times;</span>
+                        </div>
+                        <div id="selectEnterpriseList">
+                            <p style="text-align: center; color: #6b7280; padding: 2rem;">
+                                <i class="fas fa-spinner fa-spin"></i> Chargement des entreprises...
+                            </p>
+                        </div>
+                        <div style="margin-top: 1.5rem; text-align: right;">
+                            <button onclick="window.closeEnterpriseModal()" class="btn btn-secondary">Annuler</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                console.log('🔵 Modal créé et ajouté au DOM');
+            }
+
+            // Afficher le modal
+            modal.style.display = 'block';
+            console.log('🔵 Modal affiché');
+            
+            // Attendre un court délai pour s'assurer que le DOM est mis à jour
+            setTimeout(function() {
+                const list = document.getElementById('selectEnterpriseList');
+                if (!list) {
+                    console.error('🔵 ❌ Element selectEnterpriseList non trouvé');
+                    return;
+                }
+                
+                console.log('🔵 Chargement des entreprises depuis /ent/api/list...');
+                
+                // Appel à l'endpoint API
+                fetch('/ent/api/list', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(function(response) {
+                    console.log('🔵 Réponse reçue - Status:', response.status, response.statusText);
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status + ' - ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(function(enterprises) {
+                    console.log('🔵 Données reçues:', enterprises);
+                    console.log('🔵 Nombre d\'entreprises:', enterprises ? enterprises.length : 0);
+                    
+                    if (!enterprises || enterprises.length === 0) {
+                        list.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 2rem;">Aucune entreprise disponible dans la base de données.</p>';
+                        return;
+                    }
+                    
+                    // Vider la liste
+                    list.innerHTML = '';
+                    
+                    // Afficher chaque entreprise
+                    enterprises.forEach(function(enterprise) {
+                        const nom = enterprise.nom || 'Sans nom';
+                        const address = [
+                            enterprise.rue || '',
+                            enterprise.codePostal || '',
+                            enterprise.ville || ''
+                        ].filter(Boolean).join(' ');
+                        
+                        const item = document.createElement('div');
+                        item.style.cssText = 'padding: 1rem; border: 2px solid #e5e7eb; border-radius: 8px; margin-bottom: 0.75rem; cursor: pointer; transition: all 0.2s ease; background: white;';
+                        item.style.hover = 'background: #f3f4f6;';
+                        
+                        item.innerHTML = '<div style="display: flex; align-items: center; gap: 1rem;">' +
+                            '<i class="fas fa-building" style="font-size: 1.5rem; color: #3b82f6;"></i>' +
+                            '<div style="flex: 1;">' +
+                            '<h3 style="margin: 0; color: #1f2937; font-size: 1.1rem;">' + nom + '</h3>' +
+                            '<p style="margin: 0.25rem 0 0 0; color: #6b7280; font-size: 0.85rem;">' + (address || 'Aucune adresse') + '</p>' +
+                            '</div>' +
+                            '</div>';
+                        
+                        // Ajouter l'effet hover
+                        item.addEventListener('mouseenter', function() {
+                            this.style.background = '#f3f4f6';
+                            this.style.borderColor = '#3b82f6';
+                        });
+                        item.addEventListener('mouseleave', function() {
+                            this.style.background = 'white';
+                            this.style.borderColor = '#e5e7eb';
+                        });
+                        
+                        // Gérer le clic
+                        item.addEventListener('click', function() {
+                            console.log('🔵 Entreprise sélectionnée:', nom);
+                            if (typeof window.switchEnterprise === 'function') {
+                                window.switchEnterprise(enterprise);
+                            } else {
+                                console.error('🔵 switchEnterprise n\'est pas définie');
+                            }
+                        });
+                        
+                        list.appendChild(item);
+                    });
+                    
+                    console.log('🔵 ✅ ' + enterprises.length + ' entreprise(s) affichée(s) dans le modal');
+                })
+                .catch(function(error) {
+                    console.error('🔵 ❌ Erreur lors du chargement:', error);
+                    console.error('🔵 Stack:', error.stack);
+                    if (list) {
+                        list.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 2rem;">Erreur lors du chargement des entreprises.<br>Veuillez réessayer ou contacter l\'administrateur.</p>';
+                    }
+                });
+            }, 100);
+        };
+
+        window.closeEnterpriseModal = function() {
+            console.log('🔵 closeEnterpriseModal appelé');
+            const modal = document.getElementById('selectEnterpriseModal');
+            if (modal) {
+                modal.style.display = 'none';
+                // Réinitialiser les propriétés flex si nécessaire
+                modal.style.alignItems = '';
+                modal.style.justifyContent = '';
+                console.log('🔵 Modal fermé');
+            } else {
+                console.error('🔵 Modal non trouvé');
+            }
+        };
+
+        window.switchEnterprise = function(enterprise) {
+            console.log('🔵 switchEnterprise appelé avec:', enterprise);
+            // Sauvegarder dans localStorage pour persistance
+            localStorage.setItem('currentEnterprise', JSON.stringify(enterprise));
+            
+            // Mettre à jour l'affichage dans le menu
+            const nameElement = document.getElementById('currentEnterpriseName');
+            if (nameElement) {
+                nameElement.textContent = enterprise.nom || '-';
+            }
+            
+            // Mettre à jour aussi l'affichage mobile si présent
+            const mobileElement = document.getElementById('currentEnterpriseMobile');
+            if (mobileElement) {
+                mobileElement.textContent = enterprise.nom || '-';
+            }
+            
+            window.closeEnterpriseModal();
+            console.log('🔵 Entreprise changée:', enterprise.nom);
+        };
+
+        // Fermer le modal en cliquant en dehors
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('selectEnterpriseModal');
+            if (event.target === modal) {
+                window.closeEnterpriseModal();
+            }
+        });
+    </script>
+</body>
+</html>
+

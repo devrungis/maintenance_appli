@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Modifier une Entreprise - Application de Maintenance')}">
+</head>
+<body>
+    <div class="page">
+        <!-- Menu/Sidebar -->
+        <th:block th:replace="~{fragments/menu :: menu}"></th:block>
+        
+        <!-- Contenu principal -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1>Modifier une Entreprise</h1>
+            </div>
+            
+            <div th:if="${error}" class="alert alert-error">
+                <span th:text="${error}"></span>
+            </div>
+            
+            <div th:if="${success}" class="alert alert-success">
+                <span th:text="${success}"></span>
+            </div>
+            
+            <form th:action="@{/ent/{id}/edit(id=${entreprise['entrepriseId']})}" method="post" style="max-width: 600px;">
+                <div style="margin-bottom: 1rem;">
+                    <label for="nom" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Nom *</label>
+                    <input type="text" id="nom" name="nom" required 
+                           th:value="${entreprise != null and entreprise['nom'] != null ? entreprise['nom'] : ''}" 
+                           style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
+                    <span th:if="${errorNom}" style="color: red; display: block; margin-top: 0.25rem;" th:text="${errorNom}"></span>
+                </div>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label for="rue" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Rue</label>
+                    <input type="text" id="rue" name="rue" 
+                           th:value="${entreprise != null and entreprise['rue'] != null ? entreprise['rue'] : ''}" 
+                           style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label for="codePostal" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Code Postal</label>
+                        <input type="text" id="codePostal" name="codePostal" 
+                               th:value="${entreprise != null and entreprise['codePostal'] != null ? entreprise['codePostal'] : ''}" 
+                               style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    <div>
+                        <label for="ville" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Ville</label>
+                        <input type="text" id="ville" name="ville" 
+                               th:value="${entreprise != null and entreprise['ville'] != null ? entreprise['ville'] : ''}" 
+                               style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label for="email" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Email *</label>
+                    <input type="email" id="email" name="email" required 
+                           th:value="${entreprise != null and entreprise['email'] != null ? entreprise['email'] : ''}" 
+                           style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label for="numero" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Numéro de téléphone *</label>
+                    <input type="tel" id="numero" name="numero" required 
+                           th:value="${entreprise != null and entreprise['numero'] != null ? entreprise['numero'] : ''}" 
+                           style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
+                    <span th:if="${errorNumero}" style="color: red; display: block; margin-top: 0.25rem;" th:text="${errorNumero}"></span>
+                </div>
+                
+                <div style="margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    <a th:href="@{/ent}" class="btn btn-secondary" style="margin-left: 0.5rem;">Annuler</a>
+                </div>
+            </form>
+        </main>
+    </div>
+</body>
+</html>

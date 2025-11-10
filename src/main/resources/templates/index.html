@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application de Maintenance</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <!-- CSS spécifiques aux pages -->
+    <link rel="stylesheet" th:href="@{/css/pages/dashboard.css}">
+    <link rel="stylesheet" th:href="@{/css/pages/machines.css}">
+    <link rel="stylesheet" th:href="@{/css/pages/categories.css}">
+    <link rel="stylesheet" th:href="@{/css/pages/alerts.css}">
+    <link rel="stylesheet" th:href="@{/css/pages/repairs.css}">
+    <link rel="stylesheet" th:href="@{/css/pages/reports.css}">
+    <link rel="stylesheet" th:href="@{/css/pages/calendar.css}">
+    <link rel="stylesheet" th:href="@{/css/pages/inventory.css}">
+    <link rel="stylesheet" th:href="@{/css/pages/tickets.css}">
+    <link rel="stylesheet" th:href="@{/css/pages/users.css}">
+    <link rel="stylesheet" th:href="@{/css/pages/enterprises.css}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Header mobile -->
+    <header class="mobile-header">
+        <div class="header-content">
+            <button class="menu-toggle" id="menuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div style="flex: 1;">
+                <h1 class="app-title">
+                    <i class="fas fa-wrench"></i>
+                    Maintenance
+                </h1>
+                <div id="currentEnterpriseMobile" style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                    <!-- Entreprise actuelle -->
+                </div>
+            </div>
+            <button class="notifications-btn" id="notificationsBtn">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge" id="notificationBadge">0</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Overlay pour sidebar mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Application principale -->
+    <div id="mainApp" class="page">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-wrench"></i>
+                <h2>Maintenance</h2>
+            </div>
+            <div id="currentEnterpriseInfo" style="padding: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.85rem; color: rgba(255, 255, 255, 0.8);">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <i class="fas fa-building"></i>
+                    <strong id="currentEnterpriseName">-</strong>
+                </div>
+                <div id="enterpriseSelector" style="padding: 0.5rem; background: rgba(255, 255, 255, 0.1); border-radius: 4px; cursor: pointer;" onclick="if(typeof window.showEnterpriseSelector === 'function') { window.showEnterpriseSelector(); } else { console.error('showEnterpriseSelector n\'est pas définie'); }">
+                    <i class="fas fa-exchange-alt"></i> Changer d'entreprise
+                </div>
+            </div>
+            <!-- Menu dynamique avec condition pour Entreprises -->
+            <ul class="sidebar-menu">
+                <li class="menu-item active" data-page="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </li>
+                <li class="menu-item" data-page="machines">
+                    <i class="fas fa-cogs"></i>
+                    <span>Machines</span>
+                </li>
+                <li class="menu-item" data-page="categories">
+                    <i class="fas fa-tags"></i>
+                    <span>Catégories</span>
+                </li>
+                <li class="menu-item" data-page="alerts">
+                    <i class="fas fa-bell"></i>
+                    <span>Alertes</span>
+                </li>
+                <li class="menu-item" data-page="reports">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Rapports</span>
+                </li>
+                <li class="menu-item" data-page="calendar">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Calendrier</span>
+                </li>
+                <li class="menu-item" data-page="inventory">
+                    <i class="fas fa-boxes"></i>
+                    <span>Stock</span>
+                </li>
+                <li class="menu-item" data-page="tickets">
+                    <i class="fas fa-ticket-alt"></i>
+                    <span>Tickets</span>
+                </li>
+                <!-- Afficher "Utilisateurs" uniquement si l'utilisateur est superadmin -->
+                <li class="menu-item" th:if="${userRole != null and userRole == 'superadmin'}">
+                    <a href="/users" style="display: flex; align-items: center; gap: 0.75rem; color: inherit; text-decoration: none;">
+                        <i class="fas fa-users"></i>
+                        <span>Utilisateurs</span>
+                    </a>
+                </li>
+                <!-- Afficher "Entreprises" uniquement si l'utilisateur est superadmin -->
+                <li class="menu-item" th:if="${userRole != null and userRole == 'superadmin'}">
+                    <a href="/ent" style="display: flex; align-items: center; gap: 0.75rem; color: inherit; text-decoration: none;">
+                        <i class="fas fa-building"></i>
+                        <span>Entreprises</span>
+                    </a>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="btn btn-secondary">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Déconnexion
+                </button>
+            </div>
+        </nav>
+
+        <!-- Contenu principal -->
+        <main class="main-content">
+            <!-- Dashboard -->
+            <div id="dashboard" class="content-page active">
+                <div class="page-header">
+                    <h1>Dashboard</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="showAddMachineModal()">
+                            <i class="fas fa-plus"></i> Ajouter Machine
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-cogs"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="totalMachines">0</h3>
+                            <p>Total Machines</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-ticket-alt"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="openTickets">0</h3>
+                            <p>Tickets Ouverts</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="pendingMaintenance">0</h3>
+                            <p>Maintenances en attente</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-tools"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="activeRepairs">0</h3>
+                            <p>Réparations actives</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="completedMaintenance">0</h3>
+                            <p>Maintenances terminées</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="urgentTickets">0</h3>
+                            <p>Tickets Urgents</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Machines -->
+            <div id="machines" class="content-page">
+                <div class="page-header">
+                    <h1>Gestion des Machines</h1>
+                    <button class="btn btn-primary" onclick="showAddMachineModal()">
+                        <i class="fas fa-plus"></i> Ajouter Machine
+                    </button>
+                </div>
+                
+                <div class="filters">
+                    <input type="text" id="machineSearch" placeholder="Rechercher une machine...">
+                    <select id="categoryFilter">
+                        <option value="">Toutes les catégories</option>
+                    </select>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Emplacement</th>
+                                <th>N° Série</th>
+                                <th>Catégorie</th>
+                                <th>Sous-catégorie</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="machinesTableBody">
+                            <!-- Données des machines -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Categories -->
+            <div id="categories" class="content-page">
+                <div class="page-header">
+                    <h1>Gestion des Catégories</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="showAddCategoryModal()">
+                            <i class="fas fa-plus"></i> Ajouter Catégorie
+                        </button>
+                        <button class="btn btn-secondary" onclick="showAddSubCategoryModal()">
+                            <i class="fas fa-plus"></i> Ajouter Sous-catégorie
+                        </button>
+                    </div>
+                </div>
+
+                <div class="categories-grid">
+                    <div class="category-section">
+                        <h2>Catégories</h2>
+                        <div id="categoriesList" class="category-list">
+                            <!-- Liste des catégories -->
+                        </div>
+                    </div>
+                    <div class="category-section">
+                        <h2>Sous-catégories</h2>
+                        <div id="subCategoriesList" class="category-list">
+                            <!-- Liste des sous-catégories -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alerts -->
+            <div id="alerts" class="content-page">
+                <div class="page-header">
+                    <h1>Gestion des Alertes</h1>
+                    <button class="btn btn-primary" onclick="showAddAlertModal()">
+                        <i class="fas fa-plus"></i> Programmer Maintenance
+                    </button>
+                </div>
+
+                <div class="alerts-grid">
+                    <div class="alert-section">
+                        <h2>Maintenances programmées</h2>
+                        <div id="scheduledMaintenance" class="alert-list">
+                            <!-- Maintenances programmées -->
+                        </div>
+                    </div>
+                    <div class="alert-section">
+                        <h2>Historique des maintenances</h2>
+                        <div id="maintenanceHistory" class="alert-list">
+                            <!-- Historique -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Repairs -->
+            <div id="repairs" class="content-page">
+                <div class="page-header">
+                    <h1>Gestion des Réparations</h1>
+                    <button class="btn btn-primary" onclick="showAddRepairModal()">
+                        <i class="fas fa-plus"></i> Nouvelle Réparation
+                    </button>
+                </div>
+
+                <div class="filters">
+                    <input type="text" id="repairSearch" placeholder="Rechercher une réparation...">
+                    <select id="repairStatusFilter">
+                        <option value="">Tous les statuts</option>
+                        <option value="pending">En attente</option>
+                        <option value="in_progress">En cours</option>
+                        <option value="completed">Terminée</option>
+                        <option value="cancelled">Annulée</option>
+                    </select>
+                    <select id="repairPriorityFilter">
+                        <option value="">Toutes les priorités</option>
+                        <option value="low">Faible</option>
+                        <option value="medium">Moyenne</option>
+                        <option value="high">Haute</option>
+                        <option value="urgent">Urgente</option>
+                    </select>
+                </div>
+
+                <div class="repairs-grid">
+                    <div class="repair-section">
+                        <h2>Réparations actives</h2>
+                        <div id="activeRepairs" class="repair-list">
+                            <!-- Réparations actives -->
+                        </div>
+                    </div>
+                    <div class="repair-section">
+                        <h2>Historique des réparations</h2>
+                        <div id="repairHistory" class="repair-list">
+                            <!-- Historique des réparations -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports -->
+            <div id="reports" class="content-page">
+                <div class="page-header">
+                    <h1>Rapports et Statistiques</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="generateReport('maintenance')">
+                            <i class="fas fa-download"></i> Rapport Maintenance
+                        </button>
+                        <button class="btn btn-secondary" onclick="generateReport('repairs')">
+                            <i class="fas fa-download"></i> Rapport Réparations
+                        </button>
+                    </div>
+                </div>
+
+                <div class="reports-grid">
+                    <div class="report-section">
+                        <h2>Statistiques des Coûts</h2>
+                        <div class="chart-container">
+                            <canvas id="costsChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="report-section">
+                        <h2>Activité par Technicien</h2>
+                        <div class="chart-container">
+                            <canvas id="technicianChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="report-section">
+                        <h2>Machines les Plus Maintenues</h2>
+                        <div class="chart-container">
+                            <canvas id="machinesChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="report-section">
+                        <h2>Tendances Mensuelles</h2>
+                        <div class="chart-container">
+                            <canvas id="trendsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="reports-summary">
+                    <h2>Résumé des Performances</h2>
+                    <div class="summary-grid">
+                        <div class="summary-card">
+                            <h3>Coût Total Maintenance</h3>
+                            <div class="summary-value" id="totalMaintenanceCost">0€</div>
+                        </div>
+                        <div class="summary-card">
+                            <h3>Coût Total Réparations</h3>
+                            <div class="summary-value" id="totalRepairCost">0€</div>
+                        </div>
+                        <div class="summary-card">
+                            <h3>Temps Moyen Réparation</h3>
+                            <div class="summary-value" id="avgRepairTime">0h</div>
+                        </div>
+                        <div class="summary-card">
+                            <h3>Disponibilité Machines</h3>
+                            <div class="summary-value" id="machineAvailability">0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calendar -->
+            <div id="calendar" class="content-page">
+                <div class="page-header">
+                    <h1>Calendrier de Maintenance</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="showAddMaintenanceModal()">
+                            <i class="fas fa-plus"></i> Programmer Maintenance
+                        </button>
+                        <button class="btn btn-primary" onclick="showAddUserScheduleModal()">
+                            <i class="fas fa-user-plus"></i> Ajouter Planning
+                        </button>
+                    </div>
+                </div>
+
+                <div class="calendar-filters">
+                    <select id="calendarView" onchange="changeCalendarView()">
+                        <option value="month">Vue Mensuelle</option>
+                        <option value="week">Vue Hebdomadaire</option>
+                        <option value="day">Vue Quotidienne</option>
+                    </select>
+                    <select id="calendarUserFilter" onchange="filterCalendarByUser()">
+                        <option value="all">Tous les utilisateurs</option>
+                        <!-- Options générées dynamiquement -->
+                    </select>
+                    <select id="calendarEventFilter" onchange="filterCalendarByEvent()">
+                        <option value="all">Tous les événements</option>
+                        <option value="maintenance">Maintenances</option>
+                        <option value="repair">Réparations</option>
+                        <option value="ticket">Tickets</option>
+                        <option value="vacation">Congés</option>
+                        <option value="sick">Arrêts maladie</option>
+                        <option value="holiday">Jours fériés</option>
+                        <option value="weekend">Weekends</option>
+                    </select>
+                    <select id="calendarMachine">
+                        <option value="">Toutes les machines</option>
+                    </select>
+                    <button class="btn btn-secondary" onclick="navigateCalendar('prev')">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button class="btn btn-secondary" onclick="navigateCalendar('next')">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <span id="calendarTitle">Décembre 2023</span>
+                </div>
+
+                <div class="calendar-container">
+                    <div class="calendar-legend">
+                        <h3>Légende des Utilisateurs</h3>
+                        <div class="legend-items">
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #3b82f6;"></div>
+                                <span>Patrice Martin</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #10b981;"></div>
+                                <span>David Dubois</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #8b5cf6;"></div>
+                                <span>Sophie Leroy</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #f59e0b;"></div>
+                                <span>Thomas Bernard</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="calendarGrid" class="calendar-grid">
+                        <!-- Calendrier généré dynamiquement -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventory -->
+            <div id="inventory" class="content-page">
+                <div class="page-header">
+                    <h1>Gestion du Stock</h1>
+                    <button class="btn btn-primary" onclick="showAddInventoryModal()">
+                        <i class="fas fa-plus"></i> Ajouter Pièce
+                    </button>
+                </div>
+
+                <div class="inventory-filters">
+                    <input type="text" id="inventorySearch" placeholder="Rechercher une pièce...">
+                    <select id="inventoryCategory">
+                        <option value="">Toutes les catégories</option>
+                        <option value="electrical">Électrique</option>
+                        <option value="mechanical">Mécanique</option>
+                        <option value="hydraulic">Hydraulique</option>
+                        <option value="pneumatic">Pneumatique</option>
+                    </select>
+                    <select id="inventoryStatus">
+                        <option value="">Tous les statuts</option>
+                        <option value="in_stock">En stock</option>
+                        <option value="low_stock">Stock faible</option>
+                        <option value="out_of_stock">Rupture</option>
+                    </select>
+                </div>
+
+                <div class="inventory-grid">
+                    <div class="inventory-section">
+                        <h2>Pièces en Stock</h2>
+                        <div id="inventoryList" class="inventory-list">
+                            <!-- Liste des pièces -->
+                        </div>
+                    </div>
+                    <div class="inventory-section">
+                        <h2>Alertes de Stock</h2>
+                        <div id="inventoryAlerts" class="alert-list">
+                            <!-- Alertes de stock -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tickets -->
+            <div id="tickets" class="content-page">
+                <div class="page-header">
+                    <h1>Gestion des Tickets</h1>
+                    <button class="btn btn-primary" onclick="showAddTicketModal()">
+                        <i class="fas fa-plus"></i> Nouveau Ticket
+                    </button>
+                </div>
+
+                <div class="tickets-filters">
+                    <input type="text" id="ticketSearch" placeholder="Rechercher un ticket...">
+                    <select id="ticketStatusFilter">
+                        <option value="">Tous les statuts</option>
+                        <option value="open">Ouvert</option>
+                        <option value="in_progress">En cours</option>
+                        <option value="pending">En attente</option>
+                        <option value="resolved">Résolu</option>
+                        <option value="closed">Fermé</option>
+                    </select>
+                    <select id="ticketPriorityFilter">
+                        <option value="">Toutes les priorités</option>
+                        <option value="low">Faible</option>
+                        <option value="medium">Moyenne</option>
+                        <option value="high">Haute</option>
+                        <option value="urgent">Urgente</option>
+                    </select>
+                    <select id="ticketAssigneeFilter">
+                        <option value="">Tous les assignés</option>
+                    </select>
+                </div>
+
+                <div class="tickets-grid">
+                    <div class="ticket-section">
+                        <h2>Tickets Actifs</h2>
+                        <div id="activeTickets" class="ticket-list">
+                            <!-- Tickets actifs -->
+                        </div>
+                    </div>
+                    <div class="ticket-section">
+                        <h2>Historique des Tickets</h2>
+                        <div id="ticketHistory" class="ticket-list">
+                            <!-- Historique des tickets -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users - Redirigé vers /users (page Thymeleaf dédiée) -->
+
+            <!-- Enterprises -->
+            <div id="enterprises" class="content-page">
+                <div class="page-header">
+                    <h1>Gestion des Entreprises</h1>
+                    <button class="btn btn-primary" onclick="showAddEnterpriseModal()">
+                        <i class="fas fa-plus"></i> Ajouter Entreprise
+                    </button>
+                </div>
+
+                <div class="enterprises-filters">
+                    <input type="text" id="enterpriseSearch" placeholder="Rechercher une entreprise..." oninput="filterEnterprises()">
+                </div>
+
+                <div class="enterprises-grid">
+                    <div class="enterprise-section" style="grid-column: 1 / -1;">
+                        <h2>Entreprises Disponibles</h2>
+                        <div id="enterprisesList" class="enterprise-list">
+                            <!-- Liste des entreprises -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals - Tous les modals de l'application -->
+    <!-- Modal Ajouter Machine -->
+    <div id="addMachineModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Ajouter une Machine</h2>
+                <span class="close" onclick="closeModal('addMachineModal')">&times;</span>
+            </div>
+            <form id="addMachineForm">
+                <div class="form-group">
+                    <label for="machineName">Nom de la machine</label>
+                    <input type="text" id="machineName" required>
+                </div>
+                <div class="form-group">
+                    <label for="machineLocation">Emplacement</label>
+                    <input type="text" id="machineLocation" required>
+                </div>
+                <div class="form-group">
+                    <label for="machineSerial">Numéro de série</label>
+                    <input type="text" id="machineSerial" required>
+                </div>
+                <div class="form-group">
+                    <label for="machineCategory">Catégorie</label>
+                    <select id="machineCategory" required>
+                        <option value="">Sélectionner une catégorie</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="machineSubCategory">Sous-catégorie</label>
+                    <select id="machineSubCategory">
+                        <option value="">Sélectionner une sous-catégorie</option>
+                    </select>
+                </div>
+                <div id="customFields">
+                    <!-- Champs personnalisés -->
+                </div>
+                <div class="form-group">
+                    <button type="button" class="btn btn-secondary" onclick="addCustomField()">
+                        <i class="fas fa-plus"></i> Ajouter un champ personnalisé
+                    </button>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addMachineModal')">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Ajouter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Ajouter Catégorie -->
+    <div id="addCategoryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Ajouter une Catégorie</h2>
+                <span class="close" onclick="closeModal('addCategoryModal')">&times;</span>
+            </div>
+            <form id="addCategoryForm">
+                <div class="form-group">
+                    <label for="categoryName">Nom de la catégorie</label>
+                    <input type="text" id="categoryName" required>
+                </div>
+                <div class="form-group">
+                    <label for="categoryDescription">Description</label>
+                    <textarea id="categoryDescription"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addCategoryModal')">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Ajouter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Ajouter Sous-catégorie -->
+    <div id="addSubCategoryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Ajouter une Sous-catégorie</h2>
+                <span class="close" onclick="closeModal('addSubCategoryModal')">&times;</span>
+            </div>
+            <form id="addSubCategoryForm">
+                <div class="form-group">
+                    <label for="subCategoryName">Nom de la sous-catégorie</label>
+                    <input type="text" id="subCategoryName" required>
+                </div>
+                <div class="form-group">
+                    <label for="subCategoryParent">Catégorie parent</label>
+                    <select id="subCategoryParent" required>
+                        <option value="">Sélectionner une catégorie</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="subCategoryDescription">Description</label>
+                    <textarea id="subCategoryDescription"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addSubCategoryModal')">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Ajouter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Programmer Maintenance -->
+    <div id="addAlertModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Programmer une Maintenance</h2>
+                <span class="close" onclick="closeModal('addAlertModal')">&times;</span>
+            </div>
+            <form id="addAlertForm">
+                <div class="form-group">
+                    <label for="alertMachine">Machine</label>
+                    <select id="alertMachine" required>
+                        <option value="">Sélectionner une machine</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="alertDate">Date de maintenance</label>
+                    <input type="date" id="alertDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="alertTime">Heure</label>
+                    <input type="time" id="alertTime" required>
+                </div>
+                <div class="form-group">
+                    <label for="alertDescription">Description</label>
+                    <textarea id="alertDescription" placeholder="Type de maintenance, instructions..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="alertFrequency">Fréquence de rappel</label>
+                    <select id="alertFrequency">
+                        <option value="monthly">Mensuel</option>
+                        <option value="quarterly">Trimestriel</option>
+                        <option value="biannually">Semestriel</option>
+                        <option value="annually">Annuel</option>
+                        <option value="custom">Personnalisé</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addAlertModal')">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Programmer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Ajouter Réparation -->
+    <div id="addRepairModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Nouvelle Réparation</h2>
+                <span class="close" onclick="closeModal('addRepairModal')">&times;</span>
+            </div>
+            <form id="addRepairForm">
+                <div class="form-group">
+                    <label for="repairMachine">Machine</label>
+                    <select id="repairMachine" required>
+                        <option value="">Sélectionner une machine</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="repairTitle">Titre de la réparation</label>
+                    <input type="text" id="repairTitle" required placeholder="Ex: Panne moteur, Fuite hydraulique...">
+                </div>
+                <div class="form-group">
+                    <label for="repairDescription">Description du problème</label>
+                    <textarea id="repairDescription" required placeholder="Décrivez le problème rencontré..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="repairPriority">Priorité</label>
+                    <select id="repairPriority" required>
+                        <option value="low">Faible</option>
+                        <option value="medium" selected>Moyenne</option>
+                        <option value="high">Haute</option>
+                        <option value="urgent">Urgente</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="repairTechnician">Technicien assigné</label>
+                    <input type="text" id="repairTechnician" placeholder="Nom du technicien">
+                </div>
+                <div class="form-group">
+                    <label for="repairEstimatedCost">Coût estimé (€)</label>
+                    <input type="number" id="repairEstimatedCost" step="0.01" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label for="repairEstimatedDuration">Durée estimée (heures)</label>
+                    <input type="number" id="repairEstimatedDuration" step="0.5" placeholder="0">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addRepairModal')">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Créer la réparation</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Détails Réparation -->
+    <div id="repairDetailsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Détails de la Réparation</h2>
+                <span class="close" onclick="closeModal('repairDetailsModal')">&times;</span>
+            </div>
+            <div id="repairDetailsContent">
+                <!-- Contenu généré dynamiquement -->
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('repairDetailsModal')">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ajouter Technicien -->
+    <div id="addTechnicianModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Ajouter un Technicien</h2>
+                <span class="close" onclick="closeModal('addTechnicianModal')">&times;</span>
+            </div>
+            <form id="addTechnicianForm">
+                <div class="form-group">
+                    <label for="technicianName">Nom complet</label>
+                    <input type="text" id="technicianName" required>
+                </div>
+                <div class="form-group">
+                    <label for="technicianEmail">Email</label>
+                    <input type="email" id="technicianEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="technicianPhone">Téléphone</label>
+                    <input type="tel" id="technicianPhone">
+                </div>
+                <div class="form-group">
+                    <label for="technicianSpecialty">Spécialité</label>
+                    <select id="technicianSpecialty" required>
+                        <option value="">Sélectionner une spécialité</option>
+                        <option value="electrical">Électrique</option>
+                        <option value="mechanical">Mécanique</option>
+                        <option value="hydraulic">Hydraulique</option>
+                        <option value="pneumatic">Pneumatique</option>
+                        <option value="general">Généraliste</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="technicianLevel">Niveau</label>
+                    <select id="technicianLevel" required>
+                        <option value="junior">Junior</option>
+                        <option value="senior">Senior</option>
+                        <option value="expert">Expert</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="technicianAvailability">Disponibilité</label>
+                    <select id="technicianAvailability" required>
+                        <option value="full_time">Temps plein</option>
+                        <option value="part_time">Temps partiel</option>
+                        <option value="on_call">Sur appel</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addTechnicianModal')">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Ajouter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Ajouter Pièce de Stock -->
+    <div id="addInventoryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Ajouter une Pièce de Stock</h2>
+                <span class="close" onclick="closeModal('addInventoryModal')">&times;</span>
+            </div>
+            <form id="addInventoryForm">
+                <div class="form-group">
+                    <label for="inventoryName">Nom de la pièce</label>
+                    <input type="text" id="inventoryName" required>
+                </div>
+                <div class="form-group">
+                    <label for="inventoryPartNumber">Numéro de pièce</label>
+                    <input type="text" id="inventoryPartNumber" required>
+                </div>
+                <div class="form-group">
+                    <label for="inventoryCategory">Catégorie</label>
+                    <select id="inventoryCategory" required>
+                        <option value="">Sélectionner une catégorie</option>
+                        <option value="electrical">Électrique</option>
+                        <option value="mechanical">Mécanique</option>
+                        <option value="hydraulic">Hydraulique</option>
+                        <option value="pneumatic">Pneumatique</option>
+                        <option value="consumable">Consommable</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="inventoryQuantity">Quantité en stock</label>
+                    <input type="number" id="inventoryQuantity" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="inventoryMinStock">Stock minimum</label>
+                    <input type="number" id="inventoryMinStock" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="inventoryPrice">Prix unitaire (€)</label>
+                    <input type="number" id="inventoryPrice" step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="inventorySupplier">Fournisseur</label>
+                    <input type="text" id="inventorySupplier">
+                </div>
+                <div class="form-group">
+                    <label for="inventoryLocation">Emplacement</label>
+                    <input type="text" id="inventoryLocation" placeholder="Ex: Rack A, Étagère 3">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addInventoryModal')">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Ajouter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Programmer Maintenance (Calendrier) -->
+    <div id="addMaintenanceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Programmer une Maintenance</h2>
+                <span class="close" onclick="closeModal('addMaintenanceModal')">&times;</span>
+            </div>
+            <form id="addMaintenanceForm">
+                <div class="form-group">
+                    <label for="maintenanceMachine">Machine</label>
+                    <select id="maintenanceMachine" required>
+                        <option value="">Sélectionner une machine</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="maintenanceDate">Date de maintenance</label>
+                    <input type="date" id="maintenanceDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="maintenanceTime">Heure</label>
+                    <input type="time" id="maintenanceTime" required>
+                </div>
+                <div class="form-group">
+                    <label for="maintenanceType">Type de maintenance</label>
+                    <select id="maintenanceType" required>
+                        <option value="preventive">Préventive</option>
+                        <option value="corrective">Corrective</option>
+                        <option value="predictive">Prédictive</option>
+                        <option value="emergency">Urgente</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="maintenanceTechnician">Technicien assigné</label>
+                    <select id="maintenanceTechnician">
+                        <option value="">Sélectionner un technicien</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="maintenanceDescription">Description</label>
+                    <textarea id="maintenanceDescription" placeholder="Détails de la maintenance..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="maintenanceDuration">Durée estimée (heures)</label>
+                    <input type="number" id="maintenanceDuration" step="0.5" min="0.5">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addMaintenanceModal')">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Programmer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Ajouter Ticket -->
+    <div id="addTicketModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Nouveau Ticket</h2>
+                <span class="close" onclick="closeModal('addTicketModal')">&times;</span>
+            </div>
+            <form id="addTicketForm">
+                <div class="form-group">
+                    <label for="ticketTitle">Titre du ticket</label>
+                    <input type="text" id="ticketTitle" required placeholder="Ex: Panne machine de production">
+                </div>
+                <div class="form-group">
+                    <label for="ticketMachine">Machine concernée</label>
+                    <select id="ticketMachine">
+                        <option value="">Sélectionner une machine (optionnel)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ticketPriority">Priorité</label>
+                    <select id="ticketPriority" required>
+                        <option value="low">Faible</option>
+                        <option value="medium" selected>Moyenne</option>
+                        <option value="high">Haute</option>
+                        <option value="urgent">Urgente</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ticketCategory">Catégorie</label>
+                    <select id="ticketCategory" required>
+                        <option value="">Sélectionner une catégorie</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="repair">Réparation</option>
+                        <option value="inspection">Inspection</option>
+                        <option value="upgrade">Amélioration</option>
+                        <option value="other">Autre</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ticketAssignee">Assigné à</label>
+                    <select id="ticketAssignee">
+                        <option value="">Non assigné</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ticketDescription">Description</label>
+                    <textarea id="ticketDescription" required placeholder="Décrivez le problème ou la demande..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="ticketExpectedDate">Date souhaitée</label>
+                    <input type="date" id="ticketExpectedDate">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addTicketModal')">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Créer le ticket</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Détails Ticket -->
+    <div id="ticketDetailsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Détails du Ticket</h2>
+                <span class="close" onclick="closeModal('ticketDetailsModal')">&times;</span>
+            </div>
+            <div id="ticketDetailsContent">
+                <!-- Contenu généré dynamiquement -->
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('ticketDetailsModal')">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ajouter Utilisateur -->
+    <div id="addUserModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Ajouter un Utilisateur</h2>
+                <span class="close" onclick="closeModal('addUserModal')">&times;</span>
+            </div>
+            <form id="addUserForm">
+                <div class="form-group">
+                    <label for="userName">Nom complet</label>
+                    <input type="text" id="userName" required>
+                </div>
+                <div class="form-group">
+                    <label for="userEmail">Email</label>
+                    <input type="email" id="userEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="userUsername">Nom d'utilisateur</label>
+                    <input type="text" id="userUsername" required>
+                </div>
+                <div class="form-group">
+                    <label for="userPassword">Mot de passe</label>
+                    <input type="password" id="userPassword" required>
+                </div>
+                <div class="form-group">
+                    <label for="userRole">Rôle</label>
+                    <select id="userRole" required>
+                        <option value="">Sélectionner un rôle</option>
+                        <option value="admin">Administrateur</option>
+                        <option value="manager">Responsable</option>
+                        <option value="technician">Technicien</option>
+                        <option value="user">Utilisateur</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="userDepartment">Département</label>
+                    <input type="text" id="userDepartment" placeholder="Ex: Production, Maintenance, IT">
+                </div>
+                <div class="form-group">
+                    <label for="userPhone">Téléphone</label>
+                    <input type="tel" id="userPhone">
+                </div>
+                <div class="form-group">
+                    <label for="userStatus">Statut</label>
+                    <select id="userStatus" required>
+                        <option value="active" selected>Actif</option>
+                        <option value="inactive">Inactif</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addUserModal')">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Ajouter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Ajouter Entreprise -->
+    <div id="addEnterpriseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Ajouter une Entreprise</h2>
+                <span class="close" onclick="closeModal('addEnterpriseModal')">&times;</span>
+            </div>
+            <form id="addEnterpriseForm">
+                <div class="form-group">
+                    <label for="enterpriseName">Nom de l'entreprise</label>
+                    <input type="text" id="enterpriseName" required placeholder="Ex: Ma Société">
+                </div>
+                <div class="form-group">
+                    <label for="enterpriseAddress">Adresse</label>
+                    <input type="text" id="enterpriseAddress" placeholder="123 Rue Example">
+                </div>
+                <div class="form-group">
+                    <label for="enterpriseCity">Ville</label>
+                    <input type="text" id="enterpriseCity" placeholder="Paris">
+                </div>
+                <div class="form-group">
+                    <label for="enterprisePostalCode">Code Postal</label>
+                    <input type="text" id="enterprisePostalCode" placeholder="75000">
+                </div>
+                <div class="form-group">
+                    <label for="enterprisePhone">Téléphone</label>
+                    <input type="tel" id="enterprisePhone" placeholder="+33 1 23 45 67 89">
+                </div>
+                <div class="form-group">
+                    <label for="enterpriseEmail">Email</label>
+                    <input type="email" id="enterpriseEmail" placeholder="contact@societe.fr">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addEnterpriseModal')">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Ajouter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Changer d'Entreprise -->
+    <div id="selectEnterpriseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Changer d'Entreprise</h2>
+                <span class="close" onclick="closeModal('selectEnterpriseModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 1rem; color: var(--text-secondary);">Sélectionnez une nouvelle entreprise :</p>
+                <div id="selectEnterpriseList" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Liste des entreprises -->
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('selectEnterpriseModal')">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ajouter Planning Utilisateur -->
+    <div id="addUserScheduleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Ajouter un Planning</h2>
+                <span class="close" onclick="closeModal('addUserScheduleModal')">&times;</span>
+            </div>
+            <form id="addUserScheduleForm" onsubmit="handleAddUserSchedule(event)">
+                <div class="form-group">
+                    <label for="scheduleUser">Utilisateur</label>
+                    <select id="scheduleUser" name="userId" required>
+                        <option value="">Sélectionner un utilisateur</option>
+                        <!-- Options générées dynamiquement -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="scheduleDate">Date</label>
+                    <input type="date" id="scheduleDate" name="date" required>
+                </div>
+                <div class="form-group">
+                    <label for="scheduleType">Type</label>
+                    <select id="scheduleType" name="type" required onchange="toggleTimeFields()">
+                        <option value="">Sélectionner un type</option>
+                        <option value="vacation">Congés</option>
+                        <option value="sick">Arrêt maladie</option>
+                        <option value="training">Formation</option>
+                        <option value="meeting">Réunion</option>
+                        <option value="machine_arrival">Arrivage Machine</option>
+                        <option value="maintenance_preventive">Maintenance Préventive</option>
+                        <option value="audit">Audit</option>
+                        <option value="equipment_test">Test Équipement</option>
+                        <option value="inspection">Inspection</option>
+                        <option value="installation">Installation</option>
+                        <option value="repair_scheduled">Réparation Programmée</option>
+                        <option value="other">Autre</option>
+                    </select>
+                </div>
+                <div class="form-group" id="timeFields" style="display: none;">
+                    <label for="scheduleStartTime">Heure de début</label>
+                    <input type="time" id="scheduleStartTime" name="startTime">
+                    <label for="scheduleEndTime">Heure de fin</label>
+                    <input type="time" id="scheduleEndTime" name="endTime">
+                </div>
+                <div class="form-group">
+                    <label for="scheduleDescription">Description</label>
+                    <textarea id="scheduleDescription" name="description" rows="3" placeholder="Décrivez l'événement..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="scheduleFullDay" name="isFullDay" checked>
+                        Journée entière
+                    </label>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addUserScheduleModal')">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Ajouter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Conteneur de notifications -->
+    <div class="notification-container" id="notificationContainer"></div>
+
+    <!-- Chart.js pour les graphiques -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- JavaScript spécifiques aux pages -->
+    <script th:src="@{/js/pages/dashboard.js}"></script>
+    <script th:src="@{/js/pages/machines.js}"></script>
+    <script th:src="@{/js/pages/categories.js}"></script>
+    <script th:src="@{/js/pages/alerts.js}"></script>
+    <script th:src="@{/js/pages/repairs.js}"></script>
+    <script th:src="@{/js/pages/reports.js}"></script>
+    <script th:src="@{/js/pages/calendar.js}"></script>
+    <script th:src="@{/js/pages/inventory.js}"></script>
+    <script th:src="@{/js/pages/tickets.js}"></script>
+    <script th:src="@{/js/pages/users.js}"></script>
+    <script th:src="@{/js/pages/enterprises.js}"></script>
+    <!-- Script principal -->
+    <script th:src="@{/js/script.js}"></script>
+    
+    <!-- Script pour la gestion des entreprises -->
+    <script>
+        console.log('🔵 Script de gestion des entreprises chargé');
+        
+        // Fonction pour fermer le modal (définie en premier pour être disponible partout)
+        window.closeEnterpriseModal = function() {
+            console.log('🔵 closeEnterpriseModal appelé');
+            const modal = document.getElementById('selectEnterpriseModal');
+            if (modal) {
+                // Forcer la fermeture en utilisant 'none' au lieu de 'flex'
+                modal.style.display = 'none';
+                // Réinitialiser les propriétés flex si nécessaire
+                modal.style.alignItems = '';
+                modal.style.justifyContent = '';
+                console.log('🔵 Modal fermé');
+            } else {
+                console.error('🔵 Modal non trouvé');
+            }
+        };
+        
+        // Fonction pour afficher le modal de sélection d'entreprise
+        window.showEnterpriseSelector = function() {
+            console.log('🔵🔵🔵 showEnterpriseSelector APPELÉ 🔵🔵🔵');
+            
+            // Créer ou récupérer le modal
+            let modal = document.getElementById('selectEnterpriseModal');
+            if (!modal) {
+                console.log('🔵 Création du modal...');
+                modal = document.createElement('div');
+                modal.id = 'selectEnterpriseModal';
+                modal.style.cssText = 'display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(4px); align-items: center; justify-content: center;';
+                modal.innerHTML = '<div style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); padding: 0; border-radius: 16px; width: 90%; max-width: 700px; max-height: 85vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); display: flex; flex-direction: column; margin: auto;">' +
+                    '<div style="background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); padding: 1.5rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid rgba(255,255,255,0.1);">' +
+                    '<h2 style="margin: 0; color: white; font-size: 1.5rem; font-weight: 600; display: flex; align-items: center; gap: 0.75rem;"><i class="fas fa-building" style="font-size: 1.3rem;"></i> Sélectionner une entreprise</h2>' +
+                    '<span id="closeEnterpriseModalBtn" onclick="if(typeof window.closeEnterpriseModal === \'function\') { window.closeEnterpriseModal(); } else { console.error(\'closeEnterpriseModal non définie\'); }" style="font-size: 2rem; cursor: pointer; color: white; opacity: 0.9; transition: opacity 0.2s; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.1);" onmouseover="this.style.opacity=\'1\'; this.style.background=\'rgba(255,255,255,0.2)\';" onmouseout="this.style.opacity=\'0.9\'; this.style.background=\'rgba(255,255,255,0.1)\';">&times;</span>' +
+                    '</div>' +
+                    '<div id="selectEnterpriseList" style="padding: 2rem; overflow-y: auto; flex: 1; background: #f8fafc;">' +
+                    '<p style="text-align: center; color: #6b7280; padding: 3rem 2rem; font-size: 1rem;"><i class="fas fa-spinner fa-spin" style="margin-right: 0.5rem; color: #3b82f6;"></i> Chargement des entreprises...</p>' +
+                    '</div>' +
+                    '<div style="padding: 1.5rem 2rem; background: white; border-top: 1px solid #e5e7eb; text-align: right;">' +
+                    '<button id="cancelEnterpriseModalBtn" onclick="if(typeof window.closeEnterpriseModal === \'function\') { window.closeEnterpriseModal(); } else { console.error(\'closeEnterpriseModal non définie\'); }" style="padding: 0.75rem 1.5rem; background: #6b7280; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.95rem; font-weight: 500; transition: all 0.2s;" onmouseover="this.style.background=\'#4b5563\';" onmouseout="this.style.background=\'#6b7280\';">Annuler</button>' +
+                    '</div>' +
+                    '</div>';
+                document.body.appendChild(modal);
+                console.log('🔵 Modal créé et ajouté au DOM');
+                
+                // Ajouter les gestionnaires d'événements après la création
+                setTimeout(function() {
+                    const closeBtn = document.getElementById('closeEnterpriseModalBtn');
+                    const cancelBtn = document.getElementById('cancelEnterpriseModalBtn');
+                    
+                    if (closeBtn) {
+                        closeBtn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('🔵 Clic sur le bouton de fermeture');
+                            window.closeEnterpriseModal();
+                        });
+                    } else {
+                        console.error('🔵 Bouton de fermeture non trouvé');
+                    }
+                    
+                    if (cancelBtn) {
+                        cancelBtn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('🔵 Clic sur le bouton Annuler');
+                            window.closeEnterpriseModal();
+                        });
+                    } else {
+                        console.error('🔵 Bouton Annuler non trouvé');
+                    }
+                }, 50);
+            }
+
+            // Attacher les événements si ce n'est pas déjà fait
+            const closeBtn = document.getElementById('closeEnterpriseModalBtn');
+            const cancelBtn = document.getElementById('cancelEnterpriseModalBtn');
+            
+            if (closeBtn && !closeBtn.hasAttribute('data-listener-attached')) {
+                closeBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🔵 Clic sur le bouton de fermeture');
+                    window.closeEnterpriseModal();
+                });
+                closeBtn.setAttribute('data-listener-attached', 'true');
+            }
+            
+            if (cancelBtn && !cancelBtn.hasAttribute('data-listener-attached')) {
+                cancelBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🔵 Clic sur le bouton Annuler');
+                    window.closeEnterpriseModal();
+                });
+                cancelBtn.setAttribute('data-listener-attached', 'true');
+            }
+            
+            // Afficher le modal avec centrage
+            modal.style.display = 'flex';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+            console.log('🔵 Modal affiché');
+            
+            // Attendre un court délai pour s'assurer que le DOM est mis à jour
+            setTimeout(function() {
+                const list = document.getElementById('selectEnterpriseList');
+                if (!list) {
+                    console.error('🔵 ❌ Element selectEnterpriseList non trouvé');
+                    return;
+                }
+                
+                console.log('🔵 Chargement des entreprises depuis /ent/api/list...');
+                
+                // Appel à l'endpoint API
+                fetch('/ent/api/list', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(function(response) {
+                    console.log('🔵 Réponse reçue - Status:', response.status, response.statusText);
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status + ' - ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(function(enterprises) {
+                    console.log('🔵 Données reçues:', enterprises);
+                    console.log('🔵 Nombre d\'entreprises:', enterprises ? enterprises.length : 0);
+                    
+                    if (!enterprises || enterprises.length === 0) {
+                        list.innerHTML = '<div style="text-align: center; padding: 4rem 2rem;"><div style="width: 80px; height: 80px; margin: 0 auto 1.5rem; background: #f3f4f6; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i class="fas fa-building" style="font-size: 2rem; color: #9ca3af;"></i></div><p style="color: #6b7280; font-size: 1rem; margin: 0;">Aucune entreprise disponible dans la base de données.</p></div>';
+                        return;
+                    }
+                    
+                    // Vider la liste
+                    list.innerHTML = '';
+                    
+                    // Afficher chaque entreprise
+                    enterprises.forEach(function(enterprise) {
+                        const nom = enterprise.nom || 'Sans nom';
+                        const address = [
+                            enterprise.rue || '',
+                            enterprise.codePostal || '',
+                            enterprise.ville || ''
+                        ].filter(Boolean).join(' ');
+                        
+                        const item = document.createElement('div');
+                        item.style.cssText = 'padding: 1.5rem; border: 2px solid #e5e7eb; border-radius: 12px; margin-bottom: 1rem; cursor: pointer; transition: all 0.3s ease; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: relative; overflow: hidden;';
+                        
+                        // Ajouter un effet de brillance au survol
+                        item.innerHTML = '<div style="position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); transition: left 0.5s;"></div>' +
+                            '<div style="display: flex; align-items: center; gap: 1.25rem; position: relative; z-index: 1;">' +
+                            '<div style="width: 56px; height: 56px; background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); flex-shrink: 0;">' +
+                            '<i class="fas fa-building" style="font-size: 1.5rem; color: white;"></i>' +
+                            '</div>' +
+                            '<div style="flex: 1; min-width: 0;">' +
+                            '<h3 style="margin: 0 0 0.5rem 0; color: #1f2937; font-size: 1.15rem; font-weight: 600; line-height: 1.4;">' + nom + '</h3>' +
+                            '<p style="margin: 0; color: #6b7280; font-size: 0.9rem; line-height: 1.5; display: flex; align-items: center; gap: 0.5rem;">' +
+                            '<i class="fas fa-map-marker-alt" style="font-size: 0.85rem; color: #9ca3af;"></i>' +
+                            '<span>' + (address || 'Aucune adresse') + '</span>' +
+                            '</p>' +
+                            '</div>' +
+                            '<div style="display: flex; align-items: center; color: #3b82f6; flex-shrink: 0;">' +
+                            '<i class="fas fa-chevron-right" style="font-size: 1rem;"></i>' +
+                            '</div>' +
+                            '</div>';
+                        
+                        // Ajouter l'effet hover avec animation
+                        item.addEventListener('mouseenter', function() {
+                            this.style.background = 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)';
+                            this.style.borderColor = '#3b82f6';
+                            this.style.boxShadow = '0 8px 24px rgba(59, 130, 246, 0.15)';
+                            this.style.transform = 'translateY(-2px)';
+                            const shine = this.querySelector('div[style*="position: absolute"]');
+                            if (shine) {
+                                shine.style.left = '100%';
+                            }
+                        });
+                        item.addEventListener('mouseleave', function() {
+                            this.style.background = 'white';
+                            this.style.borderColor = '#e5e7eb';
+                            this.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+                            this.style.transform = 'translateY(0)';
+                            const shine = this.querySelector('div[style*="position: absolute"]');
+                            if (shine) {
+                                shine.style.left = '-100%';
+                            }
+                        });
+                        
+                        // Gérer le clic
+                        item.addEventListener('click', function() {
+                            console.log('🔵 Entreprise sélectionnée:', nom);
+                            if (typeof window.switchEnterprise === 'function') {
+                                window.switchEnterprise(enterprise);
+                            } else {
+                                console.error('🔵 switchEnterprise n\'est pas définie');
+                            }
+                        });
+                        
+                        list.appendChild(item);
+                    });
+                    
+                    console.log('🔵 ✅ ' + enterprises.length + ' entreprise(s) affichée(s) dans le modal');
+                })
+                .catch(function(error) {
+                    console.error('🔵 ❌ Erreur lors du chargement:', error);
+                    console.error('🔵 Stack:', error.stack);
+                    if (list) {
+                        list.innerHTML = '<div style="text-align: center; padding: 4rem 2rem;"><div style="width: 80px; height: 80px; margin: 0 auto 1.5rem; background: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: #ef4444;"></i></div><p style="color: #ef4444; font-size: 1rem; margin: 0 0 0.5rem 0; font-weight: 500;">Erreur lors du chargement des entreprises</p><p style="color: #6b7280; font-size: 0.9rem; margin: 0;">Veuillez réessayer ou contacter l\'administrateur.</p></div>';
+                    }
+                });
+            }, 100);
+        };
+        
+        // Fermer le modal en cliquant en dehors
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('selectEnterpriseModal');
+            if (modal && modal.style.display === 'flex') {
+                // Vérifier si le clic est en dehors du contenu du modal
+                const modalContent = modal.querySelector('div');
+                if (modalContent && !modalContent.contains(event.target) && event.target === modal) {
+                    console.log('🔵 Clic en dehors du modal, fermeture...');
+                    window.closeEnterpriseModal();
+                }
+            }
+        });
+        
+        // Fonction pour changer d'entreprise
+        window.switchEnterprise = function(enterprise) {
+            console.log('🔵 switchEnterprise appelé avec:', enterprise);
+            // Sauvegarder dans localStorage pour persistance
+            localStorage.setItem('currentEnterprise', JSON.stringify(enterprise));
+            
+            // Mettre à jour l'affichage dans le menu
+            const nameElement = document.getElementById('currentEnterpriseName');
+            if (nameElement) {
+                nameElement.textContent = enterprise.nom || '-';
+            }
+            
+            // Mettre à jour aussi l'affichage mobile si présent
+            const mobileElement = document.getElementById('currentEnterpriseMobile');
+            if (mobileElement) {
+                mobileElement.textContent = enterprise.nom || '-';
+            }
+            
+            window.closeEnterpriseModal();
+            console.log('🔵 Entreprise changée:', enterprise.nom);
+        };
+        
+        // Charger l'entreprise actuelle au démarrage
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔵 DOMContentLoaded - Chargement de l\'entreprise actuelle');
+            const currentEnterprise = localStorage.getItem('currentEnterprise');
+            if (currentEnterprise) {
+                try {
+                    const enterprise = JSON.parse(currentEnterprise);
+                    const nameElement = document.getElementById('currentEnterpriseName');
+                    if (nameElement) {
+                        nameElement.textContent = enterprise.nom || '-';
+                        console.log('✅ Entreprise actuelle chargée depuis localStorage:', enterprise.nom);
+                    }
+                    
+                    // Mettre à jour aussi l'affichage mobile si présent
+                    const mobileElement = document.getElementById('currentEnterpriseMobile');
+                    if (mobileElement) {
+                        mobileElement.textContent = enterprise.nom || '-';
+                    }
+                } catch (e) {
+                    console.error('❌ Erreur lors du parsing de currentEnterprise:', e);
+                }
+            } else {
+                console.log('ℹ️ Aucune entreprise sélectionnée dans localStorage');
+            }
+        });
+    </script>
+</body>
+</html>
+

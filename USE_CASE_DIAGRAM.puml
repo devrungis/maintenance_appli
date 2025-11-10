@@ -1,0 +1,177 @@
+@startuml Use Case Diagram - Application de Maintenance
+
+skinparam actor {
+    BackgroundColor #E1F5FE
+    BorderColor #01579B
+}
+
+skinparam usecase {
+    BackgroundColor #FFF9C4
+    BorderColor #F57F17
+}
+
+left to right direction
+
+actor "Super Admin" as superAdmin #LightBlue
+actor "Admin" as admin #LightGreen
+actor "Technicien" as technicien #LightYellow
+
+' ==========================================
+' PACKAGE: Authentification
+' ==========================================
+package "Authentification" {
+    usecase "Se connecter" as UC_Login
+    usecase "Gérer son profil" as UC_ManageProfile
+}
+
+' ==========================================
+' PACKAGE: Gestion des Entreprises
+' ==========================================
+package "Gestion des Entreprises" {
+    usecase "Gérer les entreprises" as UC_ManageEnterprises
+}
+
+' ==========================================
+' PACKAGE: Gestion des Utilisateurs
+' ==========================================
+package "Gestion des Utilisateurs" {
+    usecase "Gérer les utilisateurs" as UC_ManageUsers
+    usecase "Créer Admin/SuperAdmin" as UC_CreateAdmin
+}
+
+' ==========================================
+' PACKAGE: Gestion des Machines
+' ==========================================
+package "Gestion des Machines" {
+    usecase "Gérer les machines" as UC_ManageMachines
+    usecase "Consulter les machines" as UC_ViewMachines
+}
+
+' ==========================================
+' PACKAGE: Gestion des Catégories
+' ==========================================
+package "Gestion des Catégories" {
+    usecase "Gérer les catégories" as UC_ManageCategories
+}
+
+' ==========================================
+' PACKAGE: Gestion des Maintenances
+' ==========================================
+package "Gestion des Maintenances" {
+    usecase "Programmer maintenance" as UC_ScheduleMaintenance
+    usecase "Effectuer maintenance" as UC_PerformMaintenance
+}
+
+' ==========================================
+' PACKAGE: Gestion des Réparations
+' ==========================================
+package "Gestion des Réparations" {
+    usecase "Gérer réparations" as UC_ManageRepairs
+    usecase "Effectuer réparation" as UC_PerformRepair
+}
+
+' ==========================================
+' PACKAGE: Gestion des Tickets
+' ==========================================
+package "Gestion des Tickets" {
+    usecase "Gérer tickets" as UC_ManageTickets
+    usecase "Résoudre ticket" as UC_ResolveTicket
+}
+
+' ==========================================
+' PACKAGE: Gestion du Stock
+' ==========================================
+package "Gestion du Stock" {
+    usecase "Gérer le stock" as UC_ManageStock
+    usecase "Consulter le stock" as UC_ViewStock
+}
+
+' ==========================================
+' PACKAGE: Calendrier et Planning
+' ==========================================
+package "Calendrier et Planning" {
+    usecase "Gérer calendrier" as UC_ManageCalendar
+    usecase "Gérer son planning" as UC_ManageSchedule
+}
+
+' ==========================================
+' PACKAGE: Rapports et Statistiques
+' ==========================================
+package "Rapports et Statistiques" {
+    usecase "Consulter dashboard" as UC_ViewDashboard
+    usecase "Générer rapports" as UC_GenerateReports
+}
+
+' ==========================================
+' RELATIONS SUPER ADMIN
+' ==========================================
+superAdmin --> UC_Login
+superAdmin --> UC_ManageProfile
+superAdmin --> UC_ManageEnterprises
+superAdmin --> UC_ManageUsers
+superAdmin --> UC_CreateAdmin
+superAdmin --> UC_ManageMachines
+superAdmin --> UC_ManageCategories
+superAdmin --> UC_ScheduleMaintenance
+superAdmin --> UC_ManageRepairs
+superAdmin --> UC_ManageTickets
+superAdmin --> UC_ManageStock
+superAdmin --> UC_ManageCalendar
+superAdmin --> UC_ViewDashboard
+superAdmin --> UC_GenerateReports
+
+' ==========================================
+' RELATIONS ADMIN
+' ==========================================
+admin --> UC_Login
+admin --> UC_ManageProfile
+admin --> UC_ManageEnterprises : (son entreprise)
+admin --> UC_ManageUsers : (sauf Admin/SuperAdmin)
+admin --> UC_ManageMachines
+admin --> UC_ManageCategories
+admin --> UC_ScheduleMaintenance
+admin --> UC_ManageRepairs
+admin --> UC_ManageTickets
+admin --> UC_ManageStock
+admin --> UC_ManageCalendar
+admin --> UC_ViewDashboard
+admin --> UC_GenerateReports
+
+' ==========================================
+' RELATIONS TECHNICIEN
+' ==========================================
+technicien --> UC_Login
+technicien --> UC_ManageProfile
+technicien --> UC_ViewMachines
+technicien --> UC_PerformMaintenance : (assignées)
+technicien --> UC_PerformRepair : (assignées)
+technicien --> UC_ResolveTicket : (assignés)
+technicien --> UC_ViewStock
+technicien --> UC_ManageSchedule : (son planning)
+technicien --> UC_ViewDashboard : (ses tâches)
+
+' ==========================================
+' NOTES
+' ==========================================
+note right of superAdmin
+  **Super Admin**
+  - Accès total
+  - Gère toutes entreprises
+  - Crée Admin/SuperAdmin
+end note
+
+note right of admin
+  **Admin**
+  - Gère son entreprise
+  - Crée utilisateurs
+  (sauf Admin/SuperAdmin)
+end note
+
+note right of technicien
+  **Technicien**
+  - Consulte machines/tickets
+  - Effectue tâches assignées
+  - Gère son planning
+end note
+
+@enduml

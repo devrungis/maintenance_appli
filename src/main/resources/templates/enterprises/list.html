@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Entreprises - Application de Maintenance</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Variables CSS */
+        :root {
+            --primary-color: #3b82f6;
+            --primary-dark: #1e40af;
+            --secondary-color: #6b7280;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --background-color: #f8fafc;
+            --card-background: #ffffff;
+            --sidebar-background: #1e293b;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--background-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .page {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 20px;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--primary-dark));
+            border-radius: 20px 20px 0 0;
+        }
+
+        .page-header h1 {
+            color: var(--text-primary);
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--text-primary), #64748b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 0;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid var(--success-color);
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid var(--danger-color);
+        }
+
+        /* Filtres entreprises */
+        .enterprises-filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .enterprises-filters input {
+            flex: 1;
+            min-width: 200px;
+            max-width: 300px;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .enterprises-filters input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        /* Grille entreprises */
+        .enterprises-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        .enterprise-section {
+            background: var(--card-background);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        .enterprise-section h2 {
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .enterprise-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .enterprise-item {
+            padding: 1rem;
+            background: var(--background-color);
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid var(--primary-color);
+            transition: transform 0.2s ease;
+        }
+
+        .enterprise-item:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
+
+        .enterprise-info {
+            flex: 1;
+        }
+
+        .enterprise-info h3 {
+            font-size: 1rem;
+            margin-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .enterprise-info p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+
+        .badge-success {
+            background: var(--success-color);
+            color: white;
+            padding: 0.375rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .page-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: stretch;
+            }
+
+            .enterprises-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <!-- Menu/Sidebar -->
+        <th:block th:replace="~{fragments/menu :: menu}"></th:block>
+        
+        <!-- Contenu principal -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1>Gestion des Entreprises</h1>
+                <div class="header-actions">
+                    <a th:href="@{/ent/create}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Ajouter Entreprise
+                    </a>
+                </div>
+            </div>
+            
+            <div th:if="${error}" class="alert alert-error">
+                <span th:text="${error}"></span>
+            </div>
+            
+            <div th:if="${success}" class="alert alert-success">
+                <span th:text="${success}"></span>
+            </div>
+            
+            <div th:if="${enterprises != null and !enterprises.isEmpty()}">
+                <div class="enterprises-filters">
+                    <input type="text" id="enterpriseSearch" placeholder="Rechercher une entreprise..." oninput="filterEnterprises()">
+                </div>
+
+                <div class="enterprises-grid">
+                    <div class="enterprise-section">
+                        <h2>Entreprises Disponibles</h2>
+                        <div class="enterprise-list">
+                            <div th:each="entreprise : ${enterprises}" class="enterprise-item">
+                                <div style="display: flex; align-items: center; gap: 1rem; flex: 1;">
+                                    <i class="fas fa-building" style="font-size: 2rem; color: var(--primary-color);"></i>
+                                    <div class="enterprise-info" style="flex: 1;">
+                                        <h3 style="margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                                            <span th:text="${entreprise['nom']}"></span>
+                                        </h3>
+                                        <p th:if="${entreprise['rue'] != null or entreprise['codePostal'] != null or entreprise['ville'] != null}" style="margin: 0.25rem 0; color: var(--text-secondary);">
+                                            <i class="fas fa-map-marker-alt"></i> 
+                                            <span th:text="${#strings.isEmpty(entreprise['rue']) ? '' : entreprise['rue']} + ${#strings.isEmpty(entreprise['codePostal']) ? '' : ' ' + entreprise['codePostal']} + ${#strings.isEmpty(entreprise['ville']) ? '' : ' ' + entreprise['ville']}"></span>
+                                        </p>
+                                        <p th:if="${entreprise['email']}" style="margin: 0.25rem 0; color: var(--text-secondary); font-size: 0.85rem;">
+                                            <i class="fas fa-envelope"></i> <span th:text="${entreprise['email']}"></span>
+                                        </p>
+                                        <p th:if="${entreprise['numero']}" style="margin: 0.25rem 0; color: var(--text-secondary); font-size: 0.85rem;">
+                                            <i class="fas fa-phone"></i> <span th:text="${entreprise['numero']}"></span>
+                                        </p>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <a th:href="@{/ent/{id}/edit(id=${entreprise['entrepriseId']})}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-edit"></i> Modifier
+                                    </a>
+                                    <form th:action="@{/ent/{id}/delete(id=${entreprise['entrepriseId']})}" method="post" style="display: inline;">
+                                        <button type="submit" class="btn btn-sm btn-secondary" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette entreprise ?');">
+                                            <i class="fas fa-trash"></i> Supprimer
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div th:if="${enterprises == null or enterprises.isEmpty()}" class="alert alert-error">
+                <p>Aucune entreprise trouvée.</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function filterEnterprises() {
+            const searchTerm = document.getElementById('enterpriseSearch').value.toLowerCase();
+            const enterpriseItems = document.querySelectorAll('.enterprise-item');
+            
+            enterpriseItems.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

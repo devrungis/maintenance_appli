@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Utilisateurs - Application de Maintenance</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link rel="stylesheet" th:href="@{/css/pages/users.css}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Header mobile -->
+    <header class="mobile-header">
+        <div class="header-content">
+            <button class="menu-toggle" id="menuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div style="flex: 1;">
+                <h1 class="app-title">
+                    <i class="fas fa-wrench"></i>
+                    Maintenance
+                </h1>
+            </div>
+        </div>
+    </header>
+
+    <!-- Overlay pour sidebar mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Application principale -->
+    <div id="mainApp" class="page">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-wrench"></i>
+                <h2>Maintenance</h2>
+            </div>
+            <div id="currentEnterpriseInfo" style="padding: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.85rem; color: rgba(255, 255, 255, 0.8);">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <i class="fas fa-building"></i>
+                    <strong id="currentEnterpriseName">-</strong>
+                </div>
+            </div>
+            <ul class="sidebar-menu">
+                <li class="menu-item">
+                    <a href="/dashboard">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/machines">
+                        <i class="fas fa-cogs"></i>
+                        <span>Machines</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/categories">
+                        <i class="fas fa-tags"></i>
+                        <span>Catégories</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/alerts">
+                        <i class="fas fa-bell"></i>
+                        <span>Alertes</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/repairs">
+                        <i class="fas fa-tools"></i>
+                        <span>Réparations</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/reports">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Rapports</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/calendar">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Calendrier</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/inventory">
+                        <i class="fas fa-boxes"></i>
+                        <span>Stock</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/tickets">
+                        <i class="fas fa-ticket-alt"></i>
+                        <span>Tickets</span>
+                    </a>
+                </li>
+                <li class="menu-item active">
+                    <a href="/users">
+                        <i class="fas fa-users"></i>
+                        <span>Utilisateurs</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/ent">
+                        <i class="fas fa-building"></i>
+                        <span>Entreprises</span>
+                    </a>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <form th:action="@{/logout}" method="post" style="width: 100%;">
+                    <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Déconnexion
+                    </button>
+                </form>
+            </div>
+        </nav>
+
+        <!-- Contenu principal -->
+        <main class="main-content">
+            <div class="content-page active">
+                <div class="page-header">
+                    <h1><i class="fas fa-users"></i> Gestion des Utilisateurs</h1>
+                    <a th:href="@{/users/create}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Ajouter Utilisateur
+                    </a>
+                </div>
+
+                <!-- Messages de succès/erreur -->
+                <div th:if="${success}" class="alert alert-success" style="padding: 1rem; margin-bottom: 1.5rem; border-radius: 8px; background: #d1fae5; color: #065f46; border-left: 4px solid #10b981;">
+                    <i class="fas fa-check-circle"></i>
+                    <span th:text="${success}"></span>
+                </div>
+                <div th:if="${error}" class="alert alert-error" style="padding: 1rem; margin-bottom: 1.5rem; border-radius: 8px; background: #fee2e2; color: #991b1b; border-left: 4px solid #ef4444;">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span th:text="${error}"></span>
+                </div>
+
+                <!-- Debug info -->
+                <div style="padding: 1rem; margin-bottom: 1rem; background: #f3f4f6; border-radius: 8px; font-size: 0.85rem;">
+                    <strong>Debug:</strong> 
+                    Utilisateurs: <span th:text="${users != null ? users.size() : 'null'}"></span> | 
+                    Erreur: <span th:text="${error != null ? error : 'aucune'}"></span>
+                </div>
+
+                <div class="users-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-top: 2rem;">
+                    <div class="user-section" style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
+                        <h2>Liste des Utilisateurs</h2>
+                        
+                        <!-- Liste des utilisateurs -->
+                        <div th:if="${users != null}">
+                            <div th:if="${!users.isEmpty()}">
+                                <div class="user-item" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid #e5e7eb; margin-bottom: 1rem;" th:each="user : ${users}">
+                                    <div class="user-info" style="flex: 1;">
+                                        <h3 style="margin: 0 0 0.5rem 0; color: var(--text-primary);">
+                                            <span th:text="${user['nom']} ?: 'Sans nom'"></span>
+                                        </h3>
+                                        <p style="margin: 0.25rem 0; color: var(--text-secondary); font-size: 0.9rem;">
+                                            <i class="fas fa-envelope"></i> <span th:text="${user['email']} ?: 'N/A'"></span>
+                                        </p>
+                                        <p style="margin: 0.25rem 0; color: var(--text-secondary); font-size: 0.9rem;">
+                                            <i class="fas fa-user"></i> <span th:text="${user['nomUtilisateur']} ?: 'N/A'"></span>
+                                        </p>
+                                        <p th:if="${user['telephone']}" style="margin: 0.25rem 0; color: var(--text-secondary); font-size: 0.9rem;">
+                                            <i class="fas fa-phone"></i> <span th:text="${user['telephone']}"></span>
+                                        </p>
+                                        <div class="user-actions" style="margin-top: 0.5rem; display: flex; gap: 0.5rem;">
+                                            <a th:href="@{/users/{userId}/edit(userId=${user['userId']})}" class="btn btn-sm btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                                                <i class="fas fa-edit"></i> Modifier
+                                            </a>
+                                            <form th:action="@{/users/{userId}/delete(userId=${user['userId']})}" method="post" style="display: inline;" 
+                                                  onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?');">
+                                                <button type="submit" class="btn btn-sm btn-danger" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                                                    <i class="fas fa-trash"></i> Supprimer
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end; margin-left: 1rem;">
+                                        <span th:switch="${user['role']}" style="padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; white-space: nowrap;">
+                                            <span th:case="'superadmin'" style="background: #dc2626; color: white; display: inline-block; padding: 0.25rem 0.75rem; border-radius: 20px;">Superadmin</span>
+                                            <span th:case="'admin'" style="background: #2563eb; color: white; display: inline-block; padding: 0.25rem 0.75rem; border-radius: 20px;">Administrateur</span>
+                                            <span th:case="'technicien'" style="background: #059669; color: white; display: inline-block; padding: 0.25rem 0.75rem; border-radius: 20px;">Technicien</span>
+                                            <span th:case="*" style="background: #6b7280; color: white; display: inline-block; padding: 0.25rem 0.75rem; border-radius: 20px;">Utilisateur</span>
+                                        </span>
+                                        <span th:switch="${user['statut']}" style="padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; white-space: nowrap;">
+                                            <span th:case="'actif'" style="background: #10b981; color: white; display: inline-block; padding: 0.25rem 0.75rem; border-radius: 20px;">Actif</span>
+                                            <span th:case="*" style="background: #ef4444; color: white; display: inline-block; padding: 0.25rem 0.75rem; border-radius: 20px;">Inactif</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div th:if="${users.isEmpty()}" style="text-align: center; padding: 2rem;">
+                                <i class="fas fa-users" style="font-size: 3rem; color: #d1d5db; margin-bottom: 1rem;"></i>
+                                <p style="color: var(--text-secondary); font-size: 1.1rem; margin: 0;">
+                                    Aucun utilisateur trouvé
+                                </p>
+                            </div>
+                        </div>
+                        <div th:if="${users == null}" style="text-align: center; padding: 2rem;">
+                            <i class="fas fa-users" style="font-size: 3rem; color: #d1d5db; margin-bottom: 1rem;"></i>
+                            <p style="color: var(--text-secondary); font-size: 1.1rem; margin: 0;">
+                                Aucun utilisateur trouvé
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="user-section" style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
+                        <h2>Statistiques par Rôle</h2>
+                        <div class="stats-container" style="display: flex; flex-direction: column; gap: 1rem;" th:if="${roleStats != null}">
+                            <div class="stat-item" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #f9fafb; border-radius: 8px;" th:each="stat : ${roleStats}">
+                                <div>
+                                    <h4 style="margin: 0;" th:text="${stat.key == 'superadmin'} ? 'Superadmin' : 
+                                                                     (${stat.key == 'admin'} ? 'Administrateur' : 
+                                                                     (${stat.key == 'technicien'} ? 'Technicien' : 'Utilisateur'))"></h4>
+                                    <p style="margin: 0.25rem 0 0 0; color: var(--text-secondary); font-size: 0.9rem;">Utilisateurs</p>
+                                </div>
+                                <div style="font-size: 1.5rem; font-weight: bold; color: var(--primary-color);" 
+                                     th:text="${stat.value}"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+</body>
+</html>

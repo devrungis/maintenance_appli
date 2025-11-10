@@ -1,0 +1,2 @@
+// Inventory specific JavaScript
+

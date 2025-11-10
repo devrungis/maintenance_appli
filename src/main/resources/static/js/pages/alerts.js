@@ -1,0 +1,2 @@
+// Alerts specific JavaScript
+

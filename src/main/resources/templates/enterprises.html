@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Entreprises - Application de Maintenance</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link rel="stylesheet" th:href="@{/css/pages/enterprises.css}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Header mobile -->
+    <header class="mobile-header">
+        <div class="header-content">
+            <button class="menu-toggle" id="menuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div style="flex: 1;">
+                <h1 class="app-title">
+                    <i class="fas fa-wrench"></i>
+                    Maintenance
+                </h1>
+            </div>
+        </div>
+    </header>
+
+    <!-- Overlay pour sidebar mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Application principale -->
+    <div id="mainApp" class="page">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-wrench"></i>
+                <h2>Maintenance</h2>
+            </div>
+            <div id="currentEnterpriseInfo" style="padding: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.85rem; color: rgba(255, 255, 255, 0.8);">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <i class="fas fa-building"></i>
+                    <strong id="currentEnterpriseName">-</strong>
+                </div>
+            </div>
+            <ul class="sidebar-menu">
+                <li class="menu-item">
+                    <a href="/dashboard">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/machines">
+                        <i class="fas fa-cogs"></i>
+                        <span>Machines</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/categories">
+                        <i class="fas fa-tags"></i>
+                        <span>Catégories</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/alerts">
+                        <i class="fas fa-bell"></i>
+                        <span>Alertes</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/repairs">
+                        <i class="fas fa-tools"></i>
+                        <span>Réparations</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/reports">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Rapports</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/calendar">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Calendrier</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/inventory">
+                        <i class="fas fa-boxes"></i>
+                        <span>Stock</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/tickets">
+                        <i class="fas fa-ticket-alt"></i>
+                        <span>Tickets</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/users">
+                        <i class="fas fa-users"></i>
+                        <span>Utilisateurs</span>
+                    </a>
+                </li>
+                <li class="menu-item active">
+                    <a href="/enterprises">
+                        <i class="fas fa-building"></i>
+                        <span>Entreprises</span>
+                    </a>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <form th:action="@{/logout}" method="post" style="width: 100%;">
+                    <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Déconnexion
+                    </button>
+                </form>
+            </div>
+        </nav>
+
+        <!-- Contenu principal -->
+        <main class="main-content">
+            <div class="content-page active">
+                <div class="page-header">
+                    <h1><i class="fas fa-building"></i> Gestion des Entreprises</h1>
+                    <a th:href="@{/enterprises/create}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Ajouter Entreprise
+                    </a>
+                </div>
+
+                <!-- Messages de succès/erreur -->
+                <div th:if="${success}" class="alert alert-success" style="padding: 1rem; margin-bottom: 1.5rem; border-radius: 8px; background: #d1fae5; color: #065f46; border-left: 4px solid #10b981;">
+                    <i class="fas fa-check-circle"></i>
+                    <span th:text="${success}"></span>
+                </div>
+                <div th:if="${error}" class="alert alert-error" style="padding: 1rem; margin-bottom: 1.5rem; border-radius: 8px; background: #fee2e2; color: #991b1b; border-left: 4px solid #ef4444;">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span th:text="${error}"></span>
+                </div>
+
+                <!-- Debug info -->
+                <div style="padding: 1rem; margin-bottom: 1rem; background: #f3f4f6; border-radius: 8px; font-size: 0.85rem;">
+                    <strong>Debug:</strong> 
+                    Entreprises: <span th:text="${enterprises != null ? enterprises.size() : 'null'}"></span> | 
+                    Erreur: <span th:text="${error != null ? error : 'aucune'}"></span>
+                </div>
+
+                <div class="enterprises-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 2rem; margin-top: 2rem;">
+                    <!-- Liste des entreprises -->
+                    <div th:if="${enterprises != null}">
+                        <div th:if="${!enterprises.isEmpty()}">
+                            <div class="enterprise-card" style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); margin-bottom: 1rem;" th:each="entreprise : ${enterprises}">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                                    <h3 style="margin: 0; color: var(--text-primary); flex: 1;" th:text="${entreprise['nom']} ?: 'Sans nom'"></h3>
+                                    <div class="enterprise-actions" style="display: flex; gap: 0.5rem; margin-left: 1rem;">
+                                        <a th:href="@{/enterprises/{entrepriseId}/edit(entrepriseId=${entreprise['entrepriseId']})}" class="btn btn-sm btn-primary" style="padding: 0.5rem 1rem;">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form th:action="@{/enterprises/{entrepriseId}/delete(entrepriseId=${entreprise['entrepriseId']})}" method="post" style="display: inline;" 
+                                              onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette entreprise ?');">
+                                            <button type="submit" class="btn btn-sm btn-danger" style="padding: 0.5rem 1rem;">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                <div class="enterprise-info">
+                                    <p th:if="${entreprise['adresse']}" style="margin: 0.5rem 0; color: var(--text-secondary);">
+                                        <i class="fas fa-map-marker-alt"></i> <span th:text="${entreprise['adresse']}"></span>
+                                    </p>
+                                    <p th:if="${entreprise['numero']}" style="margin: 0.5rem 0; color: var(--text-secondary);">
+                                        <i class="fas fa-phone"></i> <span th:text="${entreprise['numero']}"></span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div th:if="${enterprises.isEmpty()}" style="grid-column: 1 / -1;">
+                            <div style="background: white; border-radius: 12px; padding: 2rem; text-align: center; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
+                                <i class="fas fa-building" style="font-size: 3rem; color: #d1d5db; margin-bottom: 1rem;"></i>
+                                <p style="color: var(--text-secondary); font-size: 1.1rem; margin: 0;">
+                                    Aucune entreprise trouvée
+                                </p>
+                                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.5rem;">
+                                    Cliquez sur "Ajouter Entreprise" pour créer votre première entreprise
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div th:if="${enterprises == null}" style="grid-column: 1 / -1;">
+                        <div style="background: white; border-radius: 12px; padding: 2rem; text-align: center; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
+                            <i class="fas fa-building" style="font-size: 3rem; color: #d1d5db; margin-bottom: 1rem;"></i>
+                            <p style="color: var(--text-secondary); font-size: 1.1rem; margin: 0;">
+                                Aucune entreprise trouvée
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+</body>
+</html>
+
+
