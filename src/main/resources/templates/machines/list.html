@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestion des Machines</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #1d4ed8;
+            --danger: #ef4444;
+            --border: #e5e7eb;
+            --bg: #f8fafc;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: #111827;
+        }
+        .page {
+            display: flex;
+            min-height: 100vh;
+        }
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .filters {
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        .filters select, .filters button {
+            padding: 0.65rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: white;
+            font-size: 0.95rem;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+            padding: 0.75rem 1.5rem;
+            border: none;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: #111827;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #f1f5f9;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .photos {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+        .photos a {
+            color: var(--primary);
+            font-size: 0.85rem;
+            text-decoration: none;
+            word-break: break-all;
+        }
+        .actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+        }
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid var(--danger);
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            background: white;
+            border-radius: 12px;
+            border: 1px dashed var(--border);
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <th:block th:replace="fragments/menu :: menu"></th:block>
+    <main class="main-content">
+        <div class="page-header">
+            <div>
+                <h1>Gestion des Machines</h1>
+                <p>Ajoutez, consultez et gérez les machines par entreprise.</p>
+            </div>
+            <div th:if="${selectedEntrepriseId}">
+                <a th:href="@{|/machines/create?entrepriseId=${selectedEntrepriseId}|}" class="btn btn-primary">
+                    <i class="fa fa-plus"></i>
+                    Nouvelle machine
+                </a>
+            </div>
+        </div>
+
+        <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+        <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+        <form method="get" action="#" class="filters">
+            <label for="entrepriseId">Entreprise</label>
+            <select id="entrepriseId" name="entrepriseId" onchange="this.form.submit()">
+                <option value="">-- Sélectionnez une entreprise --</option>
+                <option th:each="ent : ${enterprises}"
+                        th:value="${ent.entrepriseId}"
+                        th:selected="${ent.entrepriseId == selectedEntrepriseId}"
+                        th:text="${ent.nom}">Entreprise</option>
+            </select>
+            <noscript>
+                <button type="submit" class="btn btn-outline">Rechercher</button>
+            </noscript>
+        </form>
+
+        <div th:if="${#lists.isEmpty(machines)}">
+            <div class="empty-state">
+                <i class="fa fa-box-open fa-2x" style="margin-bottom: 0.75rem;"></i>
+                <p th:if="${selectedEntrepriseId}">Aucune machine enregistrée pour cette entreprise.</p>
+                <p th:unless="${selectedEntrepriseId}">Choisissez d'abord une entreprise pour afficher ses machines.</p>
+            </div>
+        </div>
+
+        <div th:unless="${#lists.isEmpty(machines)}">
+            <table>
+                <thead>
+                <tr>
+                    <th>Nom</th>
+                    <th>N° de série</th>
+                    <th>Photos</th>
+                    <th>Emplacement</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="machine : ${machines}">
+                    <td>
+                        <strong th:text="${machine.nom}">Nom machine</strong>
+                        <div class="badge" th:if="${machine.photos != null}" th:text="${machine.photos.size()} + ' photo(s)'">
+                            0 photo
+                        </div>
+                    </td>
+                    <td th:text="${machine.numeroSerie}">N° série</td>
+                    <td>
+                        <div class="photos" th:if="${machine.photos != null}">
+                            <div th:each="photo, iterStat : ${machine.photos}" style="display: flex; align-items: center; gap: 0.5rem;">
+                                <img th:src="${photo}" alt="Photo machine" style="width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid #e5e7eb;">
+                                <a th:href="${photo}"
+                                   th:text="'Photo ' + ${iterStat.index + 1}"
+                                   target="_blank"
+                                   rel="noopener">
+                                    Photo
+                                </a>
+                            </div>
+                        </div>
+                    </td>
+                    <td th:text="${machine.emplacement}">Emplacement</td>
+                    <td th:text="${machine.notes}">Notes</td>
+                    <td>
+                        <div class="actions">
+                            <a th:href="@{|/machines/${selectedEntrepriseId}/${machine.machineId}/edit|}" class="btn btn-outline btn-sm">
+                                <i class="fa fa-pen"></i> Modifier
+                            </a>
+                            <form th:action="@{|/machines/${selectedEntrepriseId}/${machine.machineId}/delete|}" method="post"
+                                  onsubmit="return confirm('Confirmer la suppression de cette machine ?');">
+                                <button type="submit" class="btn btn-outline btn-sm" style="color: var(--danger); border-color: var(--danger);">
+                                    <i class="fa fa-trash"></i> Supprimer
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+</body>
+</html>
+

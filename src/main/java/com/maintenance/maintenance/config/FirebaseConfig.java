@@ -24,10 +24,10 @@ public class FirebaseConfig {
 
     private final ResourceLoader resourceLoader;
 
-    @Value("${firebase.credentials.path:}")
+    @Value("${firebase.credentials.path:classpath:maintenance-3c65e-firebase-adminsdk-fbsvc-0942215f68.json}")
     private String serviceAccountPath;
 
-    @Value("${firebase.database.url:}")
+    @Value("${firebase.realtime.database.url:}")
     private String databaseUrl;
 
     public FirebaseConfig(ResourceLoader resourceLoader) {
@@ -37,12 +37,14 @@ public class FirebaseConfig {
     @Bean
     public FirebaseApp firebaseApp() throws IOException {
         if (FirebaseApp.getApps().isEmpty()) {
-            FirebaseOptions options = FirebaseOptions.builder()
-                .setCredentials(resolveCredentials())
-                .setDatabaseUrl(databaseUrl)
-                .build();
+            FirebaseOptions.Builder builder = FirebaseOptions.builder()
+                .setCredentials(resolveCredentials());
 
-            return FirebaseApp.initializeApp(options);
+            if (StringUtils.hasText(databaseUrl)) {
+                builder.setDatabaseUrl(databaseUrl);
+            }
+
+            return FirebaseApp.initializeApp(builder.build());
         }
         return FirebaseApp.getInstance();
     }
@@ -51,11 +53,15 @@ public class FirebaseConfig {
         IOException lastError = null;
 
         if (StringUtils.hasText(serviceAccountPath)) {
-            Path path = Paths.get(serviceAccountPath);
-            if (Files.exists(path)) {
-                try (InputStream serviceAccount = Files.newInputStream(path)) {
-                    return GoogleCredentials.fromStream(serviceAccount);
+            try {
+                Path path = Paths.get(serviceAccountPath);
+                if (Files.exists(path)) {
+                    try (InputStream serviceAccount = Files.newInputStream(path)) {
+                        return GoogleCredentials.fromStream(serviceAccount);
+                    }
                 }
+            } catch (Exception ignored) {
+                // Peut être un chemin de type classpath:...
             }
 
             Resource resource = resourceLoader.getResource(serviceAccountPath);
@@ -74,7 +80,7 @@ public class FirebaseConfig {
 
         throw new IOException(
             "Firebase credentials non configurées. Définissez la propriété 'firebase.credentials.path' " +
-            "ou la variable d'environnement GOOGLE_APPLICATION_CREDENTIALS.",
+            "ou la variable d'environnement GOOGLE_APPLICATION_CREDENTIALS. Fichier essayé: " + serviceAccountPath,
             lastError
         );
     }
@@ -96,4 +102,3 @@ public class FirebaseConfig {
         return firebaseDatabase.getReference();
     }
 }
-

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Nouvelle Machine</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f8fafc;
+            color: #111827;
+        }
+        .page {
+            display: flex;
+            min-height: 100vh;
+        }
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+            max-width: 720px;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            border: 1px solid #d1d5db;
+            font-size: 1rem;
+            background: #fff;
+            transition: border-color 0.2s;
+        }
+        input:focus, textarea:focus, select:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+        textarea {
+            min-height: 140px;
+            resize: vertical;
+        }
+        .photos-group {
+            display: grid;
+            gap: 1rem;
+        }
+        .form-actions {
+            margin-top: 2rem;
+            display: flex;
+            gap: 1rem;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-radius: 10px;
+            padding: 0.85rem 1.75rem;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #111827;
+        }
+        .help-text {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-top: 0.4rem;
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <th:block th:replace="fragments/menu :: menu"></th:block>
+    <main class="main-content">
+        <div class="page-header">
+            <div>
+                <h1>Ajouter une machine</h1>
+                <p>Renseignez les informations nécessaires pour référencer la machine.</p>
+            </div>
+            <a th:href="@{|/machines?entrepriseId=${machineForm.entrepriseId}|}" class="btn btn-secondary">
+                <i class="fa fa-arrow-left"></i> Retour
+            </a>
+        </div>
+
+        <div class="card">
+            <form th:action="@{/machines}" th:object="${machineForm}" method="post" enctype="multipart/form-data">
+                <input type="hidden" th:field="*{entrepriseId}">
+
+                <div class="form-grid">
+                    <div>
+                        <label for="nom">Nom de la machine <span style="color:#ef4444;">*</span></label>
+                        <input id="nom" type="text" th:field="*{nom}" placeholder="Ex : Press hydraulique A32" required>
+                    </div>
+                    <div>
+                        <label for="numeroSerie">Numéro de série</label>
+                        <input id="numeroSerie" type="text" th:field="*{numeroSerie}" placeholder="Ex : SN-23456789">
+                    </div>
+                    <div>
+                        <label for="emplacement">Emplacement</label>
+                        <input id="emplacement" type="text" th:field="*{emplacement}" placeholder="Ex : Atelier 2, allée C">
+                    </div>
+                </div>
+
+                <div class="photos-group" style="margin-top: 2rem;">
+                    <label for="photoFiles">Photos de la machine</label>
+                    <input id="photoFiles" type="file" name="photoFiles" accept="image/*" multiple>
+                    <p class="help-text">Sélectionnez jusqu'à 3 images (PNG, JPG...). Les fichiers seront stockés de manière sécurisée et accessibles depuis n'importe quel poste.</p>
+                </div>
+
+                <div style="margin-top: 2rem;">
+                    <label for="notes">Notes / informations complémentaires</label>
+                    <textarea id="notes" th:field="*{notes}" placeholder="Ajoutez des précisions : caractéristiques, état, remarques..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa fa-save"></i> Enregistrer
+                    </button>
+                    <a th:href="@{|/machines?entrepriseId=${machineForm.entrepriseId}|}" class="btn btn-secondary">
+                        Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+</body>
+</html>
+

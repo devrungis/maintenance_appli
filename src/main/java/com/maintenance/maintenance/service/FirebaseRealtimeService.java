@@ -4,6 +4,7 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.ValueEventListener;
+import com.maintenance.maintenance.model.entity.Machine;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -818,6 +819,278 @@ public class FirebaseRealtimeService {
         } catch (Exception e) {
             throw new Exception("Timeout ou erreur lors de la récupération de l'entreprise");
         }
+    }
+
+    /**
+     * Récupère l'ensemble des machines pour une entreprise
+     */
+    public List<Machine> getMachinesForEnterprise(String entrepriseId) throws Exception {
+        CompletableFuture<List<Machine>> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises")
+            .child(entrepriseId)
+            .child("machines")
+            .addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot snapshot) {
+                    try {
+                        List<Machine> machines = new ArrayList<>();
+                        if (snapshot.exists()) {
+                            for (DataSnapshot machineSnapshot : snapshot.getChildren()) {
+                                String machineId = machineSnapshot.getKey();
+                                if (machineId != null && !machineId.startsWith("_")) {
+                                    machines.add(mapMachineSnapshot(machineSnapshot, entrepriseId, machineId));
+                                }
+                            }
+                        }
+                        future.complete(machines);
+                    } catch (Exception e) {
+                        future.completeExceptionally(e);
+                    } finally {
+                        latch.countDown();
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError error) {
+                    future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
+                    latch.countDown();
+                }
+            });
+
+        try {
+            boolean completed = latch.await(15, TimeUnit.SECONDS);
+            if (!completed) {
+                throw new Exception("Timeout lors de la récupération des machines (15 secondes)");
+            }
+            return future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Interruption lors de la récupération des machines: " + e.getMessage());
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la récupération des machines: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Récupère une machine spécifique pour une entreprise
+     */
+    public Machine getMachineById(String entrepriseId, String machineId) throws Exception {
+        CompletableFuture<Machine> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises")
+            .child(entrepriseId)
+            .child("machines")
+            .child(machineId)
+            .addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot snapshot) {
+                    try {
+                        if (snapshot.exists()) {
+                            future.complete(mapMachineSnapshot(snapshot, entrepriseId, machineId));
+                        } else {
+                            future.complete(null);
+                        }
+                    } catch (Exception e) {
+                        future.completeExceptionally(e);
+                    } finally {
+                        latch.countDown();
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError error) {
+                    future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
+                    latch.countDown();
+                }
+            });
+
+        try {
+            boolean completed = latch.await(10, TimeUnit.SECONDS);
+            if (!completed) {
+                throw new Exception("Timeout lors de la récupération de la machine (10 secondes)");
+            }
+            return future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Interruption lors de la récupération de la machine: " + e.getMessage());
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la récupération de la machine: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Crée une machine sous une entreprise
+     */
+    public String createMachine(String entrepriseId, Machine machine) throws Exception {
+        try {
+            String machineId = databaseReference.child("entreprises")
+                .child(entrepriseId)
+                .child("machines")
+                .push()
+                .getKey();
+
+            if (machineId == null) {
+                throw new Exception("Impossible de générer un identifiant pour la machine");
+            }
+
+            Map<String, Object> machineData = serializeMachine(machine);
+            long now = System.currentTimeMillis();
+            machineData.put("dateCreation", now);
+            machineData.put("dateMiseAJour", now);
+
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            CountDownLatch latch = new CountDownLatch(1);
+
+            databaseReference.child("entreprises")
+                .child(entrepriseId)
+                .child("machines")
+                .child(machineId)
+                .setValue(machineData, (error, ref) -> {
+                    if (error != null) {
+                        future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
+                    } else {
+                        future.complete(null);
+                    }
+                    latch.countDown();
+                });
+
+            boolean completed = latch.await(10, TimeUnit.SECONDS);
+            if (!completed) {
+                throw new Exception("Timeout lors de la création de la machine (10 secondes)");
+            }
+            future.get();
+            return machineId;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Interruption lors de la création de la machine: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Met à jour une machine existante
+     */
+    public void updateMachine(String entrepriseId, String machineId, Machine machine) throws Exception {
+        try {
+            Map<String, Object> machineData = serializeMachine(machine);
+            machineData.put("dateMiseAJour", System.currentTimeMillis());
+
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            CountDownLatch latch = new CountDownLatch(1);
+
+            databaseReference.child("entreprises")
+                .child(entrepriseId)
+                .child("machines")
+                .child(machineId)
+                .updateChildren(machineData, (error, ref) -> {
+                    if (error != null) {
+                        future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
+                    } else {
+                        future.complete(null);
+                    }
+                    latch.countDown();
+                });
+
+            boolean completed = latch.await(10, TimeUnit.SECONDS);
+            if (!completed) {
+                throw new Exception("Timeout lors de la mise à jour de la machine (10 secondes)");
+            }
+            future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Interruption lors de la mise à jour de la machine: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Supprime une machine
+     */
+    public void deleteMachine(String entrepriseId, String machineId) throws Exception {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises")
+            .child(entrepriseId)
+            .child("machines")
+            .child(machineId)
+            .removeValue((error, ref) -> {
+                if (error != null) {
+                    future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
+                } else {
+                    future.complete(null);
+                }
+                latch.countDown();
+            });
+
+        try {
+            boolean completed = latch.await(10, TimeUnit.SECONDS);
+            if (!completed) {
+                throw new Exception("Timeout lors de la suppression de la machine (10 secondes)");
+            }
+            future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Interruption lors de la suppression de la machine: " + e.getMessage());
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la suppression de la machine: " + e.getMessage());
+        }
+    }
+
+    private Machine mapMachineSnapshot(DataSnapshot snapshot, String entrepriseId, String machineId) {
+        Machine machine = new Machine();
+        machine.setMachineId(machineId);
+        machine.setEntrepriseId(entrepriseId);
+        machine.setNom(snapshot.child("nom").getValue() != null ? snapshot.child("nom").getValue().toString() : "");
+        machine.setNumeroSerie(snapshot.child("numeroSerie").getValue() != null ? snapshot.child("numeroSerie").getValue().toString() : "");
+        machine.setEmplacement(snapshot.child("emplacement").getValue() != null ? snapshot.child("emplacement").getValue().toString() : "");
+        machine.setNotes(snapshot.child("notes").getValue() != null ? snapshot.child("notes").getValue().toString() : "");
+
+        Object rawPhotos = snapshot.child("photos").getValue();
+        List<String> photos = new ArrayList<>();
+        if (rawPhotos instanceof List<?> list) {
+            for (Object value : list) {
+                if (value instanceof String photo && !photo.isBlank()) {
+                    photos.add(photo);
+                }
+            }
+        } else if (rawPhotos instanceof Map<?, ?> map) {
+            List<String> keys = new ArrayList<>();
+            for (Object key : map.keySet()) {
+                if (key instanceof String stringKey) {
+                    keys.add(stringKey);
+                }
+            }
+            keys.sort(String::compareTo);
+            for (String key : keys) {
+                Object value = map.get(key);
+                if (value instanceof String photo && !photo.isBlank()) {
+                    photos.add(photo);
+                }
+            }
+        } else if (rawPhotos instanceof String photo && !photo.isBlank()) {
+            photos.add(photo);
+        }
+        machine.setPhotos(photos);
+
+        if (snapshot.child("dateCreation").getValue() instanceof Number numberCreation) {
+            machine.setDateCreation(numberCreation.longValue());
+        }
+        if (snapshot.child("dateMiseAJour").getValue() instanceof Number numberUpdate) {
+            machine.setDateMiseAJour(numberUpdate.longValue());
+        }
+        return machine;
+    }
+
+    private Map<String, Object> serializeMachine(Machine machine) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("nom", machine.getNom());
+        data.put("numeroSerie", machine.getNumeroSerie());
+        data.put("emplacement", machine.getEmplacement());
+        data.put("notes", machine.getNotes());
+        data.put("photos", machine.getPhotos());
+        return data;
     }
 
     /**

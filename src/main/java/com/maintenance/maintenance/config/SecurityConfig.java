@@ -42,7 +42,7 @@ public class SecurityConfig {
                     .requestMatchers("/ent/**").hasRole("SUPERADMIN") // Seul le superadmin peut accéder aux pages de gestion
                     .requestMatchers("/users/create", "/users", "/users/*/delete").hasRole("SUPERADMIN") // Seul le superadmin peut créer/lister/supprimer des utilisateurs
                     .requestMatchers("/users/*/edit").authenticated() // Tout utilisateur authentifié peut modifier son profil (contrôle dans le controller)
-                    .requestMatchers("/dashboard", "/machines", "/categories", "/alerts", "/reports", "/calendar", "/inventory", "/tickets").authenticated()
+                    .requestMatchers("/dashboard", "/machines", "/machines/**", "/categories", "/alerts", "/reports", "/calendar", "/inventory", "/tickets").authenticated()
                     .anyRequest().authenticated();
                 System.out.println("=== SecurityConfig: Autorisations configurées ===");
             })

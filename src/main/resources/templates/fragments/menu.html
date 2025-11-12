@@ -115,7 +115,7 @@
                     <span>Dashboard</span>
                 </a>
             </li>
-            <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/machines' ? 'active' : ''}">
+            <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI != null and #httpServletRequest.requestURI.startsWith('/machines') ? 'active' : ''}">
                 <a th:href="@{/machines}">
                     <i class="fas fa-cogs"></i>
                     <span>Machines</span>

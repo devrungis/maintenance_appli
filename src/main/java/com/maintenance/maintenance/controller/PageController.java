@@ -28,11 +28,6 @@ public class PageController {
         return "index";
     }
 
-    @GetMapping("/machines")
-    public String machines() {
-        return "index";
-    }
-
     @GetMapping("/categories")
     public String categories() {
         return "index";
