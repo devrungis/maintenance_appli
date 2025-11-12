@@ -6,36 +6,77 @@ import com.google.firebase.FirebaseOptions;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.util.StringUtils;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @Configuration
-
 public class FirebaseConfig {
 
-    private static final String SERVICE_ACCOUNT_FILE =
-        "C:\\Users\\Admin\\Downloads\\maintenance (1)\\maintenance\\src\\main\\resources\\maintenance-3c65e-firebase-adminsdk-fbsvc-0942215f68.json";
+    private final ResourceLoader resourceLoader;
 
-    private static final String DATABASE_URL =
-        "https://maintenance-3c65e-default-rtdb.europe-west1.firebasedatabase.app/";
+    @Value("${firebase.credentials.path:}")
+    private String serviceAccountPath;
+
+    @Value("${firebase.database.url:}")
+    private String databaseUrl;
+
+    public FirebaseConfig(ResourceLoader resourceLoader) {
+        this.resourceLoader = resourceLoader;
+    }
 
     @Bean
     public FirebaseApp firebaseApp() throws IOException {
         if (FirebaseApp.getApps().isEmpty()) {
-            try (InputStream serviceAccount = new FileInputStream(SERVICE_ACCOUNT_FILE)) {
-                FirebaseOptions options = FirebaseOptions.builder()
-                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                    .setDatabaseUrl(DATABASE_URL)
-                    .build();
+            FirebaseOptions options = FirebaseOptions.builder()
+                .setCredentials(resolveCredentials())
+                .setDatabaseUrl(databaseUrl)
+                .build();
 
-                return FirebaseApp.initializeApp(options);
-            }
+            return FirebaseApp.initializeApp(options);
         }
         return FirebaseApp.getInstance();
+    }
+
+    private GoogleCredentials resolveCredentials() throws IOException {
+        IOException lastError = null;
+
+        if (StringUtils.hasText(serviceAccountPath)) {
+            Path path = Paths.get(serviceAccountPath);
+            if (Files.exists(path)) {
+                try (InputStream serviceAccount = Files.newInputStream(path)) {
+                    return GoogleCredentials.fromStream(serviceAccount);
+                }
+            }
+
+            Resource resource = resourceLoader.getResource(serviceAccountPath);
+            if (resource.exists()) {
+                try (InputStream serviceAccount = resource.getInputStream()) {
+                    return GoogleCredentials.fromStream(serviceAccount);
+                }
+            }
+        }
+
+        try {
+            return GoogleCredentials.getApplicationDefault();
+        } catch (IOException ex) {
+            lastError = ex;
+        }
+
+        throw new IOException(
+            "Firebase credentials non configurées. Définissez la propriété 'firebase.credentials.path' " +
+            "ou la variable d'environnement GOOGLE_APPLICATION_CREDENTIALS.",
+            lastError
+        );
     }
 
     @Bean
@@ -55,3 +96,4 @@ public class FirebaseConfig {
         return firebaseDatabase.getReference();
     }
 }
+
