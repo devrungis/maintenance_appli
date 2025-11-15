@@ -243,7 +243,7 @@ public class FirebaseRealtimeService {
 
             // Collections vides initialisées
             entrepriseStructure.put("machines", new HashMap<>());
-            entrepriseStructure.put("categories", new HashMap<>());
+            entrepriseStructure.put("categorie", new HashMap<>());
             entrepriseStructure.put("reparations", new HashMap<>());
             entrepriseStructure.put("maintenances", new HashMap<>());
             entrepriseStructure.put("tickets", new HashMap<>());
@@ -840,7 +840,11 @@ public class FirebaseRealtimeService {
                             for (DataSnapshot machineSnapshot : snapshot.getChildren()) {
                                 String machineId = machineSnapshot.getKey();
                                 if (machineId != null && !machineId.startsWith("_")) {
-                                    machines.add(mapMachineSnapshot(machineSnapshot, entrepriseId, machineId));
+                                    Machine machine = mapMachineSnapshot(machineSnapshot, entrepriseId, machineId);
+                                    // Filtrer les machines supprimées (soft delete)
+                                    if (machine.getSupprime() == null || !machine.getSupprime()) {
+                                        machines.add(machine);
+                                    }
                                 }
                             }
                         }
@@ -1046,6 +1050,74 @@ public class FirebaseRealtimeService {
         machine.setNumeroSerie(snapshot.child("numeroSerie").getValue() != null ? snapshot.child("numeroSerie").getValue().toString() : "");
         machine.setEmplacement(snapshot.child("emplacement").getValue() != null ? snapshot.child("emplacement").getValue().toString() : "");
         machine.setNotes(snapshot.child("notes").getValue() != null ? snapshot.child("notes").getValue().toString() : "");
+        machine.setCategoryId(readLong(snapshot.child("categoryId")));
+        machine.setCategoryName(readString(snapshot.child("categoryName")));
+        machine.setCategoryDescription(readString(snapshot.child("categoryDescription")));
+        
+        Object operationnelValue = snapshot.child("operationnel").getValue();
+        if (operationnelValue instanceof Boolean) {
+            machine.setOperationnel((Boolean) operationnelValue);
+        } else if (operationnelValue != null) {
+            machine.setOperationnel(Boolean.parseBoolean(operationnelValue.toString()));
+        } else {
+            machine.setOperationnel(true); // Par défaut opérationnel
+        }
+        
+        Object enReparationValue = snapshot.child("enReparation").getValue();
+        if (enReparationValue instanceof Boolean) {
+            machine.setEnReparation((Boolean) enReparationValue);
+        } else if (enReparationValue != null) {
+            machine.setEnReparation(Boolean.parseBoolean(enReparationValue.toString()));
+        } else {
+            machine.setEnReparation(false); // Par défaut pas en réparation
+        }
+
+        Object enProgrammationValue = snapshot.child("enProgrammation").getValue();
+        if (enProgrammationValue instanceof Boolean) {
+            machine.setEnProgrammation((Boolean) enProgrammationValue);
+        } else if (enProgrammationValue != null) {
+            machine.setEnProgrammation(Boolean.parseBoolean(enProgrammationValue.toString()));
+        } else {
+            machine.setEnProgrammation(false);
+        }
+        
+        machine.setAdresseIP(readString(snapshot.child("adresseIP")));
+        machine.setMachinePrincipaleId(readString(snapshot.child("machinePrincipaleId")));
+        
+        Object estMachineSecoursValue = snapshot.child("estMachineSecours").getValue();
+        if (estMachineSecoursValue instanceof Boolean) {
+            machine.setEstMachineSecours((Boolean) estMachineSecoursValue);
+        } else if (estMachineSecoursValue != null) {
+            machine.setEstMachineSecours(Boolean.parseBoolean(estMachineSecoursValue.toString()));
+        } else {
+            machine.setEstMachineSecours(false); // Par défaut pas une machine de secours
+        }
+        
+        Object estMachineEntrepotValue = snapshot.child("estMachineEntrepot").getValue();
+        if (estMachineEntrepotValue instanceof Boolean) {
+            machine.setEstMachineEntrepot((Boolean) estMachineEntrepotValue);
+        } else if (estMachineEntrepotValue != null) {
+            machine.setEstMachineEntrepot(Boolean.parseBoolean(estMachineEntrepotValue.toString()));
+        } else {
+            machine.setEstMachineEntrepot(false); // Par défaut pas une machine entrepôt
+        }
+        
+        // Suivi des modifications
+        machine.setCreePar(readString(snapshot.child("creePar")));
+        machine.setCreeLe(readLong(snapshot.child("creeLe")));
+        machine.setModifiePar(readString(snapshot.child("modifiePar")));
+        machine.setModifieLe(readLong(snapshot.child("modifieLe")));
+        machine.setSupprimePar(readString(snapshot.child("supprimePar")));
+        machine.setSupprimeLe(readLong(snapshot.child("supprimeLe")));
+        
+        Object supprimeValue = snapshot.child("supprime").getValue();
+        if (supprimeValue instanceof Boolean) {
+            machine.setSupprime((Boolean) supprimeValue);
+        } else if (supprimeValue != null) {
+            machine.setSupprime(Boolean.parseBoolean(supprimeValue.toString()));
+        } else {
+            machine.setSupprime(false);
+        }
 
         Object rawPhotos = snapshot.child("photos").getValue();
         List<String> photos = new ArrayList<>();
@@ -1090,7 +1162,50 @@ public class FirebaseRealtimeService {
         data.put("emplacement", machine.getEmplacement());
         data.put("notes", machine.getNotes());
         data.put("photos", machine.getPhotos());
+        data.put("categoryId", machine.getCategoryId());
+        data.put("categoryName", machine.getCategoryName());
+        data.put("categoryDescription", machine.getCategoryDescription());
+        data.put("operationnel", machine.getOperationnel());
+        data.put("enReparation", machine.getEnReparation());
+        data.put("enProgrammation", machine.getEnProgrammation());
+        data.put("adresseIP", machine.getAdresseIP());
+        data.put("machinePrincipaleId", machine.getMachinePrincipaleId());
+        data.put("estMachineSecours", machine.getEstMachineSecours());
+        data.put("estMachineEntrepot", machine.getEstMachineEntrepot());
+        data.put("creePar", machine.getCreePar());
+        data.put("creeLe", machine.getCreeLe());
+        data.put("modifiePar", machine.getModifiePar());
+        data.put("modifieLe", machine.getModifieLe());
+        data.put("supprimePar", machine.getSupprimePar());
+        data.put("supprimeLe", machine.getSupprimeLe());
+        data.put("supprime", machine.getSupprime());
         return data;
+    }
+
+    private Long readLong(DataSnapshot snapshot) {
+        Object value = snapshot.getValue();
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value instanceof String stringValue) {
+            String trimmed = stringValue.trim();
+            if (!trimmed.isEmpty()) {
+                try {
+                    return Long.parseLong(trimmed);
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+        return null;
+    }
+
+    private String readString(DataSnapshot snapshot) {
+        Object value = snapshot.getValue();
+        if (value == null) {
+            return null;
+        }
+        String stringValue = value.toString().trim();
+        return stringValue.isEmpty() ? null : stringValue;
     }
 
     /**
@@ -1273,6 +1388,630 @@ public class FirebaseRealtimeService {
         } catch (Exception e) {
             throw new Exception("Erreur lors de la suppression complète de l'utilisateur: " + e.getMessage());
         }
+    }
+
+    /**
+     * Récupère tous les stocks pour une entreprise
+     */
+    public List<com.maintenance.maintenance.model.entity.Stock> getStocksForEnterprise(String entrepriseId) throws Exception {
+        CompletableFuture<List<com.maintenance.maintenance.model.entity.Stock>> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises")
+            .child(entrepriseId)
+            .child("stock")
+            .addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot snapshot) {
+                    try {
+                        List<com.maintenance.maintenance.model.entity.Stock> stocks = new ArrayList<>();
+                        if (snapshot.exists()) {
+                            for (DataSnapshot stockSnapshot : snapshot.getChildren()) {
+                                String stockId = stockSnapshot.getKey();
+                                if (stockId != null && !stockId.startsWith("_")) {
+                                    stocks.add(mapStockSnapshot(stockSnapshot, entrepriseId, stockId));
+                                }
+                            }
+                        }
+                        future.complete(stocks);
+                    } catch (Exception e) {
+                        future.completeExceptionally(e);
+                    } finally {
+                        latch.countDown();
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError error) {
+                    future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
+                    latch.countDown();
+                }
+            });
+
+        try {
+            boolean completed = latch.await(15, TimeUnit.SECONDS);
+            if (!completed) {
+                throw new Exception("Timeout lors de la récupération des stocks (15 secondes)");
+            }
+            return future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Interruption lors de la récupération des stocks: " + e.getMessage());
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la récupération des stocks: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Récupère un stock spécifique pour une entreprise
+     */
+    public com.maintenance.maintenance.model.entity.Stock getStockById(String entrepriseId, String stockId) throws Exception {
+        CompletableFuture<com.maintenance.maintenance.model.entity.Stock> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises")
+            .child(entrepriseId)
+            .child("stock")
+            .child(stockId)
+            .addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot snapshot) {
+                    try {
+                        if (snapshot.exists()) {
+                            future.complete(mapStockSnapshot(snapshot, entrepriseId, stockId));
+                        } else {
+                            future.complete(null);
+                        }
+                    } catch (Exception e) {
+                        future.completeExceptionally(e);
+                    } finally {
+                        latch.countDown();
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError error) {
+                    future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
+                    latch.countDown();
+                }
+            });
+
+        try {
+            boolean completed = latch.await(10, TimeUnit.SECONDS);
+            if (!completed) {
+                throw new Exception("Timeout lors de la récupération du stock (10 secondes)");
+            }
+            return future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Interruption lors de la récupération du stock: " + e.getMessage());
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la récupération du stock: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Crée un stock sous une entreprise
+     */
+    public String createStock(String entrepriseId, com.maintenance.maintenance.model.entity.Stock stock) throws Exception {
+        try {
+            String stockId = databaseReference.child("entreprises")
+                .child(entrepriseId)
+                .child("stock")
+                .push()
+                .getKey();
+
+            if (stockId == null) {
+                throw new Exception("Impossible de générer un identifiant pour le stock");
+            }
+
+            // Récupérer le nom de la machine si machineId est fourni
+            if (stock.getMachineId() != null && !stock.getMachineId().trim().isEmpty()) {
+                Machine machine = getMachineById(entrepriseId, stock.getMachineId());
+                if (machine != null) {
+                    stock.setMachineNom(machine.getNom());
+                }
+            }
+
+            Map<String, Object> stockData = serializeStock(stock);
+            long now = System.currentTimeMillis();
+            stockData.put("dateCreation", now);
+            stockData.put("dateMiseAJour", now);
+
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            CountDownLatch latch = new CountDownLatch(1);
+
+            databaseReference.child("entreprises")
+                .child(entrepriseId)
+                .child("stock")
+                .child(stockId)
+                .setValue(stockData, (error, ref) -> {
+                    if (error != null) {
+                        future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
+                    } else {
+                        future.complete(null);
+                    }
+                    latch.countDown();
+                });
+
+            boolean completed = latch.await(10, TimeUnit.SECONDS);
+            if (!completed) {
+                throw new Exception("Timeout lors de la création du stock (10 secondes)");
+            }
+            future.get();
+            return stockId;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Interruption lors de la création du stock: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Met à jour un stock existant
+     */
+    public void updateStock(String entrepriseId, String stockId, com.maintenance.maintenance.model.entity.Stock stock) throws Exception {
+        try {
+            // Récupérer le nom de la machine si machineId est fourni
+            if (stock.getMachineId() != null && !stock.getMachineId().trim().isEmpty()) {
+                Machine machine = getMachineById(entrepriseId, stock.getMachineId());
+                if (machine != null) {
+                    stock.setMachineNom(machine.getNom());
+                }
+            }
+
+            Map<String, Object> stockData = serializeStock(stock);
+            stockData.put("dateMiseAJour", System.currentTimeMillis());
+
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            CountDownLatch latch = new CountDownLatch(1);
+
+            databaseReference.child("entreprises")
+                .child(entrepriseId)
+                .child("stock")
+                .child(stockId)
+                .updateChildren(stockData, (error, ref) -> {
+                    if (error != null) {
+                        future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
+                    } else {
+                        future.complete(null);
+                    }
+                    latch.countDown();
+                });
+
+            boolean completed = latch.await(10, TimeUnit.SECONDS);
+            if (!completed) {
+                throw new Exception("Timeout lors de la mise à jour du stock (10 secondes)");
+            }
+            future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Interruption lors de la mise à jour du stock: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Supprime un stock
+     */
+    public void deleteStock(String entrepriseId, String stockId) throws Exception {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises")
+            .child(entrepriseId)
+            .child("stock")
+            .child(stockId)
+            .removeValue((error, ref) -> {
+                if (error != null) {
+                    future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
+                } else {
+                    future.complete(null);
+                }
+                latch.countDown();
+            });
+
+        try {
+            boolean completed = latch.await(10, TimeUnit.SECONDS);
+            if (!completed) {
+                throw new Exception("Timeout lors de la suppression du stock (10 secondes)");
+            }
+            future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Interruption lors de la suppression du stock: " + e.getMessage());
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la suppression du stock: " + e.getMessage());
+        }
+    }
+
+    private com.maintenance.maintenance.model.entity.Stock mapStockSnapshot(DataSnapshot snapshot, String entrepriseId, String stockId) {
+        com.maintenance.maintenance.model.entity.Stock stock = new com.maintenance.maintenance.model.entity.Stock();
+        stock.setStockId(stockId);
+        stock.setEntrepriseId(entrepriseId);
+        stock.setMachineId(readString(snapshot.child("machineId")));
+        stock.setMachineNom(readString(snapshot.child("machineNom")));
+        stock.setNomProduit(readString(snapshot.child("nomProduit")));
+        stock.setReference(readString(snapshot.child("reference")));
+        stock.setQuantite(readInteger(snapshot.child("quantite")));
+        stock.setUnite(readString(snapshot.child("unite")));
+        stock.setPrixUnitaire(readDouble(snapshot.child("prixUnitaire")));
+        stock.setEmplacement(readString(snapshot.child("emplacement")));
+        stock.setSeuilMinimum(readInteger(snapshot.child("seuilMinimum")));
+        stock.setFournisseur(readString(snapshot.child("fournisseur")));
+        stock.setNotes(readString(snapshot.child("notes")));
+
+        if (snapshot.child("dateCreation").getValue() instanceof Number numberCreation) {
+            stock.setDateCreation(numberCreation.longValue());
+        }
+        if (snapshot.child("dateMiseAJour").getValue() instanceof Number numberUpdate) {
+            stock.setDateMiseAJour(numberUpdate.longValue());
+        }
+        return stock;
+    }
+
+    private Map<String, Object> serializeStock(com.maintenance.maintenance.model.entity.Stock stock) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("machineId", stock.getMachineId());
+        data.put("machineNom", stock.getMachineNom());
+        data.put("nomProduit", stock.getNomProduit());
+        data.put("reference", stock.getReference());
+        data.put("quantite", stock.getQuantite());
+        data.put("unite", stock.getUnite());
+        data.put("prixUnitaire", stock.getPrixUnitaire());
+        data.put("emplacement", stock.getEmplacement());
+        data.put("seuilMinimum", stock.getSeuilMinimum());
+        data.put("fournisseur", stock.getFournisseur());
+        data.put("notes", stock.getNotes());
+        return data;
+    }
+
+    private Integer readInteger(DataSnapshot snapshot) {
+        Object value = snapshot.getValue();
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value instanceof String stringValue) {
+            String trimmed = stringValue.trim();
+            if (!trimmed.isEmpty()) {
+                try {
+                    return Integer.parseInt(trimmed);
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+        return null;
+    }
+
+    private Double readDouble(DataSnapshot snapshot) {
+        Object value = snapshot.getValue();
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        if (value instanceof String stringValue) {
+            String trimmed = stringValue.trim();
+            if (!trimmed.isEmpty()) {
+                try {
+                    return Double.parseDouble(trimmed);
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+        return null;
+    }
+
+    // ========== CATEGORIES METHODS ==========
+    
+    /**
+     * Récupère toutes les catégories depuis Firebase
+     */
+    public List<com.maintenance.maintenance.model.entity.Category> getAllCategories() throws Exception {
+        CompletableFuture<List<com.maintenance.maintenance.model.entity.Category>> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("categorie").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                List<com.maintenance.maintenance.model.entity.Category> categories = new ArrayList<>();
+                if (snapshot.exists() && snapshot.hasChildren()) {
+                    for (DataSnapshot categorySnapshot : snapshot.getChildren()) {
+                        try {
+                            com.maintenance.maintenance.model.entity.Category category = mapCategorySnapshot(categorySnapshot);
+                            if (category != null) {
+                                categories.add(category);
+                            }
+                        } catch (Exception e) {
+                            System.err.println("Erreur lors du mapping de la catégorie: " + e.getMessage());
+                            e.printStackTrace();
+                        }
+                    }
+                } else {
+                    // Le nœud "categorie" n'existe pas encore, retourner une liste vide
+                    System.out.println("Aucune catégorie trouvée dans Firebase (nœud 'categorie' n'existe pas encore)");
+                }
+                future.complete(categories);
+                latch.countDown();
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {
+                // En cas d'annulation, retourner une liste vide plutôt que de lancer une exception
+                // Cela permet la création de la première catégorie
+                System.err.println("Erreur lors de la récupération des catégories (non bloquant): " + error.getMessage());
+                future.complete(new ArrayList<>());
+                latch.countDown();
+            }
+        });
+
+        try {
+            boolean completed = latch.await(10, TimeUnit.SECONDS);
+            if (!completed) {
+                System.err.println("Timeout lors de la récupération des catégories, retour d'une liste vide");
+                return new ArrayList<>();
+            }
+            return future.get();
+        } catch (java.util.concurrent.ExecutionException e) {
+            // Si une exception s'est produite, retourner une liste vide pour permettre la création
+            System.err.println("Exception lors de la récupération des catégories (non bloquant): " + e.getMessage());
+            return new ArrayList<>();
+        } catch (Exception e) {
+            // En cas d'erreur, retourner une liste vide plutôt que de lancer une exception
+            // Cela permet la création de la première catégorie même si le nœud n'existe pas
+            System.err.println("Erreur lors de la récupération des catégories (non bloquant): " + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Récupère une catégorie par son ID depuis Firebase
+     */
+    public com.maintenance.maintenance.model.entity.Category getCategoryById(String categoryId) throws Exception {
+        System.out.println("=== FirebaseRealtimeService.getCategoryById: DÉBUT ===");
+        System.out.println("ID Firebase recherché: " + categoryId);
+        
+        CompletableFuture<com.maintenance.maintenance.model.entity.Category> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        System.out.println("=== FirebaseRealtimeService.getCategoryById: Ajout du listener Firebase ===");
+        databaseReference.child("categorie").child(categoryId).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                System.out.println("=== FirebaseRealtimeService.getCategoryById: onDataChange appelé ===");
+                System.out.println("Snapshot existe: " + snapshot.exists());
+                if (snapshot.exists()) {
+                    try {
+                        System.out.println("=== FirebaseRealtimeService.getCategoryById: Appel à mapCategorySnapshot ===");
+                        System.out.println("Snapshot key: " + snapshot.getKey());
+                        com.maintenance.maintenance.model.entity.Category category = mapCategorySnapshot(snapshot);
+                        System.out.println("=== FirebaseRealtimeService.getCategoryById: Mapping réussi - Nom: " + (category != null ? category.getName() : "null") + ", ID: " + (category != null ? category.getId() : "null") + " ===");
+                        future.complete(category);
+                    } catch (Exception e) {
+                        System.err.println("=== FirebaseRealtimeService.getCategoryById: Erreur lors du mapping - " + e.getMessage() + " ===");
+                        System.err.println("=== FirebaseRealtimeService.getCategoryById: Stack trace ===");
+                        e.printStackTrace();
+                        future.completeExceptionally(new Exception("Erreur lors du mapping de la catégorie: " + e.getMessage()));
+                    }
+                } else {
+                    System.err.println("=== FirebaseRealtimeService.getCategoryById: Snapshot n'existe pas ===");
+                    future.completeExceptionally(new Exception("Catégorie introuvable pour l'identifiant " + categoryId));
+                }
+                latch.countDown();
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {
+                System.err.println("=== FirebaseRealtimeService.getCategoryById: onCancelled - " + error.getMessage() + " ===");
+                future.completeExceptionally(new Exception("Erreur lors de la récupération de la catégorie: " + error.getMessage()));
+                latch.countDown();
+            }
+        });
+
+        try {
+            System.out.println("=== FirebaseRealtimeService.getCategoryById: Attente de la réponse Firebase ===");
+            boolean completed = latch.await(10, TimeUnit.SECONDS);
+            if (!completed) {
+                System.err.println("=== FirebaseRealtimeService.getCategoryById: Timeout ===");
+                throw new Exception("Timeout lors de la récupération de la catégorie (attente > 10 secondes)");
+            }
+            com.maintenance.maintenance.model.entity.Category result = future.get();
+            System.out.println("=== FirebaseRealtimeService.getCategoryById: SUCCÈS - Catégorie récupérée ===");
+            return result;
+        } catch (java.util.concurrent.ExecutionException e) {
+            Throwable cause = e.getCause();
+            System.err.println("=== FirebaseRealtimeService.getCategoryById: ExecutionException - " + (cause != null ? cause.getMessage() : e.getMessage()) + " ===");
+            if (cause != null) {
+                System.err.println("=== FirebaseRealtimeService.getCategoryById: Cause stack trace ===");
+                cause.printStackTrace();
+            }
+            throw new Exception("Erreur lors de la récupération de la catégorie: " + (cause != null ? cause.getMessage() : e.getMessage()), cause != null ? cause : e);
+        } catch (Exception e) {
+            System.err.println("=== FirebaseRealtimeService.getCategoryById: Exception - " + e.getMessage() + " ===");
+            System.err.println("=== FirebaseRealtimeService.getCategoryById: Stack trace ===");
+            e.printStackTrace();
+            throw new Exception("Timeout ou erreur lors de la récupération de la catégorie: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Crée une nouvelle catégorie dans Firebase
+     */
+    public String createCategory(com.maintenance.maintenance.model.entity.Category category) throws Exception {
+        System.out.println("=== FirebaseRealtimeService.createCategory: DÉBUT ===");
+        System.out.println("Category reçue - Nom: " + (category != null ? category.getName() : "null") + ", ID: " + (category != null ? category.getId() : "null"));
+        
+        CompletableFuture<String> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        System.out.println("=== FirebaseRealtimeService.createCategory: Création de la référence Firebase ===");
+        DatabaseReference categoryRef = databaseReference.child("categorie").push();
+        String categoryId = categoryRef.getKey();
+        System.out.println("=== FirebaseRealtimeService.createCategory: ID Firebase généré: " + categoryId + " ===");
+        
+        if (categoryId == null) {
+            System.err.println("=== FirebaseRealtimeService.createCategory: Impossible de générer un ID ===");
+            throw new Exception("Impossible de générer un ID pour la catégorie");
+        }
+        
+        // Ne pas modifier l'objet category passé en paramètre
+        // Créer une copie pour éviter les effets de bord
+        // L'ID Long sera généré lors du mapping depuis Firebase
+        
+        System.out.println("=== FirebaseRealtimeService.createCategory: Sérialisation de la catégorie ===");
+        Map<String, Object> data = serializeCategory(category);
+        System.out.println("=== FirebaseRealtimeService.createCategory: Données sérialisées: " + data + " ===");
+        // Ne pas stocker categoryId dans les données pour éviter les conflits
+        // L'ID Firebase est déjà la clé du nœud
+
+        System.out.println("=== FirebaseRealtimeService.createCategory: Enregistrement dans Firebase ===");
+        categoryRef.setValue(data, new DatabaseReference.CompletionListener() {
+            @Override
+            public void onComplete(DatabaseError error, DatabaseReference ref) {
+                if (error != null) {
+                    System.err.println("=== FirebaseRealtimeService.createCategory: Erreur Firebase - " + error.getMessage() + " ===");
+                    System.err.println("=== FirebaseRealtimeService.createCategory: Code d'erreur: " + error.getCode() + " ===");
+                    future.completeExceptionally(new Exception("Erreur lors de la création de la catégorie: " + error.getMessage()));
+                } else {
+                    System.out.println("=== FirebaseRealtimeService.createCategory: Catégorie créée avec succès dans Firebase, ID: " + categoryId + " ===");
+                    future.complete(categoryId);
+                }
+                latch.countDown();
+            }
+        });
+
+        try {
+            System.out.println("=== FirebaseRealtimeService.createCategory: Attente de la réponse Firebase ===");
+            boolean completed = latch.await(10, TimeUnit.SECONDS);
+            if (!completed) {
+                System.err.println("=== FirebaseRealtimeService.createCategory: Timeout ===");
+                throw new Exception("Timeout lors de la création de la catégorie (attente > 10 secondes)");
+            }
+            String result = future.get();
+            System.out.println("=== FirebaseRealtimeService.createCategory: SUCCÈS - ID retourné: " + result + " ===");
+            return result;
+        } catch (java.util.concurrent.ExecutionException e) {
+            Throwable cause = e.getCause();
+            System.err.println("=== FirebaseRealtimeService.createCategory: ExecutionException - " + (cause != null ? cause.getMessage() : e.getMessage()) + " ===");
+            if (cause != null) {
+                System.err.println("=== FirebaseRealtimeService.createCategory: Cause stack trace ===");
+                cause.printStackTrace();
+            }
+            throw new Exception("Erreur lors de la création de la catégorie: " + (cause != null ? cause.getMessage() : e.getMessage()), cause != null ? cause : e);
+        } catch (Exception e) {
+            System.err.println("=== FirebaseRealtimeService.createCategory: Exception - " + e.getMessage() + " ===");
+            System.err.println("=== FirebaseRealtimeService.createCategory: Stack trace ===");
+            e.printStackTrace();
+            throw new Exception("Timeout ou erreur lors de la création de la catégorie: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Met à jour une catégorie dans Firebase
+     */
+    public void updateCategory(String categoryId, com.maintenance.maintenance.model.entity.Category category) throws Exception {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        Map<String, Object> data = serializeCategory(category);
+        // Ne pas stocker categoryId dans les données pour éviter les conflits
+        // L'ID Firebase est déjà la clé du nœud
+
+        databaseReference.child("categorie").child(categoryId).setValue(data, new DatabaseReference.CompletionListener() {
+            @Override
+            public void onComplete(DatabaseError error, DatabaseReference ref) {
+                if (error != null) {
+                    future.completeExceptionally(new Exception("Erreur lors de la mise à jour de la catégorie: " + error.getMessage()));
+                } else {
+                    future.complete(null);
+                }
+                latch.countDown();
+            }
+        });
+
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+            future.get();
+        } catch (Exception e) {
+            throw new Exception("Timeout ou erreur lors de la mise à jour de la catégorie: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Supprime une catégorie de Firebase
+     */
+    public void deleteCategory(String categoryId) throws Exception {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("categorie").child(categoryId).removeValue(new DatabaseReference.CompletionListener() {
+            @Override
+            public void onComplete(DatabaseError error, DatabaseReference ref) {
+                if (error != null) {
+                    future.completeExceptionally(new Exception("Erreur lors de la suppression de la catégorie: " + error.getMessage()));
+                } else {
+                    future.complete(null);
+                }
+                latch.countDown();
+            }
+        });
+
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+            future.get();
+        } catch (Exception e) {
+            throw new Exception("Timeout ou erreur lors de la suppression de la catégorie: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Mappe un DataSnapshot vers un objet Category
+     */
+    private com.maintenance.maintenance.model.entity.Category mapCategorySnapshot(DataSnapshot snapshot) {
+        System.out.println("=== FirebaseRealtimeService.mapCategorySnapshot: DÉBUT ===");
+        com.maintenance.maintenance.model.entity.Category category = new com.maintenance.maintenance.model.entity.Category();
+        
+        String categoryId = snapshot.getKey();
+        System.out.println("=== FirebaseRealtimeService.mapCategorySnapshot: ID Firebase (key): " + categoryId + " ===");
+        
+        if (categoryId != null) {
+            try {
+                System.out.println("=== FirebaseRealtimeService.mapCategorySnapshot: Conversion de l'ID Firebase en Long ===");
+                System.out.println("CategoryId string: " + categoryId);
+                System.out.println("CategoryId hashCode: " + categoryId.hashCode());
+                // Utiliser un hash de l'ID Firebase comme identifiant Long
+                // Cela évite les problèmes de conversion avec les caractères spéciaux
+                // C'est la même méthode que dans createCategory pour garantir la cohérence
+                long idValue = Math.abs((long) categoryId.hashCode());
+                System.out.println("=== FirebaseRealtimeService.mapCategorySnapshot: ID Long calculé: " + idValue + " ===");
+                category.setId(idValue);
+                System.out.println("=== FirebaseRealtimeService.mapCategorySnapshot: ID défini sur la catégorie ===");
+            } catch (Exception e) {
+                System.err.println("=== FirebaseRealtimeService.mapCategorySnapshot: ERREUR lors de la conversion de l'ID - " + e.getMessage() + " ===");
+                System.err.println("=== FirebaseRealtimeService.mapCategorySnapshot: Stack trace ===");
+                e.printStackTrace();
+                throw e;
+            }
+        } else {
+            System.out.println("=== FirebaseRealtimeService.mapCategorySnapshot: categoryId est null ===");
+        }
+        
+        System.out.println("=== FirebaseRealtimeService.mapCategorySnapshot: Lecture du nom ===");
+        category.setName(readString(snapshot.child("name")));
+        System.out.println("=== FirebaseRealtimeService.mapCategorySnapshot: Nom lu: " + category.getName() + " ===");
+        
+        System.out.println("=== FirebaseRealtimeService.mapCategorySnapshot: Lecture de la description ===");
+        category.setDescription(readString(snapshot.child("description")));
+        System.out.println("=== FirebaseRealtimeService.mapCategorySnapshot: Description lue: " + category.getDescription() + " ===");
+        
+        System.out.println("=== FirebaseRealtimeService.mapCategorySnapshot: SUCCÈS - Catégorie mappée ===");
+        return category;
+    }
+
+    /**
+     * Sérialise un objet Category vers un Map pour Firebase
+     */
+    private Map<String, Object> serializeCategory(com.maintenance.maintenance.model.entity.Category category) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("name", category.getName() != null ? category.getName() : "");
+        data.put("description", category.getDescription() != null ? category.getDescription() : "");
+        return data;
     }
 }
 

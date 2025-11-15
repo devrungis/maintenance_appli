@@ -42,7 +42,8 @@ public class SecurityConfig {
                     .requestMatchers("/ent/**").hasRole("SUPERADMIN") // Seul le superadmin peut accéder aux pages de gestion
                     .requestMatchers("/users/create", "/users", "/users/*/delete").hasRole("SUPERADMIN") // Seul le superadmin peut créer/lister/supprimer des utilisateurs
                     .requestMatchers("/users/*/edit").authenticated() // Tout utilisateur authentifié peut modifier son profil (contrôle dans le controller)
-                    .requestMatchers("/dashboard", "/machines", "/machines/**", "/categories", "/alerts", "/reports", "/calendar", "/inventory", "/tickets").authenticated()
+                    .requestMatchers("/dashboard", "/machines", "/machines/**", "/categories", "/categories/**", "/stock", "/stock/**", "/alerts", "/reports", "/calendar", "/inventory", "/tickets").authenticated()
+                    .requestMatchers("/media/**").permitAll() // Autoriser l'accès aux médias (images)
                     .anyRequest().authenticated();
                 System.out.println("=== SecurityConfig: Autorisations configurées ===");
             })
@@ -58,7 +59,16 @@ public class SecurityConfig {
                     if (!request.getRequestURI().startsWith("/css") && 
                         !request.getRequestURI().startsWith("/js") && 
                         !request.getRequestURI().equals("/favicon.ico")) {
-                        response.sendRedirect("/login?error=not_authenticated");
+                        // Vérifier si la réponse n'est pas déjà commitée avant de rediriger
+                        if (!response.isCommitted()) {
+                            try {
+                                response.sendRedirect("/login?error=not_authenticated");
+                            } catch (Exception e) {
+                                System.err.println("Erreur lors de la redirection: " + e.getMessage());
+                            }
+                        } else {
+                            System.err.println("Impossible de rediriger : la réponse est déjà commitée pour " + request.getRequestURI());
+                        }
                     }
                 })
                 .accessDeniedHandler((request, response, accessDeniedException) -> {
@@ -66,7 +76,12 @@ public class SecurityConfig {
                     System.out.println("URI: " + request.getRequestURI());
                     System.out.println("Exception: " + accessDeniedException.getMessage());
                     try {
-                        response.sendRedirect("/login?error=access_denied");
+                        // Vérifier si la réponse n'est pas déjà commitée avant de rediriger
+                        if (!response.isCommitted()) {
+                            response.sendRedirect("/login?error=access_denied");
+                        } else {
+                            System.err.println("Impossible de rediriger : la réponse est déjà commitée pour " + request.getRequestURI());
+                        }
                     } catch (Exception e) {
                         System.err.println("Erreur lors de la redirection: " + e.getMessage());
                     }

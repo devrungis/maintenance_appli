@@ -28,11 +28,6 @@ public class PageController {
         return "index";
     }
 
-    @GetMapping("/categories")
-    public String categories() {
-        return "index";
-    }
-
     @GetMapping("/alerts")
     public String alerts() {
         return "index";

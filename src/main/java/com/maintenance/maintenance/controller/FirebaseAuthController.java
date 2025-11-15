@@ -1,6 +1,7 @@
 package com.maintenance.maintenance.controller;
 
 import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.FirebaseToken;
 import com.google.firebase.auth.UserRecord;
 import com.maintenance.maintenance.service.FirebaseAuthService;
 import com.maintenance.maintenance.service.FirebaseRealtimeService;
@@ -50,7 +51,8 @@ public class FirebaseAuthController {
         try {
             // Authentifier l'utilisateur avec Firebase
             System.out.println("=== Tentative d'authentification avec Firebase ===");
-            String idToken = firebaseAuthService.authenticateUser(email, password);
+            FirebaseAuthService.AuthResult authResult = firebaseAuthService.authenticateUser(email, password);
+            String idToken = authResult.getIdToken();
             
             if (idToken == null || idToken.isEmpty()) {
                 System.err.println("=== Erreur: Token vide ou null ===");
@@ -61,42 +63,84 @@ public class FirebaseAuthController {
             System.out.println("=== Token reçu: " + idToken.substring(0, Math.min(20, idToken.length())) + "... ===");
             
             // Vérifier le token et récupérer les informations utilisateur
-            UserRecord userRecord;
+            UserRecord userRecord = null;
+            String userId = authResult.getLocalId();
             try {
-                userRecord = firebaseAuthService.getUserByEmail(email);
-                System.out.println("=== UserRecord récupéré, UID: " + userRecord.getUid() + " ===");
+                if (userId != null && !userId.isEmpty()) {
+                    userRecord = firebaseAuthService.getUserById(userId);
+                } else {
+                    userRecord = firebaseAuthService.getUserByEmail(email);
+                }
+                if (userRecord != null) {
+                    System.out.println("=== UserRecord récupéré, UID: " + userRecord.getUid() + " ===");
+                    userId = userRecord.getUid();
+                }
             } catch (FirebaseAuthException e) {
                 System.err.println("=== Erreur lors de la récupération du UserRecord: " + e.getMessage() + " ===");
-                // Si on ne peut pas récupérer l'utilisateur, on continue quand même avec la session
-                userRecord = null;
+                try {
+                    FirebaseToken decodedToken = firebaseAuthService.verifyIdToken(idToken);
+                    userId = decodedToken.getUid();
+                } catch (FirebaseAuthException tokenException) {
+                    System.err.println("=== Erreur lors de la vérification du token: " + tokenException.getMessage() + " ===");
+                }
             }
             
             // Récupérer le rôle depuis Realtime Database
             String role = "utilisateur";
             try {
-                Map<String, Object> userData = firebaseRealtimeService.getUserById(userRecord.getUid());
-                if (userData != null && userData.get("role") != null) {
-                    role = (String) userData.get("role");
-                    System.out.println("=== Rôle récupéré depuis Firebase: " + role + " ===");
+                if (userId != null) {
+                    Map<String, Object> userData = firebaseRealtimeService.getUserById(userId);
+                    if (userData == null) {
+                        System.out.println("=== Aucune structure trouvée dans Realtime Database pour " + userId + ", création en cours ===");
+                        String displayName = userRecord != null ? userRecord.getDisplayName() : null;
+                        String telephone = userRecord != null ? userRecord.getPhoneNumber() : null;
+                        String nom = displayName != null ? displayName : "";
+                        String nomUtilisateur = authResult.getEmail() != null ? authResult.getEmail().split("@")[0] : "user";
+                        firebaseRealtimeService.initializeExistingUser(
+                            userId,
+                            authResult.getEmail(),
+                            nom,
+                            nomUtilisateur,
+                            telephone,
+                            null
+                        );
+                        userData = firebaseRealtimeService.getUserById(userId);
+                    }
+                    if (userData != null && userData.get("role") != null) {
+                        role = (String) userData.get("role");
+                        System.out.println("=== Rôle récupéré depuis Firebase: " + role + " ===");
+                    }
                 }
             } catch (Exception e) {
-                System.err.println("=== Erreur lors de la récupération du rôle: " + e.getMessage() + " ===");
+                System.err.println("=== Erreur lors de la récupération/initialisation du rôle: " + e.getMessage() + " ===");
                 // Si on ne peut pas récupérer le rôle, on utilise la valeur par défaut
+            }
+            
+            if (role == null || role.isBlank()) {
+                role = "utilisateur";
+            }
+            
+            if (userId == null || userId.isBlank()) {
+                System.err.println("=== Impossible de déterminer l'UID de l'utilisateur ===");
+                redirectAttributes.addAttribute("error", "Erreur lors de la connexion");
+                return "redirect:/login";
             }
             
             // Créer une session
             HttpSession session = request.getSession(true);
-            session.setAttribute("firebaseUser", userRecord);
-            session.setAttribute("email", email);
-            session.setAttribute("userId", userRecord.getUid());
+            if (userRecord != null) {
+                session.setAttribute("firebaseUser", userRecord);
+            }
+            session.setAttribute("email", authResult.getEmail());
+            session.setAttribute("userId", userId);
             session.setAttribute("role", role);
             session.setAttribute("idToken", idToken);
             session.setAttribute("authenticated", true);
             
             System.out.println("=== Session créée avec succès ===");
             System.out.println("Session ID: " + session.getId());
-            System.out.println("User ID: " + userRecord.getUid());
-            System.out.println("Email: " + email);
+            System.out.println("User ID: " + userId);
+            System.out.println("Email: " + authResult.getEmail());
             System.out.println("Role: " + role);
             System.out.println("=== Redirection vers /dashboard ===");
             

@@ -33,16 +33,32 @@
         }
         .filters {
             margin-bottom: 1.5rem;
-            display: flex;
-            gap: 1rem;
-            align-items: center;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
-        .filters select, .filters button {
+        .filters select {
             padding: 0.65rem 1rem;
             border: 1px solid var(--border);
             border-radius: 8px;
             background: white;
             font-size: 0.95rem;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .filters select:hover {
+            border-color: var(--primary);
+        }
+        .filters select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .filters label {
+            color: #374151;
+            font-size: 0.9rem;
         }
         .btn {
             display: inline-flex;
@@ -64,24 +80,84 @@
             border: 1px solid var(--border);
             color: #111827;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
+        .machines-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+        .machine-card {
             background: white;
+            border: 2px solid #e5e7eb;
             border-radius: 12px;
-            overflow: hidden;
+            padding: 1.5rem;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
-        th, td {
-            padding: 1rem;
-            border-bottom: 1px solid var(--border);
-            text-align: left;
-            vertical-align: top;
+        .machine-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+            transform: translateY(-2px);
         }
-        th {
-            background: #f1f5f9;
+        .machine-card-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .machine-card-image {
+            width: 100px;
+            height: 100px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 2px solid #e5e7eb;
+            flex-shrink: 0;
+        }
+        .machine-card-image-placeholder {
+            width: 100px;
+            height: 100px;
+            border-radius: 8px;
+            background: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9ca3af;
+            font-size: 2rem;
+            flex-shrink: 0;
+        }
+        .machine-card-info {
+            flex: 1;
+        }
+        .machine-card-title {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: #111827;
+            margin-bottom: 0.5rem;
+        }
+        .machine-card-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
             font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+            color: #6b7280;
+            margin-top: 1rem;
+        }
+        .machine-card-detail-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .machine-card-detail-item i {
+            width: 18px;
+            color: #9ca3af;
+        }
+        .machine-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e5e7eb;
         }
         .photos {
             display: flex;
@@ -98,6 +174,50 @@
             display: flex;
             gap: 0.5rem;
         }
+        .btn-icon {
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            min-height: 40px;
+            max-width: 40px;
+            max-height: 40px;
+            transition: opacity 0.2s;
+            text-decoration: none;
+            font-size: 1rem;
+        }
+        .btn-icon:hover {
+            opacity: 0.8;
+        }
+        .machine-card-footer form {
+            margin: 0;
+            display: inline-flex;
+        }
+        .machine-card-photos {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .machine-card-photo {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 2px solid #e5e7eb;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .machine-card-photo:hover {
+            transform: scale(1.05);
+            border-color: var(--primary);
+        }
         .badge {
             display: inline-flex;
             align-items: center;
@@ -112,6 +232,12 @@
             padding: 1rem 1.25rem;
             border-radius: 10px;
             margin-bottom: 1.5rem;
+        }
+        .subtext {
+            display: block;
+            margin-top: 0.35rem;
+            font-size: 0.85rem;
+            color: #6b7280;
         }
         .alert-success {
             background: #d1fae5;
@@ -136,97 +262,432 @@
 <body>
 <div class="page">
     <th:block th:replace="fragments/menu :: menu"></th:block>
+    <th:block th:replace="fragments/notifications :: notifications"></th:block>
     <main class="main-content">
         <div class="page-header">
             <div>
-                <h1>Gestion des Machines</h1>
-                <p>Ajoutez, consultez et gérez les machines par entreprise.</p>
+                <h1 style="margin: 0; font-size: 2rem; font-weight: 700; color: #111827;">
+                    <i class="fa fa-cogs" style="color: var(--primary); margin-right: 0.5rem;"></i>
+                    Gestion des Machines
+                </h1>
+                <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 1rem;">
+                    Ajoutez, consultez et gérez les machines par entreprise
+                </p>
             </div>
-            <div th:if="${selectedEntrepriseId}">
-                <a th:href="@{|/machines/create?entrepriseId=${selectedEntrepriseId}|}" class="btn btn-primary">
+            <div>
+                <a th:href="@{|/machines/create?entrepriseId=${selectedEntrepriseId != null and selectedEntrepriseId != '' ? selectedEntrepriseId : ''}|}" 
+                   class="btn btn-primary">
                     <i class="fa fa-plus"></i>
                     Nouvelle machine
                 </a>
             </div>
         </div>
 
-        <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
-        <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+        <div id="loading-indicator" style="display: none; text-align: center; padding: 2rem; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 9999;">
+            <i class="fa fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary);"></i>
+            <p style="margin-top: 1rem; color: #6b7280;">Chargement en cours...</p>
+        </div>
 
-        <form method="get" action="#" class="filters">
-            <label for="entrepriseId">Entreprise</label>
-            <select id="entrepriseId" name="entrepriseId" onchange="this.form.submit()">
-                <option value="">-- Sélectionnez une entreprise --</option>
+        <form method="get" action="/machines" class="filters" id="filterForm">
+            <div style="margin-bottom: 1rem;">
+                <label for="search" style="font-weight: 600; display: block; margin-bottom: 0.25rem;">
+                    <i class="fa fa-search"></i> Recherche
+                </label>
+                <div style="position: relative;">
+                    <input type="text" 
+                           id="search" 
+                           name="search" 
+                           th:value="${searchQuery}"
+                           placeholder="Rechercher par nom, n° série, IP, emplacement, catégorie..."
+                           style="width: 100%; padding: 0.75rem 1rem 0.75rem 2.5rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem;"
+                           oninput="handleSearchInput(event);"
+                           onkeyup="handleSearchInput(event);">
+                    <i class="fa fa-search" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #9ca3af;"></i>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+                <div>
+                    <label for="entrepriseIdSelect" style="font-weight: 600; display: block; margin-bottom: 0.25rem;">Entreprise</label>
+                    <select id="entrepriseIdSelect" name="entrepriseId" onchange="updateFilters();" style="min-width: 200px;">
+                        <option value="">-- Toutes --</option>
                 <option th:each="ent : ${enterprises}"
                         th:value="${ent.entrepriseId}"
                         th:selected="${ent.entrepriseId == selectedEntrepriseId}"
                         th:text="${ent.nom}">Entreprise</option>
             </select>
-            <noscript>
-                <button type="submit" class="btn btn-outline">Rechercher</button>
-            </noscript>
+                </div>
+                
+                <div>
+                    <label for="categoryId" style="font-weight: 600; display: block; margin-bottom: 0.25rem;">Catégorie</label>
+                    <select id="categoryId" name="categoryId" onchange="updateFilters();" style="min-width: 180px;">
+                        <option value="">-- Toutes --</option>
+                        <option th:each="cat : ${categories}"
+                                th:value="${cat.id}"
+                                th:selected="${cat.id == selectedCategoryId}"
+                                th:text="${cat.name}">Catégorie</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="operationnel" style="font-weight: 600; display: block; margin-bottom: 0.25rem;">Statut opérationnel</label>
+                    <select id="operationnel" name="operationnel" onchange="updateFilters();" style="min-width: 150px;">
+                        <option value="">-- Tous --</option>
+                        <option value="true" th:selected="${selectedOperationnel == 'true'}">Opérationnel</option>
+                        <option value="false" th:selected="${selectedOperationnel == 'false'}">Non opérationnel</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="estSecours" style="font-weight: 600; display: block; margin-bottom: 0.25rem;">Type</label>
+                    <select id="estSecours" name="estSecours" onchange="updateFilters();" style="min-width: 150px;">
+                        <option value="">-- Tous --</option>
+                        <option value="false" th:selected="${selectedEstSecours == 'false'}">Principale</option>
+                        <option value="true" th:selected="${selectedEstSecours == 'true'}">Secours</option>
+                        <option value="entrepot" th:selected="${selectedEstSecours == 'entrepot'}">Matériel neuf</option>
+                    </select>
+                </div>
+                
+                <div style="display: flex; align-items: flex-end;">
+                    <a th:href="@{|/machines?entrepriseId=${selectedEntrepriseId}|}" 
+                       class="btn btn-outline"
+                       style="padding: 0.65rem 1rem; margin-top: 0;">
+                        <i class="fa fa-times"></i> Réinitialiser
+                    </a>
+                </div>
+            </div>
         </form>
 
-        <div th:if="${#lists.isEmpty(machines)}">
-            <div class="empty-state">
-                <i class="fa fa-box-open fa-2x" style="margin-bottom: 0.75rem;"></i>
-                <p th:if="${selectedEntrepriseId}">Aucune machine enregistrée pour cette entreprise.</p>
-                <p th:unless="${selectedEntrepriseId}">Choisissez d'abord une entreprise pour afficher ses machines.</p>
+        <script>
+            let searchTimeout;
+            let urlUpdateTimeout;
+            
+            // Filtrer en temps réel sans recharger la page
+            function handleSearchInput(event) {
+                const searchValue = event.target.value.toLowerCase().trim();
+                
+                // Filtrer instantanément côté client (sans rechargement)
+                let visibleCount = 0;
+                const allCards = document.querySelectorAll('.machine-card');
+                
+                allCards.forEach(card => {
+                    const cardText = card.textContent.toLowerCase();
+                    if (!searchValue || cardText.includes(searchValue)) {
+                        card.style.display = '';
+                        visibleCount++;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+                
+                // Mettre à jour le compteur instantanément
+                updateResultsCount(visibleCount, searchValue);
+                
+                // Mettre à jour l'URL dans l'historique sans recharger (pour permettre le retour en arrière)
+                clearTimeout(urlUpdateTimeout);
+                urlUpdateTimeout = setTimeout(function() {
+                    updateURLWithoutReload();
+                }, 1000); // Délai plus long pour éviter trop de mises à jour d'URL
+            }
+            
+            function updateURLWithoutReload() {
+                const entrepriseId = document.getElementById('entrepriseIdSelect').value;
+                const categoryId = document.getElementById('categoryId').value;
+                const operationnel = document.getElementById('operationnel').value;
+                const estSecours = document.getElementById('estSecours').value;
+                const search = document.getElementById('search').value;
+                
+                // Construire l'URL avec tous les paramètres
+                let url = '/machines?';
+                if (entrepriseId) url += 'entrepriseId=' + encodeURIComponent(entrepriseId) + '&';
+                if (categoryId) url += 'categoryId=' + encodeURIComponent(categoryId) + '&';
+                if (operationnel) url += 'operationnel=' + encodeURIComponent(operationnel) + '&';
+                if (estSecours) url += 'estSecours=' + encodeURIComponent(estSecours) + '&';
+                if (search) url += 'search=' + encodeURIComponent(search) + '&';
+                
+                // Supprimer le dernier &
+                url = url.replace(/&$/, '');
+                
+                // Mettre à jour l'URL sans recharger la page
+                window.history.pushState({}, '', url);
+            }
+            
+            function updateResultsCount(count, searchValue) {
+                let countElement = document.getElementById('results-count');
+                const container = document.getElementById('table-container');
+                
+                if (!searchValue || searchValue.trim() === '') {
+                    // Si pas de recherche active, supprimer l'élément s'il existe
+                    if (countElement) {
+                        countElement.remove();
+                    }
+                    return;
+                }
+                
+                if (!countElement && container) {
+                    countElement = document.createElement('div');
+                    countElement.id = 'results-count';
+                    countElement.style.cssText = 'margin-bottom: 1rem; padding: 0.75rem 1rem; background: #f0f9ff; border-left: 4px solid var(--primary); border-radius: 8px; color: #1d4ed8; font-size: 0.9rem;';
+                    container.insertBefore(countElement, container.firstChild);
+                }
+                
+                if (countElement) {
+                    const total = document.querySelectorAll('.machine-card').length;
+                    countElement.innerHTML = '<i class="fa fa-search"></i> <strong>' + count + '</strong> machine(s) trouvée(s) sur ' + total + ' pour "<strong>' + searchValue + '</strong>"';
+                }
+            }
+            
+            // Fonction pour les autres filtres (catégorie, statut, type) - ceux-là peuvent recharger
+            function updateFilters() {
+                showLoading();
+                const entrepriseId = document.getElementById('entrepriseIdSelect').value;
+                const categoryId = document.getElementById('categoryId').value;
+                const operationnel = document.getElementById('operationnel').value;
+                const estSecours = document.getElementById('estSecours').value;
+                const search = document.getElementById('search').value;
+                
+                // Construire l'URL avec tous les paramètres
+                let url = '/machines?';
+                if (entrepriseId) url += 'entrepriseId=' + encodeURIComponent(entrepriseId) + '&';
+                if (categoryId) url += 'categoryId=' + encodeURIComponent(categoryId) + '&';
+                if (operationnel) url += 'operationnel=' + encodeURIComponent(operationnel) + '&';
+                if (estSecours) url += 'estSecours=' + encodeURIComponent(estSecours) + '&';
+                if (search) url += 'search=' + encodeURIComponent(search) + '&';
+                
+                // Supprimer le dernier &
+                url = url.replace(/&$/, '');
+                
+                // Recharger pour appliquer les filtres serveur
+                window.location.href = url;
+            }
+            
+            // Gérer le retour en arrière du navigateur
+            window.addEventListener('popstate', function(event) {
+                // Recharger la page pour synchroniser avec l'URL
+                window.location.reload();
+            });
+        </script>
+
+        <!-- Alertes pour les machines principales non fonctionnelles avec secours disponibles -->
+        <div th:if="${machinesPrincipalesNonFonctionnelles != null and !machinesPrincipalesNonFonctionnelles.isEmpty()}" 
+             style="margin-bottom: 1.5rem;">
+            <div th:each="entry : ${machinesPrincipalesNonFonctionnelles}" 
+                 th:with="info=${entry.value}, machinePrincipale=${info.machine}, secoursList=${info.secours}"
+                 class="alert"
+                 style="background: #fef3c7; border-left: 4px solid #f59e0b; color: #92400e; padding: 1rem 1.25rem; border-radius: 10px; margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                    <div style="flex: 1;">
+                        <strong style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <i class="fa fa-exclamation-triangle"></i>
+                            Machine principale non fonctionnelle détectée
+                        </strong>
+                        <p style="margin: 0.5rem 0; font-size: 0.9rem;">
+                            La machine principale <strong th:text="${machinePrincipale.nom}"></strong> est non fonctionnelle 
+                            et a <span th:text="${secoursList.size()}"></span> machine(s) de secours fonctionnelle(s) disponible(s).
+                        </p>
+                        <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; font-style: italic;">
+                            Voulez-vous remplacer cette machine principale par une de ses machines de secours ?
+                        </p>
+                    </div>
+                    <a th:href="@{|/machines/${selectedEntrepriseId}/${entry.key}/promote-secours-form|}" 
+                       class="btn"
+                       style="background: #f59e0b; color: white; padding: 0.5rem 1rem; font-size: 0.9rem; white-space: nowrap;">
+                        <i class="fa fa-exchange-alt"></i> Remplacer maintenant
+                    </a>
+                </div>
             </div>
         </div>
 
-        <div th:unless="${#lists.isEmpty(machines)}">
-            <table>
-                <thead>
-                <tr>
-                    <th>Nom</th>
-                    <th>N° de série</th>
-                    <th>Photos</th>
-                    <th>Emplacement</th>
-                    <th>Notes</th>
-                    <th>Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="machine : ${machines}">
-                    <td>
-                        <strong th:text="${machine.nom}">Nom machine</strong>
-                        <div class="badge" th:if="${machine.photos != null}" th:text="${machine.photos.size()} + ' photo(s)'">
-                            0 photo
+        <script>
+            function showLoading() {
+                const indicator = document.getElementById('loading-indicator');
+                const container = document.getElementById('table-container');
+                if (indicator) indicator.style.display = 'block';
+                if (container) container.style.opacity = '0.5';
+            }
+            
+            // Masquer le loading une fois la page chargée
+            document.addEventListener('DOMContentLoaded', function() {
+                const indicator = document.getElementById('loading-indicator');
+                const container = document.getElementById('table-container');
+                if (indicator) indicator.style.display = 'none';
+                if (container) container.style.opacity = '1';
+            });
+        </script>
+
+        <div id="table-container" style="transition: opacity 0.3s;">
+            <div th:if="${selectedCategoryId != null or selectedOperationnel != null or selectedEstSecours != null or (searchQuery != null and searchQuery != '')}" 
+                 style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: #f0f9ff; border-left: 4px solid var(--primary); border-radius: 8px; color: #1d4ed8; font-size: 0.9rem;">
+                <i class="fa fa-filter"></i> 
+                <strong th:text="${#lists.size(machines)}"></strong> machine(s) trouvée(s)
+                <span th:if="${searchQuery != null and searchQuery != ''}">
+                    pour "<strong th:text="${searchQuery}"></strong>"
+                </span>
+                <span th:if="${selectedCategoryId != null or selectedOperationnel != null or selectedEstSecours != null}">
+                    avec les filtres appliqués
+                </span>
+            </div>
+            
+            <div th:if="${#lists.isEmpty(machines)}">
+                <div class="empty-state" style="background: white; border: 2px solid #e5e7eb; border-radius: 12px; padding: 3rem 2rem; text-align: center; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+                    <i class="fa fa-search fa-3x" style="margin-bottom: 1rem; color: #9ca3af;"></i>
+                    <h3 style="font-size: 1.3rem; font-weight: 700; color: #111827; margin-bottom: 0.5rem;">
+                        Aucune recherche trouvée
+                    </h3>
+                    <p th:if="${selectedEntrepriseId != null and selectedEntrepriseId != '' and (selectedCategoryId != null or selectedOperationnel != null or selectedEstSecours != null or (searchQuery != null and searchQuery != ''))}" 
+                       style="font-size: 1rem; color: #6b7280; margin-bottom: 1rem;">
+                        Aucune machine ne correspond aux critères de recherche sélectionnés.
+                        <span th:if="${searchQuery != null and searchQuery != ''}">
+                            <br>Aucun résultat pour "<strong th:text="${searchQuery}"></strong>".
+                        </span>
+                    </p>
+                    <p th:if="${selectedEntrepriseId != null and selectedEntrepriseId != '' and selectedCategoryId == null and selectedOperationnel == null and selectedEstSecours == null and (searchQuery == null or searchQuery == '')}" 
+                       style="font-size: 1rem; color: #6b7280; margin-bottom: 1rem;">
+                        Aucune machine enregistrée pour cette entreprise.
+                    </p>
+                    <p th:if="${selectedEntrepriseId == null or selectedEntrepriseId == ''}" 
+                       style="font-size: 1rem; color: #6b7280; margin-bottom: 1rem;">
+                        Choisissez d'abord une entreprise pour afficher ses machines.
+                    </p>
+                    <a th:if="${selectedEntrepriseId != null and selectedEntrepriseId != ''}" 
+                       th:href="@{|/machines?entrepriseId=${selectedEntrepriseId}|}" 
+                       class="btn btn-primary"
+                       style="margin-top: 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <i class="fa fa-times"></i> Réinitialiser les filtres
+                    </a>
+                </div>
+            </div>
+
+            <div th:unless="${#lists.isEmpty(machines)}" class="machines-grid">
+                <div th:each="machine : ${machines}" class="machine-card">
+                    <div class="machine-card-header">
+                        <div th:if="${machine.photos != null and !machine.photos.isEmpty() and machine.photos.size() > 0 and machine.photos[0] != null and machine.photos[0] != ''}">
+                            <img th:src="${machine.photos[0]}" alt="Photo machine" class="machine-card-image">
                         </div>
-                    </td>
-                    <td th:text="${machine.numeroSerie}">N° série</td>
-                    <td>
-                        <div class="photos" th:if="${machine.photos != null}">
-                            <div th:each="photo, iterStat : ${machine.photos}" style="display: flex; align-items: center; gap: 0.5rem;">
-                                <img th:src="${photo}" alt="Photo machine" style="width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid #e5e7eb;">
-                                <a th:href="${photo}"
-                                   th:text="'Photo ' + ${iterStat.index + 1}"
-                                   target="_blank"
-                                   rel="noopener">
-                                    Photo
-                                </a>
+                        <div th:unless="${machine.photos != null and !machine.photos.isEmpty() and machine.photos.size() > 0 and machine.photos[0] != null and machine.photos[0] != ''}" class="machine-card-image-placeholder">
+                            <i class="fa fa-server"></i>
+                        </div>
+                        <div class="machine-card-info">
+                            <div class="machine-card-title" th:text="${machine.nom}">Nom machine</div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
+                                <span th:if="${machine.estMachineEntrepot == true}" class="badge" style="background: #f3e8ff; color: #7c3aed; font-size: 0.75rem;">
+                                    <i class="fa fa-box"></i> Neuve · en programmation
+                                </span>
+                                <span th:if="${machine.estMachineEntrepot != true and machine.estMachineSecours == true}" class="badge" style="background: #fef3c7; color: #92400e; font-size: 0.75rem;">
+                                    <i class="fa fa-shield-alt"></i> Secours
+                                </span>
+                                <span th:if="${machine.estMachineEntrepot != true and (machine.estMachineSecours == false or machine.estMachineSecours == null)}" class="badge" style="background: #dbeafe; color: #1d4ed8; font-size: 0.75rem;">
+                                    <i class="fa fa-server"></i> Principale
+                                </span>
+                                <span th:if="${machine.estMachineEntrepot != true and machine.operationnel == true}" class="badge badge-success" style="font-size: 0.75rem;">
+                                    <i class="fa fa-check-circle"></i> Opérationnel
+                                </span>
+                                <span th:if="${machine.estMachineEntrepot != true and machine.operationnel == false}" class="badge badge-danger" style="font-size: 0.75rem;">
+                                    <i class="fa fa-times-circle"></i> Non opérationnel
+                                </span>
+                                <span th:if="${machine.estMachineEntrepot != true and machine.enReparation == true}" class="badge" style="background: #fef3c7; color: #92400e; font-size: 0.75rem;">
+                                    <i class="fa fa-tools"></i> En réparation
+                                </span>
+                                <span th:if="${machine.estMachineEntrepot != true and machine.enProgrammation == true}" class="badge" style="background: #e0f2fe; color: #0369a1; font-size: 0.75rem;">
+                                    <i class="fa fa-microchip"></i> En programmation
+                                </span>
+                                <th:block th:if="${machine.estMachineEntrepot != true and (machine.estMachineSecours == null or machine.estMachineSecours == false)}" 
+                                          th:with="isPrincipale=${machine.estMachineSecours == null or machine.estMachineSecours == false},
+                                                   count=${secoursCountMap != null and secoursCountMap.containsKey(machine.machineId) ? secoursCountMap.get(machine.machineId) : 0},
+                                                   hasEntrepriseId=${selectedEntrepriseId != null and selectedEntrepriseId != ''}">
+                                    <a th:if="${count > 0 and hasEntrepriseId and machine.machineId != null}" 
+                                       th:href="@{|/machines/${selectedEntrepriseId}/${machine.machineId}/secours|}"
+                                       class="badge" 
+                                       style="background: #f0f9ff; color: #1d4ed8; font-size: 0.75rem; text-decoration: none; cursor: pointer;"
+                                       title="Voir les machines de secours">
+                                        <i class="fa fa-shield-alt"></i>
+                                        <span th:text="${count} + ' secours'">0 secours</span>
+                                    </a>
+                                    <span th:if="${count == 0 or !hasEntrepriseId}" 
+                                          class="badge" 
+                                          style="background: #f0f9ff; color: #1d4ed8; font-size: 0.75rem;">
+                                        <i class="fa fa-shield-alt"></i>
+                                        <span th:text="${count} + ' secours'">0 secours</span>
+                                    </span>
+                                </th:block>
                             </div>
                         </div>
-                    </td>
-                    <td th:text="${machine.emplacement}">Emplacement</td>
-                    <td th:text="${machine.notes}">Notes</td>
-                    <td>
-                        <div class="actions">
-                            <a th:href="@{|/machines/${selectedEntrepriseId}/${machine.machineId}/edit|}" class="btn btn-outline btn-sm">
-                                <i class="fa fa-pen"></i> Modifier
+                    </div>
+                    
+                    <div class="machine-card-details" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+                        <div class="machine-card-detail-item">
+                            <i class="fa fa-barcode"></i>
+                            <span><strong>N° série:</strong> <span th:text="${machine.numeroSerie ?: '-'}"></span></span>
+                        </div>
+                        <div class="machine-card-detail-item">
+                            <i class="fa fa-network-wired"></i>
+                            <span><strong>IP:</strong> <span th:text="${machine.adresseIP ?: '-'}"></span></span>
+                        </div>
+                        <div class="machine-card-detail-item" th:if="${machine.categoryName}">
+                            <i class="fa fa-tag"></i>
+                            <span><strong>Catégorie:</strong> <span th:text="${machine.categoryName}"></span></span>
+                        </div>
+                        <div class="machine-card-detail-item">
+                            <i class="fa fa-map-marker-alt"></i>
+                            <span><strong>Emplacement:</strong> <span th:text="${machine.emplacement ?: '-'}"></span></span>
+                        </div>
+                        <div class="machine-card-detail-item" th:if="${machine.notes}">
+                            <i class="fa fa-comment"></i>
+                            <span><strong>Notes:</strong> <span th:text="${machine.notes}" style="word-break: break-word;"></span></span>
+                        </div>
+                        <div class="machine-card-detail-item">
+                            <i class="fa fa-images"></i>
+                            <span><strong>Photos:</strong> 
+                                <span th:if="${machine.photos != null and !machine.photos.isEmpty()}" th:text="${machine.photos.size()} + ' photo(s)'"></span>
+                                <span th:unless="${machine.photos != null and !machine.photos.isEmpty()}">Aucune</span>
+                            </span>
+                            <div class="machine-card-photos" th:if="${machine.photos != null and !machine.photos.isEmpty()}" style="margin-top: 0.5rem;">
+                                <img th:each="photo : ${machine.photos}" 
+                                     th:if="${photo != null and photo != ''}"
+                                     th:src="${photo}" 
+                                     alt="Photo machine"
+                                     class="machine-card-photo"
+                                     th:attr="onclick='window.open(\'' + ${photo} + '\', \'_blank\')'"
+                                     style="cursor: pointer;">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="machine-card-footer">
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <a th:if="${selectedEntrepriseId != null and selectedEntrepriseId != '' and isSuperAdmin}" 
+                               th:href="@{|/machines/${selectedEntrepriseId}/${machine.machineId}/edit|}" 
+                               class="btn-icon" 
+                               title="Modifier"
+                               style="background: #3b82f6; color: white; width: 40px; height: 40px; min-width: 40px; min-height: 40px;">
+                                <i class="fa fa-pen"></i>
                             </a>
-                            <form th:action="@{|/machines/${selectedEntrepriseId}/${machine.machineId}/delete|}" method="post"
+                            <a th:if="${selectedEntrepriseId != null and selectedEntrepriseId != '' and machine.estMachineEntrepot != true and (machine.estMachineSecours == null or machine.estMachineSecours == false)}" 
+                               th:href="@{|/machines/${selectedEntrepriseId}/${machine.machineId}/attach-secours|}" 
+                               class="btn-icon" 
+                               title="Rattacher secours"
+                               style="background: #f59e0b; color: white; width: 40px; height: 40px; min-width: 40px; min-height: 40px;">
+                                <i class="fa fa-link"></i>
+                            </a>
+                            <form th:if="${selectedEntrepriseId != null and selectedEntrepriseId != '' and isSuperAdmin}" 
+                                  th:action="@{|/machines/${selectedEntrepriseId}/${machine.machineId}/delete|}" 
+                                  method="post" 
+                                  style="display: inline;"
                                   onsubmit="return confirm('Confirmer la suppression de cette machine ?');">
-                                <button type="submit" class="btn btn-outline btn-sm" style="color: var(--danger); border-color: var(--danger);">
-                                    <i class="fa fa-trash"></i> Supprimer
+                                <button type="submit" 
+                                        class="btn-icon" 
+                                        title="Supprimer"
+                                        style="background: #ef4444; color: white; width: 40px; height: 40px; min-width: 40px; min-height: 40px;">
+                                    <i class="fa fa-trash"></i>
                                 </button>
                             </form>
                         </div>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
+                        <span th:if="${selectedEntrepriseId == null or selectedEntrepriseId == ''}" style="color: #6b7280; font-size: 0.85rem;">
+                            Sélectionnez une entreprise
+                        </span>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 </div>

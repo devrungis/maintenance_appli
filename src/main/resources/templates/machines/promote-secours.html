@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Remplacer Machine Principale</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --border: #e5e7eb;
+            --bg: #f8fafc;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: #111827;
+        }
+        .page {
+            display: flex;
+            min-height: 100vh;
+        }
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: #111827;
+        }
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+        }
+        .alert-info {
+            background: #dbeafe;
+            color: #1d4ed8;
+            border-left: 4px solid var(--primary);
+        }
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid var(--danger);
+        }
+        .info-box {
+            background: white;
+            border: 2px solid var(--danger);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .info-box h3 {
+            margin: 0 0 1rem 0;
+            color: var(--danger);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .machines-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+        .machine-card {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+        .machine-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+            transform: translateY(-2px);
+        }
+        .machine-card.selected {
+            border-color: var(--primary);
+            background: #f0f9ff;
+        }
+        .machine-card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 0.5rem;
+        }
+        .machine-card-details {
+            font-size: 0.9rem;
+            color: #6b7280;
+            margin-top: 0.5rem;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        form {
+            margin-top: 2rem;
+        }
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        input[type="radio"] {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <th:block th:replace="fragments/menu :: menu"></th:block>
+    <th:block th:replace="fragments/notifications :: notifications"></th:block>
+    <main class="main-content">
+        <div class="page-header">
+            <div>
+                <h1 style="margin: 0; font-size: 2rem; font-weight: 700; color: #111827;">
+                    <i class="fa fa-exchange-alt" style="color: var(--warning); margin-right: 0.5rem;"></i>
+                    Remplacer Machine Principale
+                </h1>
+                <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 1rem;">
+                    Sélectionnez une machine de secours pour remplacer la machine principale non fonctionnelle
+                </p>
+            </div>
+            <a th:href="@{|/machines?entrepriseId=${entrepriseId}|}" class="btn btn-outline">
+                <i class="fa fa-arrow-left"></i> Retour
+            </a>
+        </div>
+
+        <div th:if="${info}" class="alert alert-info" th:text="${info}"></div>
+        <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+        <div class="info-box">
+            <h3>
+                <i class="fa fa-exclamation-triangle"></i>
+                Machine Principale Non Fonctionnelle
+            </h3>
+            <div>
+                <strong th:text="${machinePrincipale.nom}">Nom machine</strong>
+                <div style="margin-top: 0.5rem; color: #6b7280;">
+                    <span class="badge badge-danger" style="background: #fee2e2; color: #991b1b;">
+                        <i class="fa fa-times-circle"></i> Non fonctionnelle
+                    </span>
+                    <span class="badge" style="background: #fee2e2; color: #991b1b; margin-left: 0.5rem;">
+                        <i class="fa fa-tools"></i> En réparation
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <form method="post" th:action="@{|/machines/${entrepriseId}/${machinePrincipale.machineId}/promote-secours|}">
+            <h2 style="margin-bottom: 1rem; font-size: 1.3rem; color: #111827;">
+                Sélectionnez une machine de secours à promouvoir :
+            </h2>
+            
+            <div class="machines-grid">
+                <label th:each="secours : ${machinesSecoursDisponibles}" 
+                       class="machine-card"
+                       th:for="${'secours-' + secours.machineId}">
+                    <input type="radio" 
+                           name="nouvellePrincipaleId" 
+                           th:id="${'secours-' + secours.machineId}"
+                           th:value="${secours.machineId}"
+                           required>
+                    <div class="machine-card-title" th:text="${secours.nom}">Nom machine</div>
+                    <div class="machine-card-details">
+                        <div th:if="${secours.numeroSerie}">
+                            <i class="fa fa-barcode"></i> <span th:text="${secours.numeroSerie}"></span>
+                        </div>
+                        <div th:if="${secours.adresseIP}">
+                            <i class="fa fa-network-wired"></i> <span th:text="${secours.adresseIP}"></span>
+                        </div>
+                        <div th:if="${secours.emplacement}">
+                            <i class="fa fa-map-marker-alt"></i> <span th:text="${secours.emplacement}"></span>
+                        </div>
+                        <div style="margin-top: 0.5rem;">
+                            <span class="badge badge-success">
+                                <i class="fa fa-check-circle"></i> Fonctionnelle
+                            </span>
+                        </div>
+                    </div>
+                </label>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa fa-check"></i> Confirmer le remplacement
+                </button>
+                <a th:href="@{|/machines?entrepriseId=${entrepriseId}|}" class="btn btn-outline">
+                    <i class="fa fa-times"></i> Annuler
+                </a>
+            </div>
+        </form>
+    </main>
+</div>
+
+<script>
+    // Gérer la sélection visuelle des cards
+    document.querySelectorAll('input[type="radio"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.querySelectorAll('.machine-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            if (this.checked) {
+                this.closest('.machine-card').classList.add('selected');
+            }
+        });
+    });
+</script>
+</body>
+</html>
+

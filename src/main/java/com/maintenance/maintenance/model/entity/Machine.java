@@ -15,6 +15,23 @@ public class Machine {
     private String notes;
     private Long dateCreation;
     private Long dateMiseAJour;
+    private Long categoryId;
+    private String categoryName;
+    private String categoryDescription;
+    private Boolean operationnel; // true = opérationnel, false = non opérationnel
+    private Boolean enReparation; // true = en réparation, false = pas en réparation
+    private Boolean enProgrammation; // true = en cours de programmation (matériel neuf)
+    private String adresseIP; // Adresse IP de la machine
+    private String machinePrincipaleId; // ID de la machine principale si c'est une machine de secours
+    private Boolean estMachineSecours; // true = machine de secours, false = machine principale
+    private Boolean estMachineEntrepot; // true = machine entrepôt (neuve, non programmée), false = machine normale
+    private String creePar; // Utilisateur qui a créé la machine
+    private Long creeLe; // Date de création (timestamp)
+    private String modifiePar; // Utilisateur qui a modifié la machine
+    private Long modifieLe; // Date de modification (timestamp)
+    private String supprimePar; // Utilisateur qui a supprimé la machine
+    private Long supprimeLe; // Date de suppression (timestamp)
+    private Boolean supprime; // true si la machine est supprimée (soft delete)
 
     public String getMachineId() {
         return machineId;
@@ -86,6 +103,142 @@ public class Machine {
 
     public void setDateMiseAJour(Long dateMiseAJour) {
         this.dateMiseAJour = dateMiseAJour;
+    }
+
+    public Long getCategoryId() {
+        return categoryId;
+    }
+
+    public void setCategoryId(Long categoryId) {
+        this.categoryId = categoryId;
+    }
+
+    public String getCategoryName() {
+        return categoryName;
+    }
+
+    public void setCategoryName(String categoryName) {
+        this.categoryName = categoryName;
+    }
+
+    public String getCategoryDescription() {
+        return categoryDescription;
+    }
+
+    public void setCategoryDescription(String categoryDescription) {
+        this.categoryDescription = categoryDescription;
+    }
+
+    public Boolean getOperationnel() {
+        return operationnel != null ? operationnel : true; // Par défaut opérationnel
+    }
+
+    public void setOperationnel(Boolean operationnel) {
+        this.operationnel = operationnel;
+    }
+
+    public Boolean getEnReparation() {
+        return enReparation != null ? enReparation : false; // Par défaut pas en réparation
+    }
+
+    public void setEnReparation(Boolean enReparation) {
+        this.enReparation = enReparation;
+    }
+
+    public Boolean getEnProgrammation() {
+        return enProgrammation != null ? enProgrammation : false;
+    }
+
+    public void setEnProgrammation(Boolean enProgrammation) {
+        this.enProgrammation = enProgrammation;
+    }
+
+    public String getAdresseIP() {
+        return adresseIP;
+    }
+
+    public void setAdresseIP(String adresseIP) {
+        this.adresseIP = adresseIP;
+    }
+
+    public String getMachinePrincipaleId() {
+        return machinePrincipaleId;
+    }
+
+    public void setMachinePrincipaleId(String machinePrincipaleId) {
+        this.machinePrincipaleId = machinePrincipaleId;
+    }
+
+    public Boolean getEstMachineSecours() {
+        return estMachineSecours != null ? estMachineSecours : false;
+    }
+
+    public void setEstMachineSecours(Boolean estMachineSecours) {
+        this.estMachineSecours = estMachineSecours;
+    }
+
+    public Boolean getEstMachineEntrepot() {
+        return estMachineEntrepot != null ? estMachineEntrepot : false;
+    }
+
+    public void setEstMachineEntrepot(Boolean estMachineEntrepot) {
+        this.estMachineEntrepot = estMachineEntrepot;
+    }
+
+    public String getCreePar() {
+        return creePar;
+    }
+
+    public void setCreePar(String creePar) {
+        this.creePar = creePar;
+    }
+
+    public Long getCreeLe() {
+        return creeLe;
+    }
+
+    public void setCreeLe(Long creeLe) {
+        this.creeLe = creeLe;
+    }
+
+    public String getModifiePar() {
+        return modifiePar;
+    }
+
+    public void setModifiePar(String modifiePar) {
+        this.modifiePar = modifiePar;
+    }
+
+    public Long getModifieLe() {
+        return modifieLe;
+    }
+
+    public void setModifieLe(Long modifieLe) {
+        this.modifieLe = modifieLe;
+    }
+
+    public String getSupprimePar() {
+        return supprimePar;
+    }
+
+    public void setSupprimePar(String supprimePar) {
+        this.supprimePar = supprimePar;
+    }
+
+    public Long getSupprimeLe() {
+        return supprimeLe;
+    }
+
+    public void setSupprimeLe(Long supprimeLe) {
+        this.supprimeLe = supprimeLe;
+    }
+
+    public Boolean getSupprime() {
+        return supprime != null ? supprime : false;
+    }
+
+    public void setSupprime(Boolean supprime) {
+        this.supprime = supprime;
     }
 
     @Override

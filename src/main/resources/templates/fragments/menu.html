@@ -121,7 +121,13 @@
                     <span>Machines</span>
                 </a>
             </li>
-            <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/categories' ? 'active' : ''}">
+            <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI != null and #httpServletRequest.requestURI.startsWith('/stock') ? 'active' : ''}">
+                <a th:href="@{/stock}">
+                    <i class="fas fa-boxes"></i>
+                    <span>Stock</span>
+                </a>
+            </li>
+            <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI != null and #httpServletRequest.requestURI.startsWith('/categories') ? 'active' : ''}">
                 <a th:href="@{/categories}">
                     <i class="fas fa-tags"></i>
                     <span>Catégories</span>
@@ -143,12 +149,6 @@
                 <a th:href="@{/calendar}">
                     <i class="fas fa-calendar-alt"></i>
                     <span>Calendrier</span>
-                </a>
-            </li>
-            <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/inventory' ? 'active' : ''}">
-                <a th:href="@{/inventory}">
-                    <i class="fas fa-boxes"></i>
-                    <span>Stock</span>
                 </a>
             </li>
             <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/tickets' ? 'active' : ''}">

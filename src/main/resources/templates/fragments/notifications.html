@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<body>
+    <!-- Fragment pour les notifications toast -->
+    <div th:fragment="notifications">
+        <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px;"></div>
+        
+        <script>
+            (function() {
+                // Fonction pour afficher une notification toast
+                function showToast(message, type) {
+                    const container = document.getElementById('toast-container');
+                    if (!container) return;
+                    
+                    const toast = document.createElement('div');
+                    toast.style.cssText = `
+                        background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+                        color: white;
+                        padding: 1rem 1.5rem;
+                        border-radius: 8px;
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                        display: flex;
+                        align-items: center;
+                        gap: 0.75rem;
+                        min-width: 300px;
+                        max-width: 500px;
+                        animation: slideInRight 0.3s ease-out;
+                        font-size: 0.95rem;
+                        font-weight: 500;
+                    `;
+                    
+                    const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
+                    toast.innerHTML = `
+                        <i class="fa ${icon}" style="font-size: 1.2rem;"></i>
+                        <span style="flex: 1;">${message}</span>
+                        <button onclick="this.parentElement.remove()" style="background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem; padding: 0; margin-left: 0.5rem;">&times;</button>
+                    `;
+                    
+                    container.appendChild(toast);
+                    
+                    // Auto-suppression après 5 secondes
+                    setTimeout(() => {
+                        toast.style.animation = 'slideOutRight 0.3s ease-in';
+                        setTimeout(() => toast.remove(), 300);
+                    }, 5000);
+                }
+                
+                // Afficher les messages flash s'ils existent (Thymeleaf)
+                const successElement = document.querySelector('[data-success-message]');
+                const errorElement = document.querySelector('[data-error-message]');
+                
+                if (successElement) {
+                    const message = successElement.getAttribute('data-success-message');
+                    if (message) showToast(message, 'success');
+                }
+                if (errorElement) {
+                    const message = errorElement.getAttribute('data-error-message');
+                    if (message) showToast(message, 'error');
+                }
+                
+                // Vérifier aussi les alertes existantes dans la page
+                const successAlert = document.querySelector('.alert-success');
+                const errorAlert = document.querySelector('.alert-error');
+                
+                if (successAlert && successAlert.textContent.trim()) {
+                    showToast(successAlert.textContent.trim(), 'success');
+                    successAlert.style.display = 'none';
+                }
+                if (errorAlert && errorAlert.textContent.trim()) {
+                    showToast(errorAlert.textContent.trim(), 'error');
+                    errorAlert.style.display = 'none';
+                }
+                
+                // Exposer la fonction globalement
+                window.showToast = showToast;
+            })();
+        </script>
+        
+        <style>
+            @keyframes slideInRight {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes slideOutRight {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+        </style>
+    </div>
+</body>
+</html>
+

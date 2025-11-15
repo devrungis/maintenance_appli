@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestion du Stock</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #1d4ed8;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --border: #e5e7eb;
+            --bg: #f8fafc;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: #111827;
+        }
+        .page {
+            display: flex;
+            min-height: 100vh;
+        }
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .filters {
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        .filters select, .filters button {
+            padding: 0.65rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: white;
+            font-size: 0.95rem;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0.75rem 1.5rem;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: #111827;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #f1f5f9;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+        }
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid var(--success);
+        }
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid var(--danger);
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            background: white;
+            border-radius: 12px;
+            border: 1px dashed var(--border);
+            color: #6b7280;
+        }
+        .stock-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 2px solid #e5e7eb;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .stock-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+            transform: translateY(-2px);
+        }
+        .stock-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .stock-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #111827;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .stock-title i {
+            font-size: 1.1rem;
+            color: var(--primary);
+        }
+        .stock-count-container {
+            text-align: right;
+            padding: 0.5rem 0.75rem;
+            background: #f0f9ff;
+            border-radius: 8px;
+            border: 1px solid #bae6fd;
+        }
+        .stock-count {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            line-height: 1;
+        }
+        .stock-count-label {
+            font-size: 0.7rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+            margin-top: 0.25rem;
+        }
+        .stock-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .stock-stat-card {
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid;
+            transition: all 0.2s;
+        }
+        .stock-stat-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .stock-stat-card.total {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            color: #475569;
+        }
+        .stock-stat-card.functional {
+            background: #ecfdf5;
+            border-color: #10b981;
+            color: #065f46;
+        }
+        .stock-stat-card.non-functional {
+            background: #fef2f2;
+            border-color: #ef4444;
+            color: #991b1b;
+        }
+        .stock-stat-card.backup {
+            background: #fffbeb;
+            border-color: #f59e0b;
+            color: #92400e;
+        }
+        .stock-stat-card.new-material {
+            background: #f3e8ff;
+            border-color: #c084fc;
+            color: #6b21a8;
+        }
+        .stock-stat-card.repair {
+            background: #fef3c7;
+            border-color: #fbbf24;
+            color: #92400e;
+        }
+        .stock-stat-icon {
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+        .stock-stat-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        .stock-stat-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+        .stock-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 0.75rem;
+        }
+        .status-excellent {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .status-good {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        .status-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .stock-description {
+            color: #6b7280;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <th:block th:replace="fragments/menu :: menu"></th:block>
+    <th:block th:replace="fragments/notifications :: notifications"></th:block>
+    <main class="main-content">
+        <div class="page-header">
+            <div>
+                <h1 style="margin: 0; font-size: 2rem; font-weight: 700; color: #111827;">
+                    <i class="fa fa-boxes" style="color: var(--primary); margin-right: 0.5rem;"></i>
+                    Gestion du Stock
+                </h1>
+                <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 1rem;">
+                    Vue d'ensemble du stock par catégorie - Mise à jour en temps réel
+                </p>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <div style="text-align: right;">
+                    <div style="font-size: 0.85rem; color: #6b7280; margin-bottom: 0.25rem;">Total catégories</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);" th:text="${#lists.size(stocksParCategorie)}">0</div>
+                </div>
+            </div>
+        </div>
+
+        <form method="get" action="#" class="filters" id="filterForm" onsubmit="showLoading(); return true;">
+            <label for="entrepriseId">Entreprise</label>
+            <select id="entrepriseId" name="entrepriseId" onchange="showLoading(); this.form.submit();" style="min-width: 250px;">
+                <option value="">-- Sélectionnez une entreprise --</option>
+                <option th:each="ent : ${enterprises}"
+                        th:value="${ent.entrepriseId}"
+                        th:selected="${ent.entrepriseId == selectedEntrepriseId}"
+                        th:text="${ent.nom}">Entreprise</option>
+            </select>
+            <noscript>
+                <button type="submit" class="btn btn-outline">Rechercher</button>
+            </noscript>
+        </form>
+
+        <div id="loading-indicator" style="display: none; text-align: center; padding: 2rem; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 9999;">
+            <i class="fa fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary);"></i>
+            <p style="margin-top: 1rem; color: #6b7280;">Chargement en cours...</p>
+        </div>
+
+        <div id="stock-container" style="transition: opacity 0.3s;">
+            <div th:if="${#lists.isEmpty(stocksParCategorie)}">
+                <div class="empty-state" style="background: white; border: 2px solid #e5e7eb; border-radius: 12px; padding: 3rem 2rem; text-align: center; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+                    <i class="fa fa-box-open fa-3x" style="margin-bottom: 1rem; color: #9ca3af;"></i>
+                    <h3 style="font-size: 1.3rem; font-weight: 700; color: #111827; margin-bottom: 0.5rem;">
+                        Aucun stock trouvé
+                    </h3>
+                    <p th:if="${selectedEntrepriseId != null and selectedEntrepriseId != ''}" 
+                       style="font-size: 1rem; color: #6b7280; margin-bottom: 1rem;">
+                        Aucune machine enregistrée pour cette entreprise.
+                    </p>
+                    <p th:if="${selectedEntrepriseId == null or selectedEntrepriseId == ''}" 
+                       style="font-size: 1rem; color: #6b7280; margin-bottom: 1rem;">
+                        Choisissez d'abord une entreprise pour afficher le stock.
+                    </p>
+                </div>
+            </div>
+
+            <div th:unless="${#lists.isEmpty(stocksParCategorie)}" class="stock-grid">
+                <div th:each="stock : ${stocksParCategorie}" class="stock-card">
+                    <div class="stock-header">
+                        <div style="flex: 1;">
+                            <div class="stock-title">
+                                <i class="fa fa-tag"></i>
+                                <span th:text="${stock.categoryName}">Catégorie</span>
+                            </div>
+                            <div class="stock-description" th:if="${stock.categoryDescription}" th:text="${stock.categoryDescription}"></div>
+                        </div>
+                        <div class="stock-count-container">
+                            <div class="stock-count" th:text="${stock.nombreMachinesTotal}">0</div>
+                            <div class="stock-count-label">Total suivi</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stock-stats-grid">
+                        <div class="stock-stat-card total">
+                            <div class="stock-stat-icon">
+                                <i class="fa fa-boxes"></i>
+                            </div>
+                            <div class="stock-stat-label">Disponibles</div>
+                            <div class="stock-stat-value" th:text="${stock.nombreMachinesDisponibles}">0</div>
+                        </div>
+                        <div class="stock-stat-card functional">
+                            <div class="stock-stat-icon">
+                                <i class="fa fa-cogs"></i>
+                            </div>
+                            <div class="stock-stat-label">Total suivi</div>
+                            <div class="stock-stat-value" th:text="${stock.nombreMachinesTotal}">0</div>
+                        </div>
+                        <div class="stock-stat-card non-functional">
+                            <div class="stock-stat-icon">
+                                <i class="fa fa-times-circle"></i>
+                            </div>
+                            <div class="stock-stat-label">Non fonctionnel</div>
+                            <div class="stock-stat-value" th:text="${stock.nombreMachinesNonOperationnelles}">0</div>
+                        </div>
+                        <div class="stock-stat-card repair">
+                            <div class="stock-stat-icon">
+                                <i class="fa fa-tools"></i>
+                            </div>
+                            <div class="stock-stat-label">En réparation</div>
+                            <div class="stock-stat-value" th:text="${stock.nombreMachinesEnReparation}">0</div>
+                        </div>
+                        <div class="stock-stat-card backup">
+                            <div class="stock-stat-icon">
+                                <i class="fa fa-shield-alt"></i>
+                            </div>
+                            <div class="stock-stat-label">Secours</div>
+                            <div class="stock-stat-value" th:text="${stock.nombreMachinesSecours}">0</div>
+                        </div>
+                        <div class="stock-stat-card new-material">
+                            <div class="stock-stat-icon">
+                                <i class="fa fa-box"></i>
+                            </div>
+                            <div class="stock-stat-label">Matériels neufs</div>
+                            <div class="stock-stat-value" th:text="${stock.nombreMachinesNeuves}">0</div>
+                        </div>
+                    </div>
+                    
+                    <div th:if="${stock.nombreMachinesTotal > 0}" style="margin-top: 1rem;">
+                        <div th:classappend="${(stock.nombreMachinesDisponibles * 100 / stock.nombreMachinesTotal) >= 80 ? 'status-excellent' : ((stock.nombreMachinesDisponibles * 100 / stock.nombreMachinesTotal) >= 50 ? 'status-good' : 'status-warning')}" 
+                             class="stock-status-badge">
+                            <i class="fa" th:classappend="${(stock.nombreMachinesDisponibles * 100 / stock.nombreMachinesTotal) >= 80 ? 'fa-check-circle' : ((stock.nombreMachinesDisponibles * 100 / stock.nombreMachinesTotal) >= 50 ? 'fa-exclamation-circle' : 'fa-exclamation-triangle')}"></i>
+                            <span th:text="${#numbers.formatDecimal((stock.nombreMachinesDisponibles * 100 / stock.nombreMachinesTotal), 0, 0)} + '% disponibles'">0%</span>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 1rem;">
+                        <a th:if="${selectedEntrepriseId != null and selectedEntrepriseId != '' and stock.categoryId != null}" 
+                           th:href="@{|/stock/${selectedEntrepriseId}/categorie/${stock.categoryId}|}" 
+                           class="btn btn-primary"
+                           style="width: 100%; justify-content: center; padding: 0.5rem 1rem; font-size: 0.85rem;">
+                            <i class="fa fa-eye"></i>
+                            <span>Voir le détail</span>
+                        </a>
+                        <div th:unless="${selectedEntrepriseId != null and selectedEntrepriseId != '' and stock.categoryId != null}" 
+                             class="btn btn-primary"
+                             style="width: 100%; justify-content: center; padding: 0.5rem 1rem; font-size: 0.85rem; opacity: 0.5; cursor: not-allowed;">
+                            <i class="fa fa-eye"></i>
+                            <span>Voir le détail</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <script>
+            function showLoading() {
+                const indicator = document.getElementById('loading-indicator');
+                const container = document.getElementById('stock-container');
+                if (indicator) indicator.style.display = 'block';
+                if (container) container.style.opacity = '0.5';
+            }
+            
+            // Masquer le loading une fois la page chargée
+            document.addEventListener('DOMContentLoaded', function() {
+                const indicator = document.getElementById('loading-indicator');
+                const container = document.getElementById('stock-container');
+                if (indicator) indicator.style.display = 'none';
+                if (container) container.style.opacity = '1';
+            });
+        </script>
+    </main>
+</div>
+</body>
+</html>

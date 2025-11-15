@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Modifier une catégorie</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: #f8fafc;
+            color: #111827;
+        }
+        .page {
+            display: flex;
+            min-height: 100vh;
+        }
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 640px;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            border: 1px solid #d1d5db;
+            font-size: 1rem;
+            transition: border-color 0.2s ease;
+        }
+        input:focus, textarea:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+        textarea {
+            min-height: 160px;
+            resize: vertical;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-radius: 10px;
+            padding: 0.85rem 1.75rem;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #111827;
+        }
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #ef4444;
+            background: rgba(239, 68, 68, 0.12);
+            color: #991b1b;
+        }
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <th:block th:replace="fragments/menu :: menu"></th:block>
+    <th:block th:replace="fragments/notifications :: notifications"></th:block>
+    <main class="main-content">
+        <div class="page-header">
+            <div>
+                <h1>Modifier la catégorie</h1>
+                <p>Actualisez les informations de cette catégorie.</p>
+            </div>
+            <a th:href="@{/categories}" class="btn btn-secondary">
+                <i class="fa fa-arrow-left"></i>
+                Retour
+            </a>
+        </div>
+
+        <div class="card">
+            <div th:if="${error}" class="alert" th:text="${error}" style="display: none;"></div>
+
+            <form th:action="@{|/categories/${category.id}/edit|}" th:object="${category}" method="post">
+                <div class="form-group">
+                    <label for="name">Nom de la catégorie <span style="color:#ef4444;">*</span></label>
+                    <input id="name" type="text" th:field="*{name}" placeholder="Nom de la catégorie" required>
+                    <div th:if="${#fields.hasErrors('name')}" style="color:#dc2626; margin-top:0.5rem;" th:errors="*{name}"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" th:field="*{description}" placeholder="Description de la catégorie"></textarea>
+                    <div th:if="${#fields.hasErrors('description')}" style="color:#dc2626; margin-top:0.5rem;" th:errors="*{description}"></div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa fa-save"></i>
+                        Enregistrer
+                    </button>
+                    <a th:href="@{/categories}" class="btn btn-secondary">Annuler</a>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+</body>
+</html>
+
+

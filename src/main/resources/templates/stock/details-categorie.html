@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Détails Catégorie</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --danger: #ef4444;
+            --success: #10b981;
+            --border: #e5e7eb;
+            --bg: #f8fafc;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: #111827;
+        }
+        .page {
+            display: flex;
+            min-height: 100vh;
+        }
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            background: #e2e8f0;
+            color: #111827;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+        th {
+            background: #f1f5f9;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            background: white;
+            border-radius: 12px;
+            border: 1px dashed var(--border);
+            color: #6b7280;
+        }
+        .machines-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+        .machine-card {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .machine-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+            transform: translateY(-2px);
+        }
+        .machine-card-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .machine-card-image {
+            width: 100px;
+            height: 100px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 2px solid #e5e7eb;
+            flex-shrink: 0;
+        }
+        .machine-card-image-placeholder {
+            width: 100px;
+            height: 100px;
+            border-radius: 8px;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9ca3af;
+            font-size: 2rem;
+            border: 2px solid #e5e7eb;
+            flex-shrink: 0;
+        }
+        .machine-card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 0.5rem;
+        }
+        .machine-card-info {
+            margin-bottom: 1rem;
+        }
+        .machine-card-detail-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+        .machine-card-detail-item i {
+            color: var(--primary);
+            width: 20px;
+            flex-shrink: 0;
+            margin-top: 0.1rem;
+        }
+        .machine-card-photos {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.5rem;
+        }
+        .machine-card-photo {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+        }
+        .machine-card-footer {
+            display: flex;
+            gap: 0.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e5e7eb;
+        }
+        .btn-icon {
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 40px;
+            min-height: 40px;
+            max-width: 40px;
+            max-height: 40px;
+            transition: opacity 0.2s;
+            text-decoration: none;
+        }
+        .btn-icon:hover {
+            opacity: 0.8;
+        }
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid var(--success);
+        }
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid var(--danger);
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <th:block th:replace="fragments/menu :: menu"></th:block>
+    <main class="main-content">
+        <div class="page-header">
+            <div>
+                <h1 style="margin: 0; font-size: 2rem; font-weight: 700; color: #111827;">
+                    <i class="fa fa-tag" style="color: var(--primary); margin-right: 0.5rem;"></i>
+                    <span th:text="${categoryName != null ? categoryName : 'Catégorie'}">Catégorie</span>
+                </h1>
+                <p th:if="${categoryDescription != null and categoryDescription != ''}" 
+                   th:text="${categoryDescription}" 
+                   style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 1rem;"></p>
+            </div>
+            <a th:if="${entrepriseId != null}" 
+               th:href="@{|/stock?entrepriseId=${entrepriseId}|}" 
+               class="btn" 
+               style="background: #3b82f6; color: white;">
+                <i class="fa fa-arrow-left"></i> Retour au stock
+            </a>
+            <a th:unless="${entrepriseId != null}" 
+               th:href="@{/stock}" 
+               class="btn" 
+               style="background: #3b82f6; color: white;">
+                <i class="fa fa-arrow-left"></i> Retour au stock
+            </a>
+        </div>
+        
+        <div th:if="${success != null and success != ''}" class="alert alert-success">
+            <i class="fa fa-check-circle"></i> <span th:text="${success}"></span>
+        </div>
+        <div th:if="${error != null and error != ''}" class="alert alert-error">
+            <i class="fa fa-exclamation-circle"></i> <span th:text="${error}"></span>
+        </div>
+
+        <!-- Debug info -->
+        <div th:if="${machinesCount != null}" style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: #f0f9ff; border-left: 4px solid var(--primary); border-radius: 8px; color: #1d4ed8; font-size: 0.9rem;">
+            <i class="fa fa-info-circle"></i> 
+            <strong th:text="${machinesCount}"></strong> machine(s) trouvée(s) dans cette catégorie
+        </div>
+
+        <div th:if="${machines == null or #lists.isEmpty(machines)}">
+            <div class="empty-state">
+                <i class="fa fa-box-open fa-2x" style="margin-bottom: 0.75rem; color: #9ca3af;"></i>
+                <p style="font-size: 1.1rem; font-weight: 600; color: #6b7280;">Aucune machine dans cette catégorie.</p>
+            </div>
+        </div>
+
+        <div th:if="${machines != null and !#lists.isEmpty(machines)}" class="machines-grid">
+            <div th:each="machine : ${machines}" th:if="${machine != null}" class="machine-card">
+                <div class="machine-card-header">
+                    <div th:if="${machine.photos != null and !machine.photos.isEmpty() and machine.photos[0] != null and machine.photos[0] != ''}">
+                        <img th:src="${machine.photos[0]}" 
+                             alt="Photo machine" 
+                             class="machine-card-image"
+                             th:attr="onclick=|window.open('${machine.photos[0]}', '_blank')|"
+                             style="cursor: pointer;">
+                    </div>
+                    <div th:unless="${machine.photos != null and !machine.photos.isEmpty() and machine.photos[0] != null and machine.photos[0] != ''}" 
+                         class="machine-card-image-placeholder">
+                        <i class="fa fa-image"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <div class="machine-card-title" th:text="${machine.nom != null ? machine.nom : 'Machine sans nom'}">Nom machine</div>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
+                            <span th:if="${machine.estMachineEntrepot == true}" class="badge" style="background: #f3e8ff; color: #7c3aed; font-size: 0.75rem;">
+                                <i class="fa fa-box"></i> Neuve · en programmation
+                            </span>
+                            <span th:if="${machine.estMachineEntrepot != true and machine.estMachineSecours == true}" class="badge" style="background: #fef3c7; color: #92400e; font-size: 0.75rem;">
+                                <i class="fa fa-shield-alt"></i> Secours
+                            </span>
+                            <span th:if="${machine.estMachineEntrepot != true and (machine.estMachineSecours == false or machine.estMachineSecours == null)}" class="badge" style="background: #dbeafe; color: #1d4ed8; font-size: 0.75rem;">
+                                <i class="fa fa-server"></i> Principale
+                            </span>
+                            <span th:if="${machine.estMachineEntrepot != true and machine.operationnel == true}" class="badge badge-success" style="font-size: 0.75rem;">
+                                <i class="fa fa-check-circle"></i> Fonctionnel
+                            </span>
+                            <span th:if="${machine.estMachineEntrepot != true and machine.operationnel == false}" class="badge badge-danger" style="font-size: 0.75rem;">
+                                <i class="fa fa-times-circle"></i> Non fonctionnel
+                            </span>
+                            <span th:if="${machine.estMachineEntrepot != true and machine.enReparation == true}" class="badge" style="background: #fee2e2; color: #991b1b; font-size: 0.75rem;">
+                                <i class="fa fa-tools"></i> En réparation
+                            </span>
+                        </div>
+                        <div th:if="${machine.machinePrincipaleId != null and machine.machinePrincipaleId != ''}" style="font-size: 0.8rem; color: #6b7280; margin-top: 0.5rem;">
+                            <i class="fa fa-link"></i> Secours pour: 
+                            <span th:if="${machinesMap != null and machinesMap.containsKey(machine.machinePrincipaleId)}" 
+                                  th:with="principale=${machinesMap.get(machine.machinePrincipaleId)}">
+                                <span th:if="${principale != null}">
+                                    <span th:text="${principale.nom != null ? principale.nom : 'Machine'}"></span>
+                                    <span th:if="${principale.adresseIP != null and principale.adresseIP != ''}">
+                                        (<span th:text="${principale.adresseIP}"></span>)
+                                    </span>
+                                    <span th:unless="${principale.adresseIP != null and principale.adresseIP != ''}" 
+                                          th:if="${principale.numeroSerie != null and principale.numeroSerie != ''}">
+                                        (<span th:text="${principale.numeroSerie}"></span>)
+                                    </span>
+                                    <span th:unless="${(principale.adresseIP != null and principale.adresseIP != '') or (principale.numeroSerie != null and principale.numeroSerie != '')}">
+                                        (Pas d'identifiant)
+                                    </span>
+                                </span>
+                                <span th:unless="${principale != null}" th:text="${machine.machinePrincipaleId}"></span>
+                            </span>
+                            <span th:unless="${machinesMap != null and machinesMap.containsKey(machine.machinePrincipaleId)}" 
+                                  th:text="${machine.machinePrincipaleId}">
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="machine-card-info" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+                    <div class="machine-card-detail-item">
+                        <i class="fa fa-barcode"></i>
+                        <span><strong>N° série:</strong> <span th:text="${machine.numeroSerie ?: '-'}"></span></span>
+                    </div>
+                    <div class="machine-card-detail-item">
+                        <i class="fa fa-network-wired"></i>
+                        <span><strong>IP:</strong> <span th:text="${machine.adresseIP ?: '-'}"></span></span>
+                    </div>
+                    <div class="machine-card-detail-item" th:if="${machine.categoryName != null and machine.categoryName != ''}">
+                        <i class="fa fa-tag"></i>
+                        <span><strong>Catégorie:</strong> <span th:text="${machine.categoryName}"></span></span>
+                    </div>
+                    <div class="machine-card-detail-item">
+                        <i class="fa fa-map-marker-alt"></i>
+                        <span><strong>Emplacement:</strong> <span th:text="${machine.emplacement ?: '-'}"></span></span>
+                    </div>
+                    <div class="machine-card-detail-item" th:if="${machine.notes != null and machine.notes != ''}">
+                        <i class="fa fa-comment"></i>
+                        <span><strong>Notes:</strong> <span th:text="${machine.notes}" style="word-break: break-word;"></span></span>
+                    </div>
+                    <div class="machine-card-detail-item">
+                        <i class="fa fa-images"></i>
+                        <span><strong>Photos:</strong> 
+                            <span th:if="${machine.photos != null and !machine.photos.isEmpty()}" th:text="${machine.photos.size()} + ' photo(s)'"></span>
+                            <span th:unless="${machine.photos != null and !machine.photos.isEmpty()}">Aucune</span>
+                        </span>
+                        <div class="machine-card-photos" th:if="${machine.photos != null and !machine.photos.isEmpty()}" style="margin-top: 0.5rem;">
+                            <img th:each="photo : ${machine.photos}"
+                                 th:if="${photo != null and photo != ''}"
+                                 th:src="${photo}"
+                                 alt="Photo machine"
+                                 class="machine-card-photo"
+                                 th:attr="onclick=|window.open('${photo}', '_blank')|"
+                                 style="cursor: pointer;">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="machine-card-footer">
+                    <a th:if="${machine.machineId != null and entrepriseId != null}" 
+                       th:href="@{|/machines/${entrepriseId}/${machine.machineId}/edit|}" 
+                       class="btn-icon" 
+                       title="Modifier"
+                       style="background: #3b82f6; color: white;">
+                        <i class="fa fa-pen"></i>
+                    </a>
+                    <a th:if="${machine.estMachineEntrepot != true and (machine.estMachineSecours == null or machine.estMachineSecours == false) and machine.machineId != null and entrepriseId != null}" 
+                       th:href="@{|/machines/${entrepriseId}/${machine.machineId}/attach-secours|}" 
+                       class="btn-icon" 
+                       title="Rattacher secours"
+                       style="background: #f59e0b; color: white;">
+                        <i class="fa fa-link"></i>
+                    </a>
+                    <form th:if="${machine.machineId != null and entrepriseId != null}" 
+                          th:action="@{|/machines/${entrepriseId}/${machine.machineId}/delete|}" 
+                          method="post" 
+                          style="display: inline;"
+                          onsubmit="return confirm('Confirmer la suppression de cette machine ?');">
+                        <button type="submit" 
+                                class="btn-icon" 
+                                title="Supprimer"
+                                style="background: #ef4444; color: white; border: none; cursor: pointer;">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>
+

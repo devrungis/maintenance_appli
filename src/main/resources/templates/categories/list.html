@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestion des catégories</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #1d4ed8;
+            --danger: #ef4444;
+            --success: #10b981;
+            --background: #f8fafc;
+            --border: #e5e7eb;
+        }
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--background);
+            color: #111827;
+        }
+        .page {
+            display: flex;
+            min-height: 100vh;
+        }
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .page-header h1 {
+            margin: 0;
+            font-size: 1.75rem;
+        }
+        .page-header p {
+            margin: 0.25rem 0 0 0;
+            color: #6b7280;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-radius: 10px;
+            padding: 0.7rem 1.4rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: #111827;
+        }
+        .btn-outline-danger {
+            color: var(--danger);
+            border-color: var(--danger);
+        }
+        .alerts {
+            margin-bottom: 1.5rem;
+        }
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 10px;
+            margin-bottom: 0.75rem;
+        }
+        .alert-success {
+            background: rgba(16, 185, 129, 0.12);
+            color: #065f46;
+            border-left: 4px solid var(--success);
+        }
+        .alert-error {
+            background: rgba(239, 68, 68, 0.12);
+            color: #991b1b;
+            border-left: 4px solid var(--danger);
+        }
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+        .category-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .category-header h2 {
+            margin: 0;
+            font-size: 1.25rem;
+        }
+        .category-description {
+            margin: 0;
+            color: #4b5563;
+            line-height: 1.5;
+            min-height: 3rem;
+        }
+        .subcategories {
+            border-top: 1px solid var(--border);
+            padding-top: 1rem;
+        }
+        .subcategories h3 {
+            margin: 0 0 0.75rem 0;
+            font-size: 1rem;
+            color: #1f2937;
+        }
+        .empty-state {
+            text-align: center;
+            background: white;
+            padding: 3rem 1rem;
+            border-radius: 16px;
+            border: 1px dashed var(--border);
+            color: #6b7280;
+        }
+        .sub-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .sub-item {
+            padding: 0.75rem;
+            border-radius: 10px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+        }
+        .sub-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .sub-item-title {
+            font-weight: 600;
+        }
+        .sub-item-description {
+            margin: 0.4rem 0 0 0;
+            color: #6b7280;
+            line-height: 1.4;
+        }
+        .actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        form.inline {
+            display: inline;
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <th:block th:replace="fragments/menu :: menu"></th:block>
+    <th:block th:replace="fragments/notifications :: notifications"></th:block>
+    <main class="main-content">
+        <div class="page-header">
+            <div>
+                <h1 style="margin: 0; font-size: 2rem; font-weight: 700; color: #111827;">
+                    <i class="fa fa-tags" style="color: var(--primary); margin-right: 0.5rem;"></i>
+                    Catégories
+                </h1>
+                <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 1rem;">
+                    Organisez vos machines en regroupements cohérents
+                </p>
+            </div>
+            <div class="actions">
+                <a th:href="@{/categories/create}" class="btn btn-primary">
+                    <i class="fa fa-plus"></i>
+                    Nouvelle catégorie
+                </a>
+            </div>
+        </div>
+
+        <div th:if="${#lists.isEmpty(categories)}" class="empty-state">
+            <i class="fa fa-tags fa-2x" style="margin-bottom: 0.75rem;"></i>
+            <p>Aucune catégorie enregistrée pour le moment.</p>
+            <p style="margin-top: 0.5rem;">Créez votre première catégorie pour commencer à organiser les machines.</p>
+        </div>
+
+        <div class="category-grid" th:unless="${#lists.isEmpty(categories)}">
+            <div class="category-card" th:each="category : ${categories}">
+                <div class="category-header">
+                    <div>
+                        <h2 th:text="${category.name}">Nom de la catégorie</h2>
+                        <p class="category-description" th:text="${category.description ?: 'Aucune description fournie.'}"></p>
+                    </div>
+                    <div class="actions" th:if="${isSuperAdmin}">
+                        <a th:href="@{|/categories/${category.id}/edit|}" class="btn btn-outline" style="font-size: 0.9rem;">
+                            <i class="fa fa-pen"></i>
+                            Modifier
+                        </a>
+                        <form th:action="@{|/categories/${category.id}/delete|}" method="post" class="inline"
+                              onsubmit="return confirm('Confirmer la suppression de cette catégorie ?');">
+                            <button type="submit" class="btn btn-outline btn-outline-danger" style="font-size: 0.9rem;">
+                                <i class="fa fa-trash"></i>
+                                Supprimer
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>
+
+

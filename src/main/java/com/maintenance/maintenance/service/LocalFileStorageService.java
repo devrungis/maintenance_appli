@@ -31,8 +31,8 @@ public class LocalFileStorageService {
             return urls;
         }
 
-        Path machineDir = rootDir.resolve(Paths.get("machines", entrepriseId, machineId)).normalize();
-        Files.createDirectories(machineDir);
+        Path imageDir = rootDir.resolve(Paths.get("image", entrepriseId, machineId)).normalize();
+        Files.createDirectories(imageDir);
 
         for (MultipartFile file : files) {
             if (urls.size() >= maxUploads) {
@@ -50,13 +50,13 @@ public class LocalFileStorageService {
             }
 
             String filename = UUID.randomUUID() + extension;
-            Path target = machineDir.resolve(filename).normalize();
+            Path target = imageDir.resolve(filename).normalize();
 
             try (InputStream inputStream = file.getInputStream()) {
                 Files.copy(inputStream, target, StandardCopyOption.REPLACE_EXISTING);
             }
 
-            String relativePath = String.format("/media/machines/%s/%s/%s", entrepriseId, machineId, filename).replace('\\', '/');
+            String relativePath = String.format("/media/image/%s/%s/%s", entrepriseId, machineId, filename).replace('\\', '/');
             urls.add(relativePath);
         }
 

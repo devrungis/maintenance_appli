@@ -40,7 +40,7 @@ public class FirebaseAuthService {
     /**
      * Authentifie un utilisateur avec email et mot de passe via Firebase REST API
      */
-    public String authenticateUser(String email, String password) throws AuthenticationException, Exception {
+    public AuthResult authenticateUser(String email, String password) throws AuthenticationException, Exception {
         
         Map<String, String> requestBody = new HashMap<>();
         requestBody.put("email", email);
@@ -91,7 +91,11 @@ public class FirebaseAuthService {
                 throw new Exception("Erreur d'authentification");
             }
             
-            return idToken;
+            String refreshToken = (String) responseBody.get("refreshToken");
+            String localId = (String) responseBody.get("localId"); // UID de l'utilisateur
+            String returnedEmail = (String) responseBody.get("email");
+            
+            return new AuthResult(idToken, refreshToken, localId, returnedEmail != null ? returnedEmail : email);
             
         } catch (org.springframework.web.client.HttpClientErrorException e) {
             // Gérer les erreurs HTTP 400 (Bad Request)
@@ -166,6 +170,35 @@ public class FirebaseAuthService {
             return true;
         } catch (FirebaseAuthException e) {
             return false;
+        }
+    }
+    public static class AuthResult {
+        private final String idToken;
+        private final String refreshToken;
+        private final String localId;
+        private final String email;
+
+        public AuthResult(String idToken, String refreshToken, String localId, String email) {
+            this.idToken = idToken;
+            this.refreshToken = refreshToken;
+            this.localId = localId;
+            this.email = email;
+        }
+
+        public String getIdToken() {
+            return idToken;
+        }
+
+        public String getRefreshToken() {
+            return refreshToken;
+        }
+
+        public String getLocalId() {
+            return localId;
+        }
+
+        public String getEmail() {
+            return email;
         }
     }
 }

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Nouveau Stock</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f8fafc;
+            color: #111827;
+        }
+        .page {
+            display: flex;
+            min-height: 100vh;
+        }
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+            max-width: 720px;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            border: 1px solid #d1d5db;
+            font-size: 1rem;
+            background: #fff;
+            transition: border-color 0.2s;
+        }
+        input:focus, textarea:focus, select:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+        textarea {
+            min-height: 140px;
+            resize: vertical;
+        }
+        .form-actions {
+            margin-top: 2rem;
+            display: flex;
+            gap: 1rem;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-radius: 10px;
+            padding: 0.85rem 1.75rem;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #111827;
+        }
+        .help-text {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-top: 0.4rem;
+        }
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+        }
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <th:block th:replace="fragments/menu :: menu"></th:block>
+    <main class="main-content">
+        <div class="page-header">
+            <div>
+                <h1>Ajouter un stock</h1>
+                <p>Enregistrez un nouveau produit ou pièce en stock pour une machine.</p>
+            </div>
+            <a th:href="@{|/stock?entrepriseId=${stockForm.entrepriseId}|}" class="btn btn-secondary">
+                <i class="fa fa-arrow-left"></i> Retour
+            </a>
+        </div>
+
+        <div class="card">
+            <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+            <div th:if="${enterprises}" style="margin-bottom: 1.5rem; padding: 1rem; background: #f1f5f9; border-radius: 8px;">
+                <strong>Entreprise sélectionnée :</strong>
+                <span th:each="ent : ${enterprises}" 
+                      th:if="${ent.entrepriseId == stockForm.entrepriseId}"
+                      th:text="${ent.nom}"></span>
+            </div>
+
+            <form th:action="@{/stock}" th:object="${stockForm}" method="post">
+                <input type="hidden" th:field="*{entrepriseId}">
+
+                <div class="form-grid">
+                    <div>
+                        <label for="nomProduit">Nom du produit <span style="color:#ef4444;">*</span></label>
+                        <input id="nomProduit" type="text" th:field="*{nomProduit}" placeholder="Ex : Filtre à huile" required>
+                    </div>
+                    <div>
+                        <label for="reference">Référence</label>
+                        <input id="reference" type="text" th:field="*{reference}" placeholder="Ex : FIL-12345">
+                    </div>
+                    <div>
+                        <label for="machineId">Machine associée</label>
+                        <select id="machineId" th:field="*{machineId}">
+                            <option value="">-- Aucune machine (stock général) --</option>
+                            <option th:each="machine : ${machines}"
+                                    th:value="${machine.machineId}"
+                                    th:text="${machine.nom}">
+                            </option>
+                        </select>
+                        <p class="help-text">Laissez vide si le stock n'est pas spécifique à une machine.</p>
+                    </div>
+                    <div>
+                        <label for="quantite">Quantité</label>
+                        <input id="quantite" type="number" th:field="*{quantite}" min="0" placeholder="0" value="0">
+                    </div>
+                    <div>
+                        <label for="unite">Unité</label>
+                        <input id="unite" type="text" th:field="*{unite}" placeholder="Ex : pièces, kg, litres" value="pièces">
+                        <p class="help-text">Unité de mesure (pièces, kg, litres, etc.)</p>
+                    </div>
+                    <div>
+                        <label for="seuilMinimum">Seuil minimum</label>
+                        <input id="seuilMinimum" type="number" th:field="*{seuilMinimum}" min="0" placeholder="0">
+                        <p class="help-text">Alerte lorsque le stock descend en dessous de ce seuil.</p>
+                    </div>
+                    <div>
+                        <label for="prixUnitaire">Prix unitaire (€)</label>
+                        <input id="prixUnitaire" type="number" th:field="*{prixUnitaire}" min="0" step="0.01" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label for="emplacement">Emplacement</label>
+                        <input id="emplacement" type="text" th:field="*{emplacement}" placeholder="Ex : Entrepôt A, Étagère 3">
+                    </div>
+                    <div>
+                        <label for="fournisseur">Fournisseur</label>
+                        <input id="fournisseur" type="text" th:field="*{fournisseur}" placeholder="Ex : Fournisseur XYZ">
+                    </div>
+                </div>
+
+                <div style="margin-top: 2rem;">
+                    <label for="notes">Notes / informations complémentaires</label>
+                    <textarea id="notes" th:field="*{notes}" placeholder="Ajoutez des précisions : caractéristiques, conditions de stockage, remarques..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa fa-save"></i> Enregistrer
+                    </button>
+                    <a th:href="@{|/stock?entrepriseId=${stockForm.entrepriseId}|}" class="btn btn-secondary">
+                        Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+</body>
+</html>
+

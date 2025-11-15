@@ -83,73 +83,554 @@
             background: #3b82f6;
             color: white;
         }
+        .btn-primary:hover {
+            background: #2563eb;
+        }
         .btn-secondary {
             background: #e2e8f0;
             color: #111827;
+        }
+        .btn-secondary:hover {
+            background: #cbd5e1;
+        }
+        button[type="submit"] {
+            width: auto;
+            min-width: 200px;
+            display: inline-flex !important;
+            align-items: center;
+            gap: 0.5rem;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        button[type="submit"]:disabled {
+            background: #9ca3af !important;
+            cursor: not-allowed !important;
+            opacity: 0.6 !important;
+            visibility: visible !important;
+        }
+        #submitBtn {
+            display: inline-flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            position: relative !important;
+            z-index: 1000 !important;
+        }
+        #submitBtn:disabled {
+            opacity: 0.6 !important;
+            visibility: visible !important;
+        }
+        .form-actions {
+            display: flex !important;
+            gap: 1rem;
+            align-items: center;
+            visibility: visible !important;
+            opacity: 1 !important;
+            position: relative !important;
+            z-index: 999 !important;
         }
         .help-text {
             font-size: 0.85rem;
             color: #6b7280;
             margin-top: 0.4rem;
         }
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+        }
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+        }
     </style>
 </head>
 <body>
 <div class="page">
     <th:block th:replace="fragments/menu :: menu"></th:block>
+    <th:block th:replace="fragments/notifications :: notifications"></th:block>
     <main class="main-content">
         <div class="page-header">
             <div>
-                <h1>Ajouter une machine</h1>
-                <p>Renseignez les informations nécessaires pour référencer la machine.</p>
+                <h1 style="margin: 0; font-size: 2rem; font-weight: 700; color: #111827;">
+                    <i class="fa fa-plus-circle" style="color: #3b82f6; margin-right: 0.5rem;"></i>
+                    Ajouter une machine
+                </h1>
+                <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 1rem;">
+                    Renseignez les informations nécessaires pour référencer la machine
+                </p>
             </div>
-            <a th:href="@{|/machines?entrepriseId=${machineForm.entrepriseId}|}" class="btn btn-secondary">
+            <a th:href="@{|/machines?entrepriseId=${selectedEntrepriseId ?: machineForm.entrepriseId ?: ''}|}" class="btn btn-secondary">
                 <i class="fa fa-arrow-left"></i> Retour
             </a>
         </div>
 
         <div class="card">
-            <form th:action="@{/machines}" th:object="${machineForm}" method="post" enctype="multipart/form-data">
-                <input type="hidden" th:field="*{entrepriseId}">
+            <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+            <div th:if="${attachToMachine != null}" class="alert" style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                <strong style="display: block; margin-bottom: 0.5rem; color: #92400e;">
+                    <i class="fa fa-info-circle"></i> Rattachement automatique
+                </strong>
+                <p style="margin: 0; color: #92400e; font-size: 0.9rem;">
+                    Cette machine sera automatiquement rattachée comme machine de secours pour : 
+                    <strong th:text="${attachToMachine.nom}"></strong>
+                    <span th:if="${attachToMachine.adresseIP}" th:text="${' (IP: ' + attachToMachine.adresseIP + ')'}"></span>
+                    <span th:if="${attachToMachine.numeroSerie and !attachToMachine.adresseIP}" th:text="${' (N° série: ' + attachToMachine.numeroSerie + ')'}"></span>
+                </p>
+            </div>
+
+            <form th:action="@{/machines}" th:object="${machineForm}" method="post" enctype="multipart/form-data" id="machineForm" style="display: block;">
+                <div th:if="${selectedEntrepriseId == null}" class="alert alert-error" style="margin-bottom: 1.5rem;">
+                    <strong>⚠️ Attention :</strong> Veuillez sélectionner une entreprise ci-dessous avant de remplir le formulaire.
+                </div>
 
                 <div class="form-grid">
+                    <div th:if="${selectedEntrepriseId == null}" style="grid-column: 1 / -1;">
+                        <label for="entrepriseIdSelect">Entreprise <span style="color:#ef4444;">*</span></label>
+                        <select id="entrepriseIdSelect" name="entrepriseIdSelect" required onchange="updateEntrepriseId(this.value)" style="width: 100%; padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid #d1d5db; font-size: 1rem; background: #fff;">
+                            <option value="">-- Sélectionnez une entreprise --</option>
+                            <option th:each="ent : ${enterprises}" 
+                                    th:value="${ent.entrepriseId}"
+                                    th:text="${ent.nom}">
+                            </option>
+                        </select>
+                        <p class="help-text">Sélectionnez l'entreprise à laquelle cette machine appartient.</p>
+                    </div>
+                </div>
+                
+                <!-- Un seul champ caché pour entrepriseId -->
+                <input type="hidden" th:field="*{entrepriseId}" th:value="${selectedEntrepriseId ?: ''}" id="entrepriseIdHidden">
+
+                <div class="form-grid" th:if="${selectedEntrepriseId != null}">
                     <div>
                         <label for="nom">Nom de la machine <span style="color:#ef4444;">*</span></label>
                         <input id="nom" type="text" th:field="*{nom}" placeholder="Ex : Press hydraulique A32" required>
                     </div>
                     <div>
-                        <label for="numeroSerie">Numéro de série</label>
+                        <label for="machineType">Type de machine</label>
+                        <select id="machineType" name="machineType" onchange="handleMachineTypeChange()" style="width: 100%; padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid #d1d5db; font-size: 1rem; background: #fff;">
+                            <option value="principale"
+                                    th:selected="${machineForm.estMachineEntrepot != true and (machineForm.estMachineSecours == null or machineForm.estMachineSecours == false)}">
+                                Machine principale
+                            </option>
+                            <option value="secours"
+                                    th:selected="${machineForm.estMachineEntrepot != true and machineForm.estMachineSecours == true}">
+                                Machine de secours
+                            </option>
+                            <option value="entrepot"
+                                    th:selected="${machineForm.estMachineEntrepot == true}">
+                                Matériel neuf (non programmé)
+                            </option>
+                        </select>
+                        <p class="help-text" id="machineTypeHelp">
+                            Choisissez si cette machine est principale, de secours ou une machine neuve non programmée.
+                        </p>
+                        <div id="promotionBanner" style="margin-top: 0.75rem; padding: 0.85rem 1rem; border-radius: 10px; border: 1px solid #c7d2fe; background: #eef2ff; color: #312e81; display: none; flex-direction: column; gap: 0.75rem;">
+                            <div style="font-weight: 600; display: flex; align-items: center; gap: 0.35rem;">
+                                <i class="fa fa-info-circle"></i>
+                                Cette machine neuve vient d'être programmée. Choisissez son rôle :
+                            </div>
+                            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                                <button type="button" class="btn btn-primary" style="padding: 0.5rem 1.25rem; font-size: 0.9rem;" onclick="convertMatNeuf('principale')">
+                                    <i class="fa fa-server"></i> Devenir principale
+                                </button>
+                                <button type="button" class="btn btn-secondary" style="padding: 0.5rem 1.25rem; font-size: 0.9rem; background: #fef3c7; color: #92400e;" onclick="convertMatNeuf('secours')">
+                                    <i class="fa fa-shield-alt"></i> Devenir secours
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="estMachineSecoursField" th:field="*{estMachineSecours}">
+                    <input type="hidden" id="estMachineEntrepotField" th:field="*{estMachineEntrepot}">
+                    <input type="hidden" id="enProgrammationField" th:field="*{enProgrammation}">
+                    <div>
+                        <label for="numeroSerie">Numéro de série <span id="numeroSerieRequired" style="color:#6b7280; font-size: 0.85rem;">(ou Adresse IP)</span></label>
                         <input id="numeroSerie" type="text" th:field="*{numeroSerie}" placeholder="Ex : SN-23456789">
+                        <p class="help-text" id="numeroSerieHelp">Renseignez soit le numéro de série, soit l'adresse IP (au moins un des deux)</p>
+                    </div>
+                    <div>
+                        <label for="adresseIP">Adresse IP <span id="adresseIPRequired" style="color:#6b7280; font-size: 0.85rem;">(ou Numéro de série)</span></label>
+                        <input id="adresseIP" type="text" th:field="*{adresseIP}" placeholder="Ex : 190.120.1.30">
+                        <p class="help-text" id="adresseIPHelp">Renseignez soit l'adresse IP, soit le numéro de série (au moins un des deux)</p>
                     </div>
                     <div>
                         <label for="emplacement">Emplacement</label>
                         <input id="emplacement" type="text" th:field="*{emplacement}" placeholder="Ex : Atelier 2, allée C">
                     </div>
+                    <div>
+                        <label for="categoryId">Catégorie</label>
+                        <select id="categoryId" th:field="*{categoryId}">
+                            <option value="">-- Sélectionnez une catégorie --</option>
+                            <option th:each="cat : ${categories}"
+                                    th:value="${cat.id}"
+                                    th:text="${cat.name}"
+                                    th:attr="data-description=${cat.description ?: ''}">
+                            </option>
+                        </select>
+                        <p id="categoryDescription" class="help-text" style="min-height: 1.5rem;"></p>
+                    </div>
+                    <div>
+                        <label for="operationnel">Statut opérationnel</label>
+                        <select id="operationnel" th:field="*{operationnel}" onchange="syncOperationnelReparation()">
+                            <option th:value="true">Oui - Opérationnel</option>
+                            <option th:value="false">Non - Non opérationnel</option>
+                        </select>
+                        <p class="help-text">Indiquez si la machine est actuellement opérationnelle.</p>
+                    </div>
+                    <div>
+                        <label for="enReparation">En réparation</label>
+                        <select id="enReparation" th:field="*{enReparation}" onchange="syncReparationOperationnel()">
+                            <option th:value="false">Non - Pas en réparation</option>
+                            <option th:value="true">Oui - En réparation</option>
+                        </select>
+                        <p class="help-text">Indiquez si la machine est actuellement en réparation.</p>
+                    </div>
                 </div>
 
-                <div class="photos-group" style="margin-top: 2rem;">
+                <div class="photos-group" style="margin-top: 2rem;" th:if="${selectedEntrepriseId != null}">
                     <label for="photoFiles">Photos de la machine</label>
                     <input id="photoFiles" type="file" name="photoFiles" accept="image/*" multiple>
                     <p class="help-text">Sélectionnez jusqu'à 3 images (PNG, JPG...). Les fichiers seront stockés de manière sécurisée et accessibles depuis n'importe quel poste.</p>
                 </div>
 
-                <div style="margin-top: 2rem;">
+                <div style="margin-top: 2rem;" th:if="${selectedEntrepriseId != null}">
                     <label for="notes">Notes / informations complémentaires</label>
                     <textarea id="notes" th:field="*{notes}" placeholder="Ajoutez des précisions : caractéristiques, état, remarques..."></textarea>
                 </div>
 
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fa fa-save"></i> Enregistrer
+                <!-- BOUTON TOUJOURS VISIBLE - NE PAS MASQUER -->
+                <div class="form-actions" style="margin-top: 2rem !important; padding-top: 2rem !important; border-top: 2px solid #e5e7eb !important; display: flex !important; gap: 1rem !important; align-items: center !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 100 !important;">
+                    <button type="submit" id="submitBtn" name="submitBtn" class="btn btn-primary" 
+                            style="min-width: 200px !important; justify-content: center !important; display: inline-flex !important; align-items: center !important; gap: 0.5rem !important; border-radius: 10px !important; padding: 0.85rem 1.75rem !important; border: none !important; font-weight: 600 !important; color: white !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 101 !important;"
+                            th:disabled="${selectedEntrepriseId == null}"
+                            th:style="${selectedEntrepriseId == null ? 'background: #9ca3af !important; cursor: not-allowed !important; opacity: 0.6 !important;' : 'background: #3b82f6 !important; cursor: pointer !important; opacity: 1 !important;'}">
+                        <i class="fa fa-save"></i> Enregistrer la machine
                     </button>
-                    <a th:href="@{|/machines?entrepriseId=${machineForm.entrepriseId}|}" class="btn btn-secondary">
-                        Annuler
+                    <a th:href="@{|/machines?entrepriseId=${machineForm.entrepriseId ?: selectedEntrepriseId ?: ''}|}" class="btn btn-secondary" style="min-width: 150px; justify-content: center; display: inline-flex; align-items: center; gap: 0.5rem; border-radius: 10px; padding: 0.85rem 1.75rem; background: #e2e8f0; color: #111827; text-decoration: none; font-weight: 600;">
+                        <i class="fa fa-times"></i> Annuler
                     </a>
                 </div>
             </form>
         </div>
     </main>
 </div>
+<script>
+    (function() {
+        const categorySelect = document.getElementById('categoryId');
+        const categoryDescription = document.getElementById('categoryDescription');
+
+        if (!categorySelect) {
+            return;
+        }
+
+        function updateCategoryDescription() {
+            const option = categorySelect.options[categorySelect.selectedIndex];
+            const description = option ? option.getAttribute('data-description') : null;
+            if (categoryDescription) {
+            categoryDescription.textContent = description && description.trim().length > 0
+                ? description
+                : 'Aucune description pour cette catégorie.';
+        }
+        }
+
+        categorySelect.addEventListener('change', updateCategoryDescription);
+
+        function updateEntrepotUI(isEntrepot) {
+            const numeroSerieField = document.getElementById('numeroSerie');
+            const adresseIPField = document.getElementById('adresseIP');
+            const numeroSerieRequired = document.getElementById('numeroSerieRequired');
+            const adresseIPRequired = document.getElementById('adresseIPRequired');
+            const numeroSerieHelp = document.getElementById('numeroSerieHelp');
+            const adresseIPHelp = document.getElementById('adresseIPHelp');
+            
+            if (isEntrepot) {
+                // Matériel neuf : numéro de série obligatoire, IP facultative
+                if (numeroSerieField) numeroSerieField.setAttribute('required', 'required');
+                if (adresseIPField) adresseIPField.removeAttribute('required');
+                if (numeroSerieRequired) numeroSerieRequired.textContent = '(obligatoire pour matériel neuf)';
+                if (adresseIPRequired) adresseIPRequired.textContent = '(sera ajouté après programmation)';
+                if (numeroSerieHelp) numeroSerieHelp.textContent = 'Pour un matériel neuf, le numéro de série doit être renseigné dès l\'entrée en stock.';
+                if (adresseIPHelp) adresseIPHelp.textContent = 'L\'adresse IP sera ajoutée une fois la machine programmée.';
+            } else {
+                // Machine normale : au moins un des deux doit être renseigné
+                if (numeroSerieField) numeroSerieField.removeAttribute('required');
+                if (adresseIPField) adresseIPField.removeAttribute('required');
+                if (numeroSerieRequired) numeroSerieRequired.textContent = '(ou Adresse IP)';
+                if (adresseIPRequired) adresseIPRequired.textContent = '(ou Numéro de série)';
+                if (numeroSerieHelp) numeroSerieHelp.textContent = 'Renseignez soit le numéro de série, soit l\'adresse IP (au moins un des deux)';
+                if (adresseIPHelp) adresseIPHelp.textContent = 'Renseignez soit l\'adresse IP, soit le numéro de série (au moins un des deux)';
+                // Afficher le type machine
+            }
+        }
+        
+        function updatePromotionBanner() {
+            const typeSelect = document.getElementById('machineType');
+            const numeroSerieField = document.getElementById('numeroSerie');
+            const adresseIPField = document.getElementById('adresseIP');
+            const banner = document.getElementById('promotionBanner');
+            
+            if (!banner) {
+                return;
+            }
+            
+            const isEntrepot = typeSelect && typeSelect.value === 'entrepot';
+            const hasInfos = adresseIPField && adresseIPField.value.trim().length > 0;
+            
+            if (isEntrepot && hasInfos) {
+                banner.style.display = 'flex';
+            } else {
+                banner.style.display = 'none';
+            }
+        }
+        
+        function convertMatNeuf(targetType) {
+            const typeSelect = document.getElementById('machineType');
+            if (!typeSelect) {
+                return;
+            }
+            typeSelect.value = targetType;
+            handleMachineTypeChange();
+            updatePromotionBanner();
+        }
+        window.convertMatNeuf = convertMatNeuf;
+        
+        function handleMachineTypeChange() {
+            const typeSelect = document.getElementById('machineType');
+            const typeValue = typeSelect ? typeSelect.value : 'principale';
+            const secoursField = document.getElementById('estMachineSecoursField');
+            const entrepotField = document.getElementById('estMachineEntrepotField');
+            const enProgrammationField = document.getElementById('enProgrammationField');
+            const helpText = document.getElementById('machineTypeHelp');
+            const operationnelSelect = document.getElementById('operationnel');
+            const enReparationSelect = document.getElementById('enReparation');
+            
+            if (!secoursField || !entrepotField) {
+                return;
+            }
+            
+            switch (typeValue) {
+                case 'secours':
+                    secoursField.value = 'true';
+                    entrepotField.value = 'false';
+                    if (enProgrammationField) enProgrammationField.value = 'false';
+                    if (helpText) helpText.textContent = 'Cette machine sera une machine de secours. Vous pourrez la rattacher à une machine principale après la création.';
+                    if (operationnelSelect) operationnelSelect.value = 'true';
+                    if (enReparationSelect) enReparationSelect.value = 'false';
+                    updateEntrepotUI(false);
+                    updatePromotionBanner();
+                    break;
+                case 'entrepot':
+                    secoursField.value = 'false';
+                    entrepotField.value = 'true';
+                    if (enProgrammationField) enProgrammationField.value = 'true';
+                    if (helpText) helpText.textContent = 'Matériel neuf : numéro de série et IP pourront être remplis plus tard.';
+                    if (operationnelSelect) operationnelSelect.value = 'false';
+                    if (enReparationSelect) enReparationSelect.value = 'false';
+                    updateEntrepotUI(true);
+                    updatePromotionBanner();
+                    break;
+                default:
+                    secoursField.value = 'false';
+                    entrepotField.value = 'false';
+                    if (enProgrammationField) enProgrammationField.value = 'false';
+                    if (helpText) helpText.textContent = 'Machine principale prêtée ou installée chez le client.';
+                    if (operationnelSelect) operationnelSelect.value = 'true';
+                    if (enReparationSelect) enReparationSelect.value = 'false';
+                    updateEntrepotUI(false);
+                    updatePromotionBanner();
+                    break;
+            }
+        }
+        
+        // Fonction pour synchroniser non fonctionnel -> en réparation
+        function syncOperationnelReparation() {
+            const operationnelSelect = document.getElementById('operationnel');
+            const enReparationSelect = document.getElementById('enReparation');
+            const typeSelect = document.getElementById('machineType');
+            
+            if (!operationnelSelect || !enReparationSelect) {
+                return;
+            }
+            
+            const operationnel = operationnelSelect.value === 'true';
+            const isEntrepot = typeSelect && typeSelect.value === 'entrepot';
+            
+            if (isEntrepot) {
+                enReparationSelect.value = 'false';
+                return;
+            }
+            
+            if (!operationnel) {
+                // Si non fonctionnel, automatiquement en réparation
+                enReparationSelect.value = 'true';
+            } else if (enReparationSelect.value === 'true') {
+                enReparationSelect.value = 'false';
+            }
+        }
+        
+        // Fonction pour synchroniser en réparation -> non fonctionnel
+        function syncReparationOperationnel() {
+            const enReparationSelect = document.getElementById('enReparation');
+            const operationnelSelect = document.getElementById('operationnel');
+            const typeSelect = document.getElementById('machineType');
+            
+            if (!enReparationSelect || !operationnelSelect) {
+                return;
+            }
+            
+            const enReparation = enReparationSelect.value === 'true';
+            const isEntrepot = typeSelect && typeSelect.value === 'entrepot';
+            
+            if (isEntrepot && enReparation) {
+                enReparationSelect.value = 'false';
+                return;
+            }
+            
+            if (enReparation) {
+                // Si en réparation, automatiquement non fonctionnel
+                operationnelSelect.value = 'false';
+            }
+        }
+
+        // Plus besoin de toggleMachinePrincipale car le rattachement se fait après la création
+
+        function updateEntrepriseId(entrepriseId) {
+            if (entrepriseId) {
+                // Nettoyer l'entrepriseId si plusieurs valeurs sont présentes
+                if (entrepriseId.includes(',')) {
+                    entrepriseId = entrepriseId.split(',')[0].trim();
+                }
+                
+                // Mettre à jour le seul champ caché entrepriseId
+                const hiddenField = document.getElementById('entrepriseIdHidden');
+                if (hiddenField) {
+                    hiddenField.value = entrepriseId;
+                }
+                // Recharger la page pour charger les machines principales
+                const url = new URL(window.location.href);
+                // Supprimer tous les paramètres entrepriseId existants avant d'ajouter le nouveau
+                url.searchParams.delete('entrepriseId');
+                url.searchParams.set('entrepriseId', entrepriseId);
+                window.location.href = url.toString();
+            }
+        }
+        
+        // Fonction pour forcer la visibilité du bouton
+        function ensureButtonVisible() {
+            const submitBtn = document.getElementById('submitBtn') || document.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.style.display = 'inline-flex';
+                submitBtn.style.visibility = 'visible';
+                submitBtn.style.position = 'relative';
+                submitBtn.style.zIndex = '1000';
+                submitBtn.style.opacity = '1';
+                submitBtn.hidden = false;
+                submitBtn.removeAttribute('hidden');
+                console.log('Bouton trouvé et rendu visible:', submitBtn);
+            } else {
+                console.error('ERREUR: Le bouton submitBtn n\'a pas été trouvé dans le DOM!');
+            }
+            
+            const formActions = document.querySelector('.form-actions');
+            if (formActions) {
+                formActions.style.display = 'flex';
+                formActions.style.visibility = 'visible';
+                formActions.style.opacity = '1';
+                formActions.style.position = 'relative';
+                formActions.style.zIndex = '999';
+                formActions.hidden = false;
+                formActions.removeAttribute('hidden');
+                console.log('Div form-actions trouvée et rendue visible:', formActions);
+            } else {
+                console.error('ERREUR: La div form-actions n\'a pas été trouvée dans le DOM!');
+            }
+        }
+        
+        // Appeler immédiatement et plusieurs fois pour être sûr
+        ensureButtonVisible();
+        setTimeout(ensureButtonVisible, 100);
+        setTimeout(ensureButtonVisible, 500);
+        setTimeout(ensureButtonVisible, 1000);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialiser l'état du formulaire selon le type de machine
+            handleMachineTypeChange();
+            updatePromotionBanner();
+            
+            const numeroSerieInput = document.getElementById('numeroSerie');
+            const adresseIPInput = document.getElementById('adresseIP');
+            if (adresseIPInput) {
+                adresseIPInput.addEventListener('input', updatePromotionBanner);
+            }
+            
+            // Validation personnalisée pour le formulaire
+            const form = document.getElementById('machineForm');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+            const typeSelect = document.getElementById('machineType');
+            const estEntrepot = typeSelect && typeSelect.value === 'entrepot';
+            const numeroSerie = document.getElementById('numeroSerie').value.trim();
+            const adresseIP = document.getElementById('adresseIP').value.trim();
+            
+            if (estEntrepot && !numeroSerie) {
+                e.preventDefault();
+                alert('Le numéro de série est obligatoire pour un matériel neuf.');
+                return false;
+            }
+            
+            if (!estEntrepot && !numeroSerie && !adresseIP) {
+                e.preventDefault();
+                alert('Veuillez renseigner au moins le numéro de série ou l\'adresse IP pour une machine normale.');
+                return false;
+            }
+                });
+            }
+            // S'assurer que le bouton est toujours visible
+            ensureButtonVisible();
+            
+            const submitBtn = document.getElementById('submitBtn') || document.querySelector('button[type="submit"]');
+            const entrepriseSelect = document.getElementById('entrepriseIdSelect');
+            const selectedEntrepriseId = /*[[${selectedEntrepriseId}]]*/ null;
+            
+            // Vérifier si une entreprise est sélectionnée et activer le bouton si nécessaire
+            if (selectedEntrepriseId && submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.style.background = '#3b82f6';
+                submitBtn.style.cursor = 'pointer';
+                submitBtn.style.opacity = '1';
+                
+                // S'assurer que le champ caché entrepriseId est bien défini
+                const hiddenField = document.getElementById('entrepriseIdHidden');
+                if (hiddenField) {
+                    hiddenField.value = selectedEntrepriseId;
+                }
+            }
+            
+            // Si le sélecteur d'entreprise change, activer le bouton
+            if (entrepriseSelect) {
+                entrepriseSelect.addEventListener('change', function() {
+                    if (this.value && submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.style.background = '#3b82f6';
+                        submitBtn.style.cursor = 'pointer';
+                        submitBtn.style.opacity = '1';
+                        // Mettre à jour le seul champ caché entrepriseId
+                        const hiddenField = document.getElementById('entrepriseIdHidden');
+                        if (hiddenField) {
+                            hiddenField.value = this.value;
+                        }
+                    }
+                });
+            }
+            
+            updateCategoryDescription();
+            
+            // Plus de validation du rattachement lors de la création
+            // Le rattachement se fera après via le bouton "Rattacher"
+        });
+    })();
+</script>
 </body>
 </html>
 
