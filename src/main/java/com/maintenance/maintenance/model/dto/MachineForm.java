@@ -1,6 +1,7 @@
 package com.maintenance.maintenance.model.dto;
 
 import com.maintenance.maintenance.model.entity.Machine;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +36,8 @@ public class MachineForm {
         machine.setEnReparation(enReparation != null ? enReparation : false); // Par défaut pas en réparation
         machine.setEnProgrammation(enProgrammation != null ? enProgrammation : false);
         machine.setAdresseIP(adresseIP != null ? adresseIP.trim() : "");
-        machine.setMachinePrincipaleId(machinePrincipaleId != null ? machinePrincipaleId.trim() : null);
+        String principaleId = machinePrincipaleId != null ? machinePrincipaleId.trim() : null;
+        machine.setMachinePrincipaleId(StringUtils.hasText(principaleId) ? principaleId : null);
         machine.setEstMachineSecours(estMachineSecours != null ? estMachineSecours : false);
         machine.setEstMachineEntrepot(estMachineEntrepot != null ? estMachineEntrepot : false);
         return machine;
@@ -152,5 +154,6 @@ public class MachineForm {
     public void setEstMachineEntrepot(Boolean estMachineEntrepot) {
         this.estMachineEntrepot = estMachineEntrepot;
     }
+
 }
 

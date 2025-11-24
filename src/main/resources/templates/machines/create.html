@@ -4,11 +4,17 @@
     <meta charset="UTF-8">
     <title>Nouvelle Machine</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
+        * {
+            box-sizing: border-box;
+        }
         body {
-            font-family: 'Segoe UI', sans-serif;
-            background: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             color: #111827;
+            margin: 0;
+            padding: 0;
         }
         .page {
             display: flex;
@@ -17,131 +23,253 @@
         .main-content {
             flex: 1;
             padding: 2rem;
+            width: 100%;
         }
         .page-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2rem;
+            margin-bottom: 2.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .page-header h1 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #111827;
         }
         .card {
             background: white;
-            border-radius: 16px;
-            padding: 2rem;
-            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
-            max-width: 720px;
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            margin: 0 auto;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+        .form-section {
+            margin-bottom: 3rem;
+            padding-bottom: 2.5rem;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .form-section:last-child {
+            border-bottom: none;
+        }
+        .form-section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .form-section-title i {
+            color: #3b82f6;
         }
         .form-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
+            gap: 2rem;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
         }
         label {
             font-weight: 600;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
             display: block;
+            color: #374151;
+            font-size: 0.95rem;
         }
         input, textarea, select {
             width: 100%;
-            padding: 0.75rem 1rem;
-            border-radius: 10px;
-            border: 1px solid #d1d5db;
+            padding: 1rem 1.25rem;
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
             font-size: 1rem;
             background: #fff;
-            transition: border-color 0.2s;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+        input:hover, textarea:hover, select:hover {
+            border-color: #cbd5e1;
         }
         input:focus, textarea:focus, select:focus {
             border-color: #3b82f6;
             outline: none;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+            transform: translateY(-1px);
         }
         textarea {
             min-height: 140px;
             resize: vertical;
+            line-height: 1.6;
         }
         .photos-group {
             display: grid;
-            gap: 1rem;
+            gap: 1.5rem;
         }
         .form-actions {
-            margin-top: 2rem;
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 2px solid #e5e7eb;
             display: flex;
             gap: 1rem;
+            flex-wrap: wrap;
         }
         .btn {
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            border-radius: 10px;
-            padding: 0.85rem 1.75rem;
+            border-radius: 12px;
+            padding: 1rem 2rem;
             border: none;
             cursor: pointer;
             font-weight: 600;
             text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 1rem;
         }
         .btn-primary {
-            background: #3b82f6;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
             color: white;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
         }
-        .btn-primary:hover {
-            background: #2563eb;
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
         }
         .btn-secondary {
-            background: #e2e8f0;
+            background: #f3f4f6;
             color: #111827;
+            border: 2px solid #e5e7eb;
         }
         .btn-secondary:hover {
-            background: #cbd5e1;
+            background: #e5e7eb;
+            transform: translateY(-1px);
         }
-        button[type="submit"] {
-            width: auto;
-            min-width: 200px;
-            display: inline-flex !important;
-            align-items: center;
-            gap: 0.5rem;
-            visibility: visible !important;
-            opacity: 1 !important;
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
         }
         button[type="submit"]:disabled {
             background: #9ca3af !important;
             cursor: not-allowed !important;
             opacity: 0.6 !important;
-            visibility: visible !important;
-        }
-        #submitBtn {
-            display: inline-flex !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            position: relative !important;
-            z-index: 1000 !important;
-        }
-        #submitBtn:disabled {
-            opacity: 0.6 !important;
-            visibility: visible !important;
-        }
-        .form-actions {
-            display: flex !important;
-            gap: 1rem;
-            align-items: center;
-            visibility: visible !important;
-            opacity: 1 !important;
-            position: relative !important;
-            z-index: 999 !important;
+            transform: none !important;
+            box-shadow: none !important;
         }
         .help-text {
-            font-size: 0.85rem;
+            font-size: 0.875rem;
             color: #6b7280;
-            margin-top: 0.4rem;
+            margin-top: 0.5rem;
+            line-height: 1.5;
         }
         .alert {
-            padding: 1rem 1.25rem;
-            border-radius: 10px;
-            margin-bottom: 1.5rem;
+            padding: 1.25rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            border-left: 4px solid;
         }
         .alert-error {
-            background: #fee2e2;
+            background: #fef2f2;
             color: #991b1b;
-            border-left: 4px solid #ef4444;
+            border-left-color: #ef4444;
+        }
+        .custom-fields-section {
+            background: #f9fafb;
+            padding: 2rem;
+            border-radius: 16px;
+            margin-top: 2rem;
+            border: 2px dashed #d1d5db;
+        }
+        .custom-field-item {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            align-items: flex-start;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s ease;
+        }
+        .custom-field-item:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+        }
+        .custom-field-item input[type="text"] {
+            flex: 1;
+        }
+        .custom-field-item .field-name {
+            min-width: 200px;
+        }
+        .custom-field-item .field-value {
+            flex: 1;
+        }
+        .custom-field-item .field-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 1rem;
+            }
+            .card {
+                padding: 1.5rem;
+                border-radius: 16px;
+            }
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .page-header h1 {
+                font-size: 1.5rem;
+            }
+            .custom-field-item {
+                flex-direction: column;
+            }
+            .custom-field-item .field-name,
+            .custom-field-item .field-value {
+                min-width: 100%;
+            }
+            .form-actions {
+                flex-direction: column;
+            }
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+        @media (max-width: 480px) {
+            .card {
+                padding: 1rem;
+            }
+            .form-section {
+                margin-bottom: 2rem;
+                padding-bottom: 1.5rem;
+            }
         }
     </style>
 </head>
@@ -168,25 +296,30 @@
         <div class="card">
             <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
 
-            <div th:if="${attachToMachine != null}" class="alert" style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+            <div th:if="${attachToMachineId != null}" class="alert" style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
                 <strong style="display: block; margin-bottom: 0.5rem; color: #92400e;">
                     <i class="fa fa-info-circle"></i> Rattachement automatique
                 </strong>
                 <p style="margin: 0; color: #92400e; font-size: 0.9rem;">
-                    Cette machine sera automatiquement rattachée comme machine de secours pour : 
-                    <strong th:text="${attachToMachine.nom}"></strong>
-                    <span th:if="${attachToMachine.adresseIP}" th:text="${' (IP: ' + attachToMachine.adresseIP + ')'}"></span>
-                    <span th:if="${attachToMachine.numeroSerie and !attachToMachine.adresseIP}" th:text="${' (N° série: ' + attachToMachine.numeroSerie + ')'}"></span>
+                    <span th:if="${attachToMachine != null}">
+                        Cette machine sera automatiquement rattachée comme machine de secours pour : 
+                        <strong th:text="${attachToMachine.nom}"></strong>
+                        <span th:if="${attachToMachine.adresseIP}" th:text="${' (IP: ' + attachToMachine.adresseIP + ')'}"></span>
+                        <span th:if="${attachToMachine.numeroSerie and !attachToMachine.adresseIP}" th:text="${' (N° série: ' + attachToMachine.numeroSerie + ')'}"></span>
+                    </span>
+                    <span th:unless="${attachToMachine != null}">
+                        Cette machine sera automatiquement rattachée comme machine de secours à la machine principale sélectionnée.
+                    </span>
                 </p>
             </div>
 
             <form th:action="@{/machines}" th:object="${machineForm}" method="post" enctype="multipart/form-data" id="machineForm" style="display: block;">
-                <div th:if="${selectedEntrepriseId == null}" class="alert alert-error" style="margin-bottom: 1.5rem;">
+                <div th:if="${selectedEntrepriseId == null or selectedEntrepriseId == ''}" class="alert alert-error" style="margin-bottom: 1.5rem;">
                     <strong>⚠️ Attention :</strong> Veuillez sélectionner une entreprise ci-dessous avant de remplir le formulaire.
                 </div>
 
                 <div class="form-grid">
-                    <div th:if="${selectedEntrepriseId == null}" style="grid-column: 1 / -1;">
+                    <div th:if="${selectedEntrepriseId == null or selectedEntrepriseId == ''}" style="grid-column: 1 / -1;">
                         <label for="entrepriseIdSelect">Entreprise <span style="color:#ef4444;">*</span></label>
                         <select id="entrepriseIdSelect" name="entrepriseIdSelect" required onchange="updateEntrepriseId(this.value)" style="width: 100%; padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid #d1d5db; font-size: 1rem; background: #fff;">
                             <option value="">-- Sélectionnez une entreprise --</option>
@@ -202,29 +335,33 @@
                 <!-- Un seul champ caché pour entrepriseId -->
                 <input type="hidden" th:field="*{entrepriseId}" th:value="${selectedEntrepriseId ?: ''}" id="entrepriseIdHidden">
 
-                <div class="form-grid" th:if="${selectedEntrepriseId != null}">
+                <div class="form-grid" th:if="${selectedEntrepriseId != null and selectedEntrepriseId != ''}">
                     <div>
                         <label for="nom">Nom de la machine <span style="color:#ef4444;">*</span></label>
                         <input id="nom" type="text" th:field="*{nom}" placeholder="Ex : Press hydraulique A32" required>
                     </div>
                     <div>
                         <label for="machineType">Type de machine</label>
-                        <select id="machineType" name="machineType" onchange="handleMachineTypeChange()" style="width: 100%; padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid #d1d5db; font-size: 1rem; background: #fff;">
+                        <select id="machineType" name="machineType" onchange="handleMachineTypeChange()" 
+                                th:disabled="${attachToMachineId != null}"
+                                style="width: 100%; padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid #d1d5db; font-size: 1rem; background: #fff;"
+                                th:style="${attachToMachineId != null ? 'width: 100%; padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid #d1d5db; font-size: 1rem; background: #e5e7eb; cursor: not-allowed;' : 'width: 100%; padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid #d1d5db; font-size: 1rem; background: #fff;'}">
                             <option value="principale"
-                                    th:selected="${machineForm.estMachineEntrepot != true and (machineForm.estMachineSecours == null or machineForm.estMachineSecours == false)}">
+                                    th:selected="${machineForm.estMachineEntrepot != true and (machineForm.estMachineSecours == null or machineForm.estMachineSecours == false) and attachToMachineId == null}">
                                 Machine principale
                             </option>
                             <option value="secours"
-                                    th:selected="${machineForm.estMachineEntrepot != true and machineForm.estMachineSecours == true}">
+                                    th:selected="${(machineForm.estMachineEntrepot != true and machineForm.estMachineSecours == true) or attachToMachineId != null}">
                                 Machine de secours
                             </option>
                             <option value="entrepot"
-                                    th:selected="${machineForm.estMachineEntrepot == true}">
+                                    th:selected="${machineForm.estMachineEntrepot == true and attachToMachineId == null}">
                                 Matériel neuf (non programmé)
                             </option>
                         </select>
                         <p class="help-text" id="machineTypeHelp">
-                            Choisissez si cette machine est principale, de secours ou une machine neuve non programmée.
+                            <span th:if="${attachToMachineId != null}">Cette machine sera automatiquement rattachée comme machine de secours.</span>
+                            <span th:unless="${attachToMachineId != null}">Choisissez si cette machine est principale, de secours ou une machine neuve non programmée.</span>
                         </p>
                         <div id="promotionBanner" style="margin-top: 0.75rem; padding: 0.85rem 1rem; border-radius: 10px; border: 1px solid #c7d2fe; background: #eef2ff; color: #312e81; display: none; flex-direction: column; gap: 0.75rem;">
                             <div style="font-weight: 600; display: flex; align-items: center; gap: 0.35rem;">
@@ -244,6 +381,7 @@
                     <input type="hidden" id="estMachineSecoursField" th:field="*{estMachineSecours}">
                     <input type="hidden" id="estMachineEntrepotField" th:field="*{estMachineEntrepot}">
                     <input type="hidden" id="enProgrammationField" th:field="*{enProgrammation}">
+                    <input type="hidden" id="attachToMachineIdField" name="attachTo" th:value="${attachToMachineId ?: ''}">
                     <div>
                         <label for="numeroSerie">Numéro de série <span id="numeroSerieRequired" style="color:#6b7280; font-size: 0.85rem;">(ou Adresse IP)</span></label>
                         <input id="numeroSerie" type="text" th:field="*{numeroSerie}" placeholder="Ex : SN-23456789">
@@ -288,23 +426,40 @@
                     </div>
                 </div>
 
-                <div class="photos-group" style="margin-top: 2rem;" th:if="${selectedEntrepriseId != null}">
+                <div class="photos-group" style="margin-top: 2rem;" th:if="${selectedEntrepriseId != null and selectedEntrepriseId != ''}">
                     <label for="photoFiles">Photos de la machine</label>
                     <input id="photoFiles" type="file" name="photoFiles" accept="image/*" multiple>
                     <p class="help-text">Sélectionnez jusqu'à 3 images (PNG, JPG...). Les fichiers seront stockés de manière sécurisée et accessibles depuis n'importe quel poste.</p>
                 </div>
 
-                <div style="margin-top: 2rem;" th:if="${selectedEntrepriseId != null}">
+                <div style="margin-top: 2rem;" th:if="${selectedEntrepriseId != null and selectedEntrepriseId != ''}">
                     <label for="notes">Notes / informations complémentaires</label>
                     <textarea id="notes" th:field="*{notes}" placeholder="Ajoutez des précisions : caractéristiques, état, remarques..."></textarea>
+                </div>
+
+                <!-- Section Champs personnalisés -->
+                <div class="custom-fields-section" th:if="${selectedEntrepriseId != null and selectedEntrepriseId != ''}">
+                    <div class="form-section-title">
+                        <i class="fa fa-plus-circle"></i>
+                        <span>Champs personnalisés</span>
+                    </div>
+                    <p class="help-text" style="margin-bottom: 1.5rem;">
+                        Ajoutez des champs supplémentaires pour cette machine (ex: prix, garantie, date d'achat, etc.)
+                    </p>
+                    <div id="customFieldsContainer">
+                        <!-- Les champs personnalisés seront ajoutés ici dynamiquement -->
+                    </div>
+                    <button type="button" class="btn btn-success" onclick="addCustomField()" style="margin-top: 1rem;">
+                        <i class="fa fa-plus"></i> Ajouter un champ
+                    </button>
                 </div>
 
                 <!-- BOUTON TOUJOURS VISIBLE - NE PAS MASQUER -->
                 <div class="form-actions" style="margin-top: 2rem !important; padding-top: 2rem !important; border-top: 2px solid #e5e7eb !important; display: flex !important; gap: 1rem !important; align-items: center !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 100 !important;">
                     <button type="submit" id="submitBtn" name="submitBtn" class="btn btn-primary" 
                             style="min-width: 200px !important; justify-content: center !important; display: inline-flex !important; align-items: center !important; gap: 0.5rem !important; border-radius: 10px !important; padding: 0.85rem 1.75rem !important; border: none !important; font-weight: 600 !important; color: white !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 101 !important;"
-                            th:disabled="${selectedEntrepriseId == null}"
-                            th:style="${selectedEntrepriseId == null ? 'background: #9ca3af !important; cursor: not-allowed !important; opacity: 0.6 !important;' : 'background: #3b82f6 !important; cursor: pointer !important; opacity: 1 !important;'}">
+                            th:disabled="${selectedEntrepriseId == null or selectedEntrepriseId == ''}"
+                            th:style="${(selectedEntrepriseId == null or selectedEntrepriseId == '') ? 'background: #9ca3af !important; cursor: not-allowed !important; opacity: 0.6 !important;' : 'background: #3b82f6 !important; cursor: pointer !important; opacity: 1 !important;'}">
                         <i class="fa fa-save"></i> Enregistrer la machine
                     </button>
                     <a th:href="@{|/machines?entrepriseId=${machineForm.entrepriseId ?: selectedEntrepriseId ?: ''}|}" class="btn btn-secondary" style="min-width: 150px; justify-content: center; display: inline-flex; align-items: center; gap: 0.5rem; border-radius: 10px; padding: 0.85rem 1.75rem; background: #e2e8f0; color: #111827; text-decoration: none; font-weight: 600;">
@@ -554,6 +709,17 @@
         setTimeout(ensureButtonVisible, 1000);
 
         document.addEventListener('DOMContentLoaded', () => {
+            // Si attachToMachineId est présent, forcer le type à "secours" et désactiver le select
+            const attachToField = document.getElementById('attachToMachineIdField');
+            const attachToMachineId = attachToField ? attachToField.value : null;
+            const typeSelect = document.getElementById('machineType');
+            
+            if (attachToMachineId && attachToMachineId.trim() !== '' && typeSelect) {
+                typeSelect.value = 'secours';
+                typeSelect.disabled = true;
+                handleMachineTypeChange();
+            }
+            
             // Initialiser l'état du formulaire selon le type de machine
             handleMachineTypeChange();
             updatePromotionBanner();
@@ -629,6 +795,50 @@
             // Plus de validation du rattachement lors de la création
             // Le rattachement se fera après via le bouton "Rattacher"
         });
+        
+        // Gestion des champs personnalisés dynamiques
+        let customFieldCounter = 0;
+        
+        function addCustomField() {
+            const container = document.getElementById('customFieldsContainer');
+            if (!container) return;
+            
+            const fieldId = 'customField_' + customFieldCounter++;
+            const fieldItem = document.createElement('div');
+            fieldItem.className = 'custom-field-item';
+            fieldItem.id = fieldId;
+            
+            fieldItem.innerHTML = `
+                <div class="field-name" style="flex: 1;">
+                    <label>Nom du champ</label>
+                    <input type="text" name="customFieldNames[]" placeholder="Ex: machine_prix" required 
+                           style="text-transform: lowercase;" oninput="this.value = this.value.toLowerCase().replace(/[^a-z0-9_]/g, '_')">
+                </div>
+                <div class="field-value" style="flex: 1;">
+                    <label>Valeur</label>
+                    <input type="text" name="customFieldValues[]" placeholder="Ex: 1500€" required>
+                </div>
+                <div class="field-actions" style="display: flex; align-items: flex-end; padding-bottom: 0.5rem;">
+                    <button type="button" class="btn btn-danger" onclick="removeCustomField('${fieldId}')" 
+                            style="padding: 0.75rem 1rem; min-width: auto;">
+                        <i class="fa fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            
+            container.appendChild(fieldItem);
+        }
+        
+        function removeCustomField(fieldId) {
+            const fieldItem = document.getElementById(fieldId);
+            if (fieldItem) {
+                fieldItem.remove();
+            }
+        }
+        
+        // Initialiser les champs personnalisés existants si présents
+        window.addCustomField = addCustomField;
+        window.removeCustomField = removeCustomField;
     })();
 </script>
 </body>

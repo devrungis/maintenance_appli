@@ -230,6 +230,11 @@
             border-color: #fbbf24;
             color: #92400e;
         }
+        .stock-stat-card.component {
+            background: #f3e8ff;
+            border-color: #c084fc;
+            color: #5b21b6;
+        }
         .stock-stat-icon {
             font-size: 1.1rem;
             margin-bottom: 0.25rem;
@@ -353,33 +358,24 @@
                     </div>
                     
                     <div class="stock-stats-grid">
+                        <div class="stock-stat-card functional" style="grid-column: span 3; text-align: center;">
+                            <div class="stock-stat-label" style="font-size: 0.95rem; text-transform: uppercase; color: #6b7280; letter-spacing: 0.08em;">Machines fonctionnelles</div>
+                            <div class="stock-stat-value" style="font-size: 3rem;" th:text="${stock.nombreMachinesTotal}">0</div>
+                            <div style="font-size: 0.85rem; color: #9ca3af;">Neuves + principales + secours opérationnels</div>
+                        </div>
+                        <div class="stock-stat-card new-material">
+                            <div class="stock-stat-icon">
+                                <i class="fa fa-box"></i>
+                            </div>
+                            <div class="stock-stat-label">Neuves</div>
+                            <div class="stock-stat-value" th:text="${stock.nombreMachinesNeuves}">0</div>
+                        </div>
                         <div class="stock-stat-card total">
                             <div class="stock-stat-icon">
-                                <i class="fa fa-boxes"></i>
+                                <i class="fa fa-server"></i>
                             </div>
-                            <div class="stock-stat-label">Disponibles</div>
-                            <div class="stock-stat-value" th:text="${stock.nombreMachinesDisponibles}">0</div>
-                        </div>
-                        <div class="stock-stat-card functional">
-                            <div class="stock-stat-icon">
-                                <i class="fa fa-cogs"></i>
-                            </div>
-                            <div class="stock-stat-label">Total suivi</div>
-                            <div class="stock-stat-value" th:text="${stock.nombreMachinesTotal}">0</div>
-                        </div>
-                        <div class="stock-stat-card non-functional">
-                            <div class="stock-stat-icon">
-                                <i class="fa fa-times-circle"></i>
-                            </div>
-                            <div class="stock-stat-label">Non fonctionnel</div>
-                            <div class="stock-stat-value" th:text="${stock.nombreMachinesNonOperationnelles}">0</div>
-                        </div>
-                        <div class="stock-stat-card repair">
-                            <div class="stock-stat-icon">
-                                <i class="fa fa-tools"></i>
-                            </div>
-                            <div class="stock-stat-label">En réparation</div>
-                            <div class="stock-stat-value" th:text="${stock.nombreMachinesEnReparation}">0</div>
+                            <div class="stock-stat-label">Principales</div>
+                            <div class="stock-stat-value" th:text="${stock.nombreMachinesPrincipales}">0</div>
                         </div>
                         <div class="stock-stat-card backup">
                             <div class="stock-stat-icon">
@@ -387,21 +383,6 @@
                             </div>
                             <div class="stock-stat-label">Secours</div>
                             <div class="stock-stat-value" th:text="${stock.nombreMachinesSecours}">0</div>
-                        </div>
-                        <div class="stock-stat-card new-material">
-                            <div class="stock-stat-icon">
-                                <i class="fa fa-box"></i>
-                            </div>
-                            <div class="stock-stat-label">Matériels neufs</div>
-                            <div class="stock-stat-value" th:text="${stock.nombreMachinesNeuves}">0</div>
-                        </div>
-                    </div>
-                    
-                    <div th:if="${stock.nombreMachinesTotal > 0}" style="margin-top: 1rem;">
-                        <div th:classappend="${(stock.nombreMachinesDisponibles * 100 / stock.nombreMachinesTotal) >= 80 ? 'status-excellent' : ((stock.nombreMachinesDisponibles * 100 / stock.nombreMachinesTotal) >= 50 ? 'status-good' : 'status-warning')}" 
-                             class="stock-status-badge">
-                            <i class="fa" th:classappend="${(stock.nombreMachinesDisponibles * 100 / stock.nombreMachinesTotal) >= 80 ? 'fa-check-circle' : ((stock.nombreMachinesDisponibles * 100 / stock.nombreMachinesTotal) >= 50 ? 'fa-exclamation-circle' : 'fa-exclamation-triangle')}"></i>
-                            <span th:text="${#numbers.formatDecimal((stock.nombreMachinesDisponibles * 100 / stock.nombreMachinesTotal), 0, 0)} + '% disponibles'">0%</span>
                         </div>
                     </div>
                     

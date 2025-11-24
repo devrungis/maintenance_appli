@@ -4,6 +4,7 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.ValueEventListener;
+import com.maintenance.maintenance.model.entity.Component;
 import com.maintenance.maintenance.model.entity.Machine;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 public class FirebaseRealtimeService {
@@ -1101,7 +1103,7 @@ public class FirebaseRealtimeService {
         } else {
             machine.setEstMachineEntrepot(false); // Par défaut pas une machine entrepôt
         }
-        
+
         // Suivi des modifications
         machine.setCreePar(readString(snapshot.child("creePar")));
         machine.setCreeLe(readLong(snapshot.child("creeLe")));
@@ -1152,6 +1154,21 @@ public class FirebaseRealtimeService {
         if (snapshot.child("dateMiseAJour").getValue() instanceof Number numberUpdate) {
             machine.setDateMiseAJour(numberUpdate.longValue());
         }
+        
+        // Charger les champs personnalisés
+        DataSnapshot champsPersonnalisesSnapshot = snapshot.child("champsPersonnalises");
+        if (champsPersonnalisesSnapshot.exists()) {
+            Map<String, Object> champsPersonnalises = new HashMap<>();
+            for (DataSnapshot champSnapshot : champsPersonnalisesSnapshot.getChildren()) {
+                String key = champSnapshot.getKey();
+                Object value = champSnapshot.getValue();
+                if (key != null && value != null) {
+                    champsPersonnalises.put(key, value);
+                }
+            }
+            machine.setChampsPersonnalises(champsPersonnalises);
+        }
+        
         return machine;
     }
 
@@ -1179,6 +1196,298 @@ public class FirebaseRealtimeService {
         data.put("supprimePar", machine.getSupprimePar());
         data.put("supprimeLe", machine.getSupprimeLe());
         data.put("supprime", machine.getSupprime());
+        
+        // Ajouter les champs personnalisés
+        if (machine.getChampsPersonnalises() != null && !machine.getChampsPersonnalises().isEmpty()) {
+            data.put("champsPersonnalises", machine.getChampsPersonnalises());
+        }
+        
+        return data;
+    }
+
+    /**
+     * Gestion des composants
+     */
+    public List<Component> getComponentsForMachine(String entrepriseId, String machineId) throws Exception {
+        List<Component> allComponents = getComponentsForEnterprise(entrepriseId);
+        return allComponents.stream()
+            .filter(c -> c != null && machineId != null && machineId.equals(c.getMachineId()))
+            .collect(Collectors.toList());
+    }
+
+    public List<Component> getAvailableComponents(String entrepriseId) throws Exception {
+        List<Component> allComponents = getComponentsForEnterprise(entrepriseId);
+        return allComponents.stream()
+            .filter(c -> c != null && (c.getMachineId() == null || c.getMachineId().isBlank()))
+            .collect(Collectors.toList());
+    }
+
+    public List<Component> getComponentsForEnterprise(String entrepriseId) throws Exception {
+        CompletableFuture<List<Component>> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises")
+            .child(entrepriseId)
+            .child("components")
+            .addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot snapshot) {
+                    try {
+                        List<Component> components = new ArrayList<>();
+                        if (snapshot.exists()) {
+                            for (DataSnapshot componentSnapshot : snapshot.getChildren()) {
+                                String componentId = componentSnapshot.getKey();
+                                if (componentId != null && !componentId.startsWith("_")) {
+                                    components.add(mapComponentSnapshot(componentSnapshot, entrepriseId, componentId));
+                                }
+                            }
+                        }
+                        future.complete(components);
+                    } catch (Exception e) {
+                        future.completeExceptionally(e);
+                    } finally {
+                        latch.countDown();
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError error) {
+                    future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
+                    latch.countDown();
+                }
+            });
+
+        try {
+            boolean completed = latch.await(10, TimeUnit.SECONDS);
+            if (!completed) {
+                throw new Exception("Timeout lors de la récupération des composants (10 secondes)");
+            }
+            return future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Interruption lors de la récupération des composants: " + e.getMessage());
+        }
+    }
+
+    public Component getComponentById(String entrepriseId, String componentId) throws Exception {
+        CompletableFuture<Component> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises")
+            .child(entrepriseId)
+            .child("components")
+            .child(componentId)
+            .addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot snapshot) {
+                    try {
+                        if (snapshot.exists()) {
+                            future.complete(mapComponentSnapshot(snapshot, entrepriseId, componentId));
+                        } else {
+                            future.complete(null);
+                        }
+                    } catch (Exception e) {
+                        future.completeExceptionally(e);
+                    } finally {
+                        latch.countDown();
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError error) {
+                    future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
+                    latch.countDown();
+                }
+            });
+
+        try {
+            boolean completed = latch.await(10, TimeUnit.SECONDS);
+            if (!completed) {
+                throw new Exception("Timeout lors de la récupération du composant (10 secondes)");
+            }
+            return future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Interruption lors de la récupération du composant: " + e.getMessage());
+        }
+    }
+
+    public String createComponent(String entrepriseId, Component component) throws Exception {
+        try {
+            String componentId = databaseReference.child("entreprises")
+                .child(entrepriseId)
+                .child("components")
+                .push()
+                .getKey();
+
+            if (componentId == null) {
+                throw new Exception("Impossible de générer un identifiant pour le composant");
+            }
+
+            Map<String, Object> data = serializeComponent(component);
+            long now = System.currentTimeMillis();
+            data.put("creeLe", now);
+            data.put("modifieLe", now);
+
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            CountDownLatch latch = new CountDownLatch(1);
+
+            databaseReference.child("entreprises")
+                .child(entrepriseId)
+                .child("components")
+                .child(componentId)
+                .setValue(data, (error, ref) -> {
+                    if (error != null) {
+                        future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
+                    } else {
+                        future.complete(null);
+                    }
+                    latch.countDown();
+                });
+
+            boolean completed = latch.await(10, TimeUnit.SECONDS);
+            if (!completed) {
+                throw new Exception("Timeout lors de la création du composant (10 secondes)");
+            }
+            future.get();
+            return componentId;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Interruption lors de la création du composant: " + e.getMessage());
+        }
+    }
+
+    public void updateComponent(String entrepriseId, String componentId, Component component) throws Exception {
+        try {
+            Map<String, Object> data = serializeComponent(component);
+            data.put("modifieLe", System.currentTimeMillis());
+
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            CountDownLatch latch = new CountDownLatch(1);
+
+            databaseReference.child("entreprises")
+                .child(entrepriseId)
+                .child("components")
+                .child(componentId)
+                .updateChildren(data, (error, ref) -> {
+                    if (error != null) {
+                        future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
+                    } else {
+                        future.complete(null);
+                    }
+                    latch.countDown();
+                });
+
+            boolean completed = latch.await(10, TimeUnit.SECONDS);
+            if (!completed) {
+                throw new Exception("Timeout lors de la mise à jour du composant (10 secondes)");
+            }
+            future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Interruption lors de la mise à jour du composant: " + e.getMessage());
+        }
+    }
+
+    public void deleteComponent(String entrepriseId, String componentId) throws Exception {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises")
+            .child(entrepriseId)
+            .child("components")
+            .child(componentId)
+            .removeValue((error, ref) -> {
+                if (error != null) {
+                    future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
+                } else {
+                    future.complete(null);
+                }
+                latch.countDown();
+            });
+
+        try {
+            boolean completed = latch.await(10, TimeUnit.SECONDS);
+            if (!completed) {
+                throw new Exception("Timeout lors de la suppression du composant (10 secondes)");
+            }
+            future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Interruption lors de la suppression du composant: " + e.getMessage());
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la suppression du composant: " + e.getMessage());
+        }
+    }
+
+    private Component mapComponentSnapshot(DataSnapshot snapshot, String entrepriseId, String componentId) {
+        Component component = new Component();
+        component.setComponentId(componentId);
+        component.setEntrepriseId(entrepriseId);
+        component.setMachineId(readString(snapshot.child("machineId")));
+        component.setCategoryId(readLong(snapshot.child("categoryId")));
+        component.setCategoryName(readString(snapshot.child("categoryName")));
+        component.setNom(readString(snapshot.child("nom")));
+        component.setNumeroSerie(readString(snapshot.child("numeroSerie")));
+        component.setEtat(readString(snapshot.child("etat")));
+        component.setNotes(readString(snapshot.child("notes")));
+        component.setLocation(readString(snapshot.child("location")));
+        component.setTypePeripherique(readString(snapshot.child("typePeripherique")));
+
+        Object rawPhotos = snapshot.child("photos").getValue();
+        List<String> photos = new ArrayList<>();
+        if (rawPhotos instanceof List<?> list) {
+            for (Object value : list) {
+                if (value instanceof String photo && !photo.isBlank()) {
+                    photos.add(photo);
+                }
+            }
+        } else if (rawPhotos instanceof Map<?, ?> map) {
+            List<String> keys = new ArrayList<>();
+            for (Object key : map.keySet()) {
+                if (key instanceof String stringKey) {
+                    keys.add(stringKey);
+                }
+            }
+            keys.sort(String::compareTo);
+            for (String key : keys) {
+                Object value = map.get(key);
+                if (value instanceof String photo && !photo.isBlank()) {
+                    photos.add(photo);
+                }
+            }
+        } else if (rawPhotos instanceof String photo && !photo.isBlank()) {
+            photos.add(photo);
+        }
+        component.setPhotos(photos);
+
+        if (snapshot.child("creeLe").getValue() instanceof Number numberCreation) {
+            component.setCreeLe(numberCreation.longValue());
+        }
+        if (snapshot.child("modifieLe").getValue() instanceof Number numberUpdate) {
+            component.setModifieLe(numberUpdate.longValue());
+        }
+        component.setCreePar(readString(snapshot.child("creePar")));
+        component.setModifiePar(readString(snapshot.child("modifiePar")));
+        return component;
+    }
+
+    private Map<String, Object> serializeComponent(Component component) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("machineId", component.getMachineId());
+        data.put("categoryId", component.getCategoryId());
+        data.put("categoryName", component.getCategoryName());
+        data.put("nom", component.getNom());
+        data.put("numeroSerie", component.getNumeroSerie());
+        data.put("etat", component.getEtat());
+        data.put("notes", component.getNotes());
+        data.put("photos", component.getPhotos());
+        data.put("location", component.getLocation());
+        data.put("typePeripherique", component.getTypePeripherique());
+        data.put("creePar", component.getCreePar());
+        data.put("creeLe", component.getCreeLe());
+        data.put("modifiePar", component.getModifiePar());
+        data.put("modifieLe", component.getModifieLe());
         return data;
     }
 

@@ -254,20 +254,6 @@
 
             <!-- Cas 1: Machine principale - Rattacher plusieurs machines de secours -->
             <div th:if="${isMachinePrincipale}">
-                <!-- Option 1: Créer une nouvelle machine de secours -->
-                <div style="margin-bottom: 2rem; padding: 1rem; background: #f0f9ff; border-radius: 8px; border-left: 4px solid var(--primary);">
-                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem;">Option 1 : Créer une nouvelle machine de secours</h3>
-                    <p style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #6b7280;">
-                        Créez une nouvelle machine qui sera automatiquement rattachée comme machine de secours pour cette machine principale.
-                    </p>
-                    <form th:action="@{|/machines/${entrepriseId}/${machine.machineId}/attach-secours|}" method="post" style="display: inline;">
-                        <input type="hidden" name="action" value="create">
-                        <button type="submit" class="btn btn-primary" style="background: var(--primary);">
-                            <i class="fa fa-plus"></i> Créer une nouvelle machine de secours
-                        </button>
-                    </form>
-                </div>
-
                 <!-- Afficher les machines déjà rattachées en cards -->
                 <div th:if="${machinesSecoursRattachees != null and !machinesSecoursRattachees.isEmpty()}" class="rattachees-section">
                     <h4><i class="fa fa-check-circle"></i> Machines de secours déjà rattachées (<span th:text="${machinesSecoursRattachees.size()}"></span>)</h4>
@@ -331,13 +317,13 @@
                     </div>
                 </div>
 
-                <!-- Option 2: Rattacher des machines de secours existantes avec cards -->
+                <!-- Rattacher des machines de secours existantes avec cards -->
                 <div style="margin-bottom: 2rem;">
-                    <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem;">Option 2 : Rattacher des machines de secours existantes</h3>
+                    <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem;">Rattacher des machines de secours existantes</h3>
                     
                     <form th:action="@{|/machines/${entrepriseId}/${machine.machineId}/attach-secours|}" method="post" id="attachForm">
                         <div th:if="${machinesSecoursDisponibles == null or machinesSecoursDisponibles.isEmpty()}" style="padding: 1rem; background: #fef3c7; border-radius: 8px; color: #92400e;">
-                            <i class="fa fa-info-circle"></i> Aucune machine de secours disponible. Créez-en une nouvelle via l'option 1.
+                            <i class="fa fa-info-circle"></i> Aucune machine de secours disponible. Créez d'abord une machine de secours depuis la liste des machines.
                         </div>
                         
                         <div th:if="${machinesSecoursDisponibles != null and !machinesSecoursDisponibles.isEmpty()}" class="machines-grid">

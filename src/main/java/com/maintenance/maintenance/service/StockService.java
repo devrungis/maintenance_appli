@@ -2,6 +2,7 @@ package com.maintenance.maintenance.service;
 
 import com.maintenance.maintenance.model.dto.StockParCategorie;
 import com.maintenance.maintenance.model.entity.Category;
+import com.maintenance.maintenance.model.entity.Component;
 import com.maintenance.maintenance.model.entity.Machine;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,13 +16,13 @@ import java.util.Map;
 public class StockService {
 
     @Autowired
-    private FirebaseRealtimeService firebaseRealtimeService;
-
-    @Autowired
     private MachineService machineService;
 
     @Autowired
     private CategoryService categoryService;
+
+    @Autowired
+    private ComponentService componentService;
 
     /**
      * Calcule le stock par catégorie (nombre de machines opérationnelles)
@@ -65,11 +66,35 @@ public class StockService {
             }
         }
         
-        // Filtrer les catégories vides (sans machines) et retourner la liste triée par nom de catégorie
+        // Ajouter les composants par catégorie
+        try {
+            List<Component> components = componentService.listComponentsForEnterprise(entrepriseId);
+            if (components != null) {
+                for (Component component : components) {
+                    if (component == null || component.getCategoryId() == null) {
+                        continue;
+                    }
+                    StockParCategorie stock = stockMap.get(component.getCategoryId());
+                    if (stock == null) {
+                        stock = new StockParCategorie(
+                            component.getCategoryId(),
+                            component.getCategoryName() != null ? component.getCategoryName() : "Catégorie " + component.getCategoryId(),
+                            null
+                        );
+                        stockMap.put(component.getCategoryId(), stock);
+                    }
+                    boolean rattache = component.getMachineId() != null && !component.getMachineId().isBlank();
+                    stock.addComponent(rattache);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Impossible de récupérer les composants pour le stock: " + e.getMessage());
+        }
+
+        // Filtrer les catégories vides (sans machines ni composants) et retourner la liste triée par nom de catégorie
         List<StockParCategorie> result = new ArrayList<>();
         for (StockParCategorie stock : stockMap.values()) {
-            // Ne garder que les catégories qui ont au moins une machine
-            if (stock.getNombreMachinesTotal() > 0) {
+            if (stock.getNombreMachinesTotal() > 0 || stock.getNombreComposantsTotal() > 0) {
                 result.add(stock);
             }
         }

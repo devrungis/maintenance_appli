@@ -10,11 +10,15 @@ public class StockParCategorie {
     private String categoryDescription;
     private Integer nombreMachinesOperationnelles;
     private Integer nombreMachinesTotal;
-    private Integer nombreMachinesSecours; // Nombre de machines de secours
+    private Integer nombreMachinesSecours; // Nombre de machines de secours fonctionnelles
     private Integer nombreMachinesNeuves; // Matériels neufs en programmation
     private Integer nombreMachinesDisponibles; // Machines opérationnelles et non en réparation
     private Integer nombreMachinesNonOperationnelles; // Non opérationnelles ou indisponibles
     private Integer nombreMachinesEnReparation;
+    private Integer nombreMachinesPrincipales;
+    private Integer nombreComposantsTotal;
+    private Integer nombreComposantsDisponibles;
+    private Integer nombreComposantsRattaches;
     private List<Machine> machines = new ArrayList<>();
 
     public StockParCategorie() {
@@ -25,6 +29,10 @@ public class StockParCategorie {
         this.nombreMachinesDisponibles = 0;
         this.nombreMachinesNonOperationnelles = 0;
         this.nombreMachinesEnReparation = 0;
+        this.nombreComposantsTotal = 0;
+        this.nombreComposantsDisponibles = 0;
+        this.nombreComposantsRattaches = 0;
+        this.nombreMachinesPrincipales = 0;
     }
 
     public StockParCategorie(Long categoryId, String categoryName, String categoryDescription) {
@@ -38,6 +46,10 @@ public class StockParCategorie {
         this.nombreMachinesDisponibles = 0;
         this.nombreMachinesNonOperationnelles = 0;
         this.nombreMachinesEnReparation = 0;
+        this.nombreComposantsTotal = 0;
+        this.nombreComposantsDisponibles = 0;
+        this.nombreComposantsRattaches = 0;
+        this.nombreMachinesPrincipales = 0;
     }
 
     public Long getCategoryId() {
@@ -128,12 +140,47 @@ public class StockParCategorie {
         this.nombreMachinesEnReparation = nombreMachinesEnReparation;
     }
 
+    public Integer getNombreComposantsTotal() {
+        return nombreComposantsTotal != null ? nombreComposantsTotal : 0;
+    }
+
+    public void setNombreComposantsTotal(Integer nombreComposantsTotal) {
+        this.nombreComposantsTotal = nombreComposantsTotal;
+    }
+
+    public Integer getNombreComposantsDisponibles() {
+        return nombreComposantsDisponibles != null ? nombreComposantsDisponibles : 0;
+    }
+
+    public void setNombreComposantsDisponibles(Integer nombreComposantsDisponibles) {
+        this.nombreComposantsDisponibles = nombreComposantsDisponibles;
+    }
+
+    public Integer getNombreComposantsRattaches() {
+        return nombreComposantsRattaches != null ? nombreComposantsRattaches : 0;
+    }
+
+    public void setNombreComposantsRattaches(Integer nombreComposantsRattaches) {
+        this.nombreComposantsRattaches = nombreComposantsRattaches;
+    }
+
+    public Integer getNombreMachinesPrincipales() {
+        return nombreMachinesPrincipales != null ? nombreMachinesPrincipales : 0;
+    }
+
+    public void setNombreMachinesPrincipales(Integer nombreMachinesPrincipales) {
+        this.nombreMachinesPrincipales = nombreMachinesPrincipales;
+    }
+
     public void addMachine(Machine machine) {
         this.machines.add(machine);
 
         boolean enReparation = machine.getEnReparation() != null && machine.getEnReparation();
-        boolean operationnel = machine.getOperationnel() != null && machine.getOperationnel();
+        Boolean operationnelValue = machine.getOperationnel();
+        boolean operationnel = operationnelValue == null || operationnelValue;
         boolean estNeuve = machine.getEstMachineEntrepot() != null && machine.getEstMachineEntrepot();
+        boolean estSecours = machine.getEstMachineSecours() != null && machine.getEstMachineSecours();
+        boolean estPrincipale = !estNeuve && !estSecours;
 
         boolean disponible = !enReparation && operationnel;
         boolean compterDansTotal = estNeuve || disponible;
@@ -153,11 +200,23 @@ public class StockParCategorie {
             this.nombreMachinesEnReparation = getNombreMachinesEnReparation() + 1;
         }
 
-        if (machine.getEstMachineSecours() != null && machine.getEstMachineSecours()) {
+        if (estSecours && (estNeuve || disponible)) {
             this.nombreMachinesSecours = getNombreMachinesSecours() + 1;
         }
         if (estNeuve) {
             this.nombreMachinesNeuves = getNombreMachinesNeuves() + 1;
+        }
+        if (estPrincipale && disponible) {
+            this.nombreMachinesPrincipales = getNombreMachinesPrincipales() + 1;
+        }
+    }
+
+    public void addComponent(boolean rattache) {
+        this.nombreComposantsTotal = getNombreComposantsTotal() + 1;
+        if (rattache) {
+            this.nombreComposantsRattaches = getNombreComposantsRattaches() + 1;
+        } else {
+            this.nombreComposantsDisponibles = getNombreComposantsDisponibles() + 1;
         }
     }
 }

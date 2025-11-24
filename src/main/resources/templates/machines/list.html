@@ -20,10 +20,13 @@
         .page {
             display: flex;
             min-height: 100vh;
+            overflow: hidden;
         }
         .main-content {
             flex: 1;
             padding: 2rem;
+            overflow-y: auto;
+            height: 100vh;
         }
         .page-header {
             display: flex;
@@ -80,24 +83,34 @@
             border: 1px solid var(--border);
             color: #111827;
         }
+        .machines-container {
+            margin-top: 1rem;
+        }
         .machines-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
             gap: 1.5rem;
-            margin-top: 1rem;
         }
         .machine-card {
             background: white;
             border: 2px solid #e5e7eb;
-            border-radius: 12px;
+            border-radius: 16px;
             padding: 1.5rem;
-            transition: all 0.2s;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            display: none;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            min-height: 420px;
+        }
+        .machine-card.visible {
+            display: flex;
         }
         .machine-card:hover {
             border-color: var(--primary);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
+            transform: translateY(-4px);
         }
         .machine-card-header {
             display: flex;
@@ -151,13 +164,75 @@
             width: 18px;
             color: #9ca3af;
         }
-        .machine-card-footer {
+        .machine-card-content {
+            transition: filter 0.3s ease;
+        }
+        .machine-card.overlay-open .machine-card-content {
+            filter: blur(4px);
+        }
+        .machine-card-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.96);
+            padding: 1.5rem;
+            display: none;
+            flex-direction: column;
+            gap: 1rem;
+            overflow-y: auto;
+            z-index: 5;
+        }
+        .machine-card-overlay.active {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 1rem;
+        }
+        .machine-card-footer {
+            margin-top: auto;
             padding-top: 1rem;
-            border-top: 1px solid #e5e7eb;
+            padding-bottom: 150px; /* ~40mm */
+            border-top: 5px solid #e5e7eb;
+        }
+        .card-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            justify-content: flex-end;
+            width: 100%;
+        }
+        .card-actions form {
+            margin: 0;
+        }
+        .btn-card {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.2s;
+            text-decoration: none;
+            font-size: 1rem;
+            color: #fff;
+        }
+        .btn-card.edit {
+            background: #3b82f6;
+        }
+        .btn-card.attach {
+            background: #f59e0b;
+        }
+        .btn-card.delete {
+            background: #ef4444;
+        }
+        .btn-card.detail {
+            width: auto;
+            padding: 0 1.1rem;
+            background: #4b5563;
+        }
+        .btn-card.detail i {
+            margin-right: 0.35rem;
+        }
+        .btn-card:hover {
+            opacity: 0.85;
         }
         .photos {
             display: flex;
@@ -558,18 +633,20 @@
                 </div>
             </div>
 
-            <div th:unless="${#lists.isEmpty(machines)}" class="machines-grid">
-                <div th:each="machine : ${machines}" class="machine-card">
-                    <div class="machine-card-header">
-                        <div th:if="${machine.photos != null and !machine.photos.isEmpty() and machine.photos.size() > 0 and machine.photos[0] != null and machine.photos[0] != ''}">
-                            <img th:src="${machine.photos[0]}" alt="Photo machine" class="machine-card-image">
-                        </div>
-                        <div th:unless="${machine.photos != null and !machine.photos.isEmpty() and machine.photos.size() > 0 and machine.photos[0] != null and machine.photos[0] != ''}" class="machine-card-image-placeholder">
-                            <i class="fa fa-server"></i>
-                        </div>
-                        <div class="machine-card-info">
-                            <div class="machine-card-title" th:text="${machine.nom}">Nom machine</div>
-                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
+            <div th:unless="${#lists.isEmpty(machines)}" class="machines-container">
+                <div class="machines-grid" id="machinesGrid">
+                <div th:each="machine : ${machines}" class="machine-card" th:attr="data-machine-id=${machine.machineId}">
+                    <div class="machine-card-content">
+                        <div class="machine-card-header">
+                            <div th:if="${machine.photos != null and !machine.photos.isEmpty() and machine.photos.size() > 0 and machine.photos[0] != null and machine.photos[0] != ''}">
+                                <img th:src="${machine.photos[0]}" alt="Photo machine" class="machine-card-image">
+                            </div>
+                            <div th:unless="${machine.photos != null and !machine.photos.isEmpty() and machine.photos.size() > 0 and machine.photos[0] != null and machine.photos[0] != ''}" class="machine-card-image-placeholder">
+                                <i class="fa fa-server"></i>
+                            </div>
+                            <div class="machine-card-info">
+                                <div class="machine-card-title" th:text="${machine.nom}">Nom machine</div>
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
                                 <span th:if="${machine.estMachineEntrepot == true}" class="badge" style="background: #f3e8ff; color: #7c3aed; font-size: 0.75rem;">
                                     <i class="fa fa-box"></i> Neuve · en programmation
                                 </span>
@@ -610,11 +687,54 @@
                                         <span th:text="${count} + ' secours'">0 secours</span>
                                     </span>
                                 </th:block>
+                                </div>
                             </div>
                         </div>
+                        <div class="machine-card-footer">
+                            <div class="card-actions">
+                                <button type="button" class="btn-card detail" 
+                                        th:attr="onclick='toggleDetails(this, \'' + ${machine.machineId} + '\')'">
+                                    <i class="fa fa-info-circle"></i> Détails
+                                </button>
+                                <a th:if="${selectedEntrepriseId != null and selectedEntrepriseId != '' and isSuperAdmin}" 
+                                   th:href="@{|/machines/${selectedEntrepriseId}/${machine.machineId}/edit|}" 
+                                   class="btn-card edit" 
+                                   title="Modifier">
+                                    <i class="fa fa-pen"></i>
+                                </a>
+                                <a th:if="${selectedEntrepriseId != null and selectedEntrepriseId != '' and machine.estMachineEntrepot != true and (machine.estMachineSecours == null or machine.estMachineSecours == false)}" 
+                                   th:href="@{|/machines/${selectedEntrepriseId}/${machine.machineId}/attach-secours|}" 
+                                   class="btn-card attach" 
+                                   title="Rattacher secours">
+                                    <i class="fa fa-link"></i>
+                                </a>
+                                <form th:if="${selectedEntrepriseId != null and selectedEntrepriseId != '' and isSuperAdmin}" 
+                                      th:action="@{|/machines/${selectedEntrepriseId}/${machine.machineId}/delete|}" 
+                                      method="post" 
+                                      onsubmit="return confirm('Confirmer la suppression de cette machine ?');">
+                                    <button type="submit" 
+                                            class="btn-card delete" 
+                                            title="Supprimer">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                            <div th:if="${selectedEntrepriseId == null or selectedEntrepriseId == ''}" style="color: #6b7280; font-size: 0.85rem; text-align: right; margin-top: 0.5rem;">
+                                Sélectionnez une entreprise
+                            </div>
                     </div>
-                    
-                    <div class="machine-card-details" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+                    </div>
+                    <div class="machine-card-overlay" th:id="'overlay_' + ${machine.machineId}">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong th:text="'Détails : ' + ${machine.nom}">Détails</strong>
+                                <div style="font-size: 0.85rem; color: #6b7280;">Données complètes de la machine</div>
+                            </div>
+                            <button type="button" class="btn btn-secondary" 
+                                    th:attr="onclick='toggleDetails(this, \'' + ${machine.machineId} + '\')'">
+                                <i class="fa fa-times"></i> Fermer
+                            </button>
+                        </div>
                         <div class="machine-card-detail-item">
                             <i class="fa fa-barcode"></i>
                             <span><strong>N° série:</strong> <span th:text="${machine.numeroSerie ?: '-'}"></span></span>
@@ -635,6 +755,23 @@
                             <i class="fa fa-comment"></i>
                             <span><strong>Notes:</strong> <span th:text="${machine.notes}" style="word-break: break-word;"></span></span>
                         </div>
+                        <div class="machine-card-detail-item" th:if="${machine.estMachineSecours == true}">
+                            <i class="fa fa-project-diagram"></i>
+                            <span><strong>Rattachée à :</strong>
+                                <span th:if="${machine.machinePrincipaleId != null && machine.machinePrincipaleId != ''}"
+                                      th:text="${machineLookup != null && machineLookup[machine.machinePrincipaleId] != null ? machineLookup[machine.machinePrincipaleId].nom : machine.machinePrincipaleId}"></span>
+                                <span th:unless="${machine.machinePrincipaleId != null && machine.machinePrincipaleId != ''}">Non défini</span>
+                            </span>
+                        </div>
+                        <div class="machine-card-detail-item" th:if="${machine.champsPersonnalises != null and !machine.champsPersonnalises.isEmpty()}">
+                            <i class="fa fa-plus-circle"></i>
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
+                                <div th:each="entry : ${machine.champsPersonnalises}" style="padding: 0.5rem; background: #f9fafb; border-radius: 8px;">
+                                    <strong th:text="${entry.key + ':'}"></strong>
+                                    <span th:text="${entry.value}"></span>
+                                </div>
+                            </div>
+                        </div>
                         <div class="machine-card-detail-item">
                             <i class="fa fa-images"></i>
                             <span><strong>Photos:</strong> 
@@ -652,45 +789,57 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="machine-card-footer">
-                        <div style="display: flex; gap: 0.5rem; align-items: center;">
-                            <a th:if="${selectedEntrepriseId != null and selectedEntrepriseId != '' and isSuperAdmin}" 
-                               th:href="@{|/machines/${selectedEntrepriseId}/${machine.machineId}/edit|}" 
-                               class="btn-icon" 
-                               title="Modifier"
-                               style="background: #3b82f6; color: white; width: 40px; height: 40px; min-width: 40px; min-height: 40px;">
-                                <i class="fa fa-pen"></i>
-                            </a>
-                            <a th:if="${selectedEntrepriseId != null and selectedEntrepriseId != '' and machine.estMachineEntrepot != true and (machine.estMachineSecours == null or machine.estMachineSecours == false)}" 
-                               th:href="@{|/machines/${selectedEntrepriseId}/${machine.machineId}/attach-secours|}" 
-                               class="btn-icon" 
-                               title="Rattacher secours"
-                               style="background: #f59e0b; color: white; width: 40px; height: 40px; min-width: 40px; min-height: 40px;">
-                                <i class="fa fa-link"></i>
-                            </a>
-                            <form th:if="${selectedEntrepriseId != null and selectedEntrepriseId != '' and isSuperAdmin}" 
-                                  th:action="@{|/machines/${selectedEntrepriseId}/${machine.machineId}/delete|}" 
-                                  method="post" 
-                                  style="display: inline;"
-                                  onsubmit="return confirm('Confirmer la suppression de cette machine ?');">
-                                <button type="submit" 
-                                        class="btn-icon" 
-                                        title="Supprimer"
-                                        style="background: #ef4444; color: white; width: 40px; height: 40px; min-width: 40px; min-height: 40px;">
-                                    <i class="fa fa-trash"></i>
-                                </button>
-                            </form>
-                        </div>
-                        <span th:if="${selectedEntrepriseId == null or selectedEntrepriseId == ''}" style="color: #6b7280; font-size: 0.85rem;">
-                            Sélectionnez une entreprise
-                        </span>
-                    </div>
+                </div>
                 </div>
             </div>
         </div>
     </main>
 </div>
+
+<script>
+    // Toggle du panneau de détails
+    function toggleDetails(button, machineId) {
+        const overlay = document.getElementById('overlay_' + machineId);
+        const card = document.querySelector(`.machine-card[data-machine-id="${machineId}"]`);
+        if (!overlay || !card) {
+            return;
+        }
+        const isOpen = overlay.classList.contains('active');
+        if (isOpen) {
+            overlay.classList.remove('active');
+            card.classList.remove('overlay-open');
+        } else {
+            overlay.classList.add('active');
+            card.classList.add('overlay-open');
+        }
+    }
+    window.toggleDetails = toggleDetails;
+
+    // Afficher progressivement les cards (3 par 3)
+    document.addEventListener('DOMContentLoaded', function() {
+        const cards = Array.from(document.querySelectorAll('.machine-card'));
+        const batchSize = 3;
+        let visibleCount = 0;
+
+        function revealNextBatch() {
+            let shown = 0;
+            while (visibleCount < cards.length && shown < batchSize) {
+                cards[visibleCount].classList.add('visible');
+                shown++;
+                visibleCount++;
+            }
+        }
+
+        function handleScroll() {
+            if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
+                revealNextBatch();
+            }
+        }
+
+        revealNextBatch();
+        window.addEventListener('scroll', handleScroll);
+    });
+</script>
 </body>
 </html>
 

@@ -2,11 +2,13 @@ package com.maintenance.maintenance.controller;
 
 import com.maintenance.maintenance.model.dto.MachineForm;
 import com.maintenance.maintenance.model.entity.Category;
+import com.maintenance.maintenance.model.entity.Component;
 import com.maintenance.maintenance.model.entity.Machine;
 import com.maintenance.maintenance.service.FirebaseRealtimeService;
 import com.maintenance.maintenance.service.MachineService;
 import com.maintenance.maintenance.service.LocalFileStorageService;
 import com.maintenance.maintenance.service.CategoryService;
+import com.maintenance.maintenance.service.ComponentService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +28,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Controller
@@ -43,6 +46,9 @@ public class MachineController {
 
     @Autowired
     private CategoryService categoryService;
+
+    @Autowired
+    private ComponentService componentService;
 
     /**
      * Vérifie si l'utilisateur est connecté (tous les rôles autorisés)
@@ -67,8 +73,8 @@ public class MachineController {
         }
         
         redirectAttributes.addFlashAttribute("error", "Vous devez être connecté pour accéder à cette page.");
-        return false;
-    }
+            return false;
+        }
 
     /**
      * Vérifie si l'utilisateur est superadmin
@@ -76,7 +82,7 @@ public class MachineController {
     private boolean isSuperAdmin(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         if (session != null) {
-            String role = (String) session.getAttribute("role");
+        String role = (String) session.getAttribute("role");
             return "superadmin".equalsIgnoreCase(role);
         }
             return false;
@@ -197,17 +203,14 @@ public class MachineController {
                             Boolean machineEstEntrepot = m.getEstMachineEntrepot() != null ? m.getEstMachineEntrepot() : false;
                             
                             if ("entrepot".equals(estSecours)) {
-                                // Filtrer pour les machines entrepôt
                                 if (!machineEstEntrepot) {
                                     return false;
                                 }
                             } else if ("true".equalsIgnoreCase(estSecours)) {
-                                // Filtrer pour les machines de secours (même celles attachées, mais pas entrepôt)
                                 if (machineEstEntrepot || machineEstSecours == null || !machineEstSecours) {
                                     return false;
                                 }
                             } else {
-                                // Filtrer pour les machines principales (pas secours, pas entrepôt)
                                 if (machineEstEntrepot || (machineEstSecours != null && machineEstSecours)) {
                                     return false;
                                 }
@@ -221,6 +224,11 @@ public class MachineController {
             
             // Récupérer toutes les catégories pour le filtre
             List<Category> categories = categoryService.findAll();
+
+            List<Machine> lookupSource = allMachines != null ? allMachines : new ArrayList<>();
+            Map<String, Machine> machineLookup = lookupSource.stream()
+                .filter(m -> m != null && m.getMachineId() != null)
+                .collect(Collectors.toMap(Machine::getMachineId, Function.identity(), (existing, replacement) -> existing));
 
             // Créer une map pour compter rapidement les machines de secours par machine principale
             Map<String, Long> secoursCountMap = new HashMap<>();
@@ -285,6 +293,8 @@ public class MachineController {
             model.addAttribute("selectedOperationnel", operationnel);
             model.addAttribute("selectedEstSecours", estSecours);
             model.addAttribute("searchQuery", search != null ? search : "");
+            model.addAttribute("machineLookup", machineLookup);
+
         } catch (Exception e) {
             e.printStackTrace();
             redirectAttributes.addFlashAttribute("error", "Erreur lors du chargement des machines: " + e.getMessage());
@@ -316,8 +326,18 @@ public class MachineController {
             
             if (isMachinePrincipale) {
                 // Si c'est une machine principale, récupérer les machines de secours disponibles (non rattachées)
-                List<Machine> allMachines = machineService.listMachines(entrepriseId);
+                List<Machine> allMachines = new ArrayList<>();
+                try {
+                    allMachines = machineService.listMachines(entrepriseId);
+                    if (allMachines == null) {
+                        allMachines = new ArrayList<>();
+                    }
+                } catch (Exception e) {
+                    allMachines = new ArrayList<>();
+                }
+                
                 List<Machine> machinesSecoursDisponibles = allMachines.stream()
+                    .filter(m -> m != null && m.getMachineId() != null)
                     .filter(m -> m.getEstMachineSecours() != null && m.getEstMachineSecours())
                     .filter(m -> m.getMachinePrincipaleId() == null || m.getMachinePrincipaleId().isEmpty())
                     .filter(m -> m.getEnReparation() == null || !m.getEnReparation()) // Exclure les machines en réparation
@@ -326,6 +346,7 @@ public class MachineController {
                 
                 // Récupérer les machines de secours déjà rattachées à cette machine principale
                 List<Machine> machinesSecoursRattachees = allMachines.stream()
+                    .filter(m -> m != null && m.getMachineId() != null)
                     .filter(m -> m.getEstMachineSecours() != null && m.getEstMachineSecours())
                     .filter(m -> m.getMachinePrincipaleId() != null && m.getMachinePrincipaleId().equals(machineId))
                     .collect(Collectors.toList());
@@ -334,8 +355,18 @@ public class MachineController {
                 model.addAttribute("machinesSecoursRattachees", machinesSecoursRattachees);
             } else {
                 // Si c'est une machine de secours, récupérer les machines principales pour changer le rattachement
-                List<Machine> allMachines = machineService.listMachines(entrepriseId);
+                List<Machine> allMachines = new ArrayList<>();
+                try {
+                    allMachines = machineService.listMachines(entrepriseId);
+                    if (allMachines == null) {
+                        allMachines = new ArrayList<>();
+                    }
+                } catch (Exception e) {
+                    allMachines = new ArrayList<>();
+                }
+                
                 List<Machine> machinesPrincipales = allMachines.stream()
+                    .filter(m -> m != null && m.getMachineId() != null)
                     .filter(m -> m.getEstMachineSecours() == null || !m.getEstMachineSecours())
                     .filter(m -> !m.getMachineId().equals(machineId)) // Exclure la machine courante
                     .collect(Collectors.toList());
@@ -345,17 +376,24 @@ public class MachineController {
                 model.addAttribute("currentMainMachineId", currentMainMachineId);
             }
             
+            if (machine == null || machine.getMachineId() == null) {
+                redirectAttributes.addFlashAttribute("error", "Machine introuvable ou invalide.");
+                return "redirect:/machines?entrepriseId=" + entrepriseId;
+            }
+            
             model.addAttribute("machine", machine);
             model.addAttribute("entrepriseId", entrepriseId);
             model.addAttribute("isSuperAdmin", isSuperAdmin(request));
             model.addAttribute("isMachinePrincipale", isMachinePrincipale);
         } catch (Exception e) {
+            e.printStackTrace();
             redirectAttributes.addFlashAttribute("error", "Erreur lors du chargement: " + e.getMessage());
             return "redirect:/machines?entrepriseId=" + entrepriseId;
         }
 
         return "machines/attach-secours";
     }
+
 
     @GetMapping("/{entrepriseId}/{machineId}/secours")
     public String showSecoursDetails(@PathVariable String entrepriseId,
@@ -470,7 +508,15 @@ public class MachineController {
         }
 
         try {
-            Machine machine = machineService.getMachine(entrepriseId, machineId);
+            Machine machine = null;
+            try {
+                machine = machineService.getMachine(entrepriseId, machineId);
+            } catch (Exception e) {
+                redirectAttributes.addFlashAttribute("error", "Erreur lors de la récupération de la machine: " + e.getMessage());
+                e.printStackTrace();
+                return "redirect:/machines?entrepriseId=" + entrepriseId;
+            }
+            
             if (machine == null) {
                 redirectAttributes.addFlashAttribute("error", "Machine introuvable.");
                 return "redirect:/machines?entrepriseId=" + entrepriseId;
@@ -483,20 +529,29 @@ public class MachineController {
             
             // Si action = "detach", détacher la machine de secours
             if ("detach".equals(detach) || "true".equals(detach)) {
-                machine.setMachinePrincipaleId(null);
-                // La machine reste de secours, prête à être rattachée à une autre principale
-                machine.setEstMachineSecours(true);
-                machineService.updateMachine(entrepriseId, machineId, machine);
-                redirectAttributes.addFlashAttribute("success", "Machine détachée avec succès.");
-                
-                HttpSession session = request.getSession(true);
-                session.setAttribute("authenticated", true);
-                session.setAttribute("lastSelectedEntrepriseId", entrepriseId);
-                return "redirect:/machines?entrepriseId=" + entrepriseId;
+                try {
+                    machine.setMachinePrincipaleId(null);
+                    // La machine reste de secours, prête à être rattachée à une autre principale
+                    machine.setEstMachineSecours(true);
+                    machineService.updateMachine(entrepriseId, machineId, machine);
+                    redirectAttributes.addFlashAttribute("success", "Machine détachée avec succès.");
+                    
+                    HttpSession session = request.getSession(true);
+                    session.setAttribute("authenticated", true);
+                    session.setAttribute("lastSelectedEntrepriseId", entrepriseId);
+                    return "redirect:/machines?entrepriseId=" + entrepriseId;
+                } catch (Exception e) {
+                    redirectAttributes.addFlashAttribute("error", "Erreur lors du détachement: " + e.getMessage());
+                    e.printStackTrace();
+                    return "redirect:/machines/" + entrepriseId + "/" + machineId + "/attach-secours";
+                }
             }
             
             // Si action = "create", rediriger vers la création d'une nouvelle machine
             if ("create".equals(action) || "true".equals(createNew)) {
+                HttpSession session = request.getSession(true);
+                session.setAttribute("authenticated", true);
+                session.setAttribute("lastSelectedEntrepriseId", entrepriseId);
                 redirectAttributes.addFlashAttribute("attachToMachineId", machineId);
                 redirectAttributes.addFlashAttribute("info", "Créez une nouvelle machine qui sera automatiquement rattachée comme machine de secours.");
                 return "redirect:/machines/create?entrepriseId=" + entrepriseId + "&attachTo=" + machineId;
@@ -664,6 +719,29 @@ public class MachineController {
             nouvellePrincipale.setEnReparation(false);
             machineService.updateMachine(entrepriseId, nouvellePrincipaleId, nouvellePrincipale);
 
+            // Transférer les périphériques de l'ancienne machine principale vers la nouvelle
+            try {
+                List<Component> composantsAnciennePrincipale = componentService.listComponentsForMachine(entrepriseId, machineId);
+                if (composantsAnciennePrincipale != null && !composantsAnciennePrincipale.isEmpty()) {
+                    int peripheriquesTransferes = 0;
+                    for (Component composant : composantsAnciennePrincipale) {
+                        if (composant != null && composant.getComponentId() != null) {
+                            composant.setMachineId(nouvellePrincipaleId);
+                            composant.setModifieLe(System.currentTimeMillis());
+                            componentService.updateComponent(entrepriseId, composant.getComponentId(), composant);
+                            peripheriquesTransferes++;
+                        }
+                    }
+                    if (peripheriquesTransferes > 0) {
+                        System.out.println("=== " + peripheriquesTransferes + " périphérique(s) transféré(s) de la machine " + machineId + " vers " + nouvellePrincipaleId + " ===");
+                    }
+                }
+            } catch (Exception e) {
+                // Ne pas bloquer la promotion si le transfert des périphériques échoue
+                System.err.println("Erreur lors du transfert des périphériques: " + e.getMessage());
+                e.printStackTrace();
+            }
+
             // Mettre les autres machines de secours en réparation (non fonctionnelles)
             for (Machine secours : machinesSecours) {
                 if (!secours.getMachineId().equals(nouvellePrincipaleId)) {
@@ -682,7 +760,22 @@ public class MachineController {
             machinePrincipale.setMachinePrincipaleId(null);
             machineService.updateMachine(entrepriseId, machineId, machinePrincipale);
 
-            redirectAttributes.addFlashAttribute("success", "Machine de secours promue avec succès. Les autres machines sont passées en réparation.");
+            // Compter les périphériques transférés pour le message
+            int peripheriquesTransferes = 0;
+            try {
+                List<Component> peripheriques = componentService.listComponentsForMachine(entrepriseId, nouvellePrincipaleId);
+                if (peripheriques != null) {
+                    peripheriquesTransferes = peripheriques.size();
+                }
+            } catch (Exception e) {
+                // Ignorer l'erreur
+            }
+            
+            String messageSuccess = "Machine de secours promue avec succès. Les autres machines sont passées en réparation.";
+            if (peripheriquesTransferes > 0) {
+                messageSuccess += " " + peripheriquesTransferes + " périphérique(s) transféré(s) de l'ancienne machine principale.";
+            }
+            redirectAttributes.addFlashAttribute("success", messageSuccess);
 
             HttpSession session = request.getSession(true);
             session.setAttribute("authenticated", true);
@@ -733,58 +826,89 @@ public class MachineController {
                 session.setAttribute("lastSelectedEntrepriseId", entrepriseId);
             }
             
-            // Toujours définir selectedEntrepriseId, même si null
+            // Toujours définir enterprises dans le modèle
             model.addAttribute("enterprises", enterprises);
-            model.addAttribute("selectedEntrepriseId", entrepriseId);
-            System.out.println("=== MachineController.showCreateForm: selectedEntrepriseId = " + entrepriseId + " ===");
+            System.out.println("=== MachineController.showCreateForm: entrepriseId initial = " + entrepriseId + ", attachToMachineId = " + attachToMachineId + " ===");
             
             // Si attachTo est fourni, charger la machine principale pour affichage
             Machine attachToMachine = null;
-            if (StringUtils.hasText(attachToMachineId) && StringUtils.hasText(entrepriseId)) {
-                try {
-                    attachToMachine = machineService.getMachine(entrepriseId, attachToMachineId);
-                    model.addAttribute("attachToMachine", attachToMachine);
-                    model.addAttribute("attachToMachineId", attachToMachineId);
-                } catch (Exception e) {
-                    // Ignorer si la machine n'existe pas
+            if (StringUtils.hasText(attachToMachineId)) {
+                // Toujours ajouter attachToMachineId au modèle
+                model.addAttribute("attachToMachineId", attachToMachineId);
+                
+                // Si entrepriseId n'est pas fourni, essayer de le récupérer depuis la session ou la machine
+                if (!StringUtils.hasText(entrepriseId)) {
+                    String lastEntrepriseId = (String) session.getAttribute("lastSelectedEntrepriseId");
+                    if (StringUtils.hasText(lastEntrepriseId)) {
+                        entrepriseId = lastEntrepriseId;
+                    }
                 }
+                
+                // Essayer de charger la machine principale
+                if (StringUtils.hasText(entrepriseId)) {
+                    try {
+                        attachToMachine = machineService.getMachine(entrepriseId, attachToMachineId);
+                        if (attachToMachine != null) {
+                            model.addAttribute("attachToMachine", attachToMachine);
+                            // S'assurer que entrepriseId est bien défini
+                            if (!StringUtils.hasText(entrepriseId)) {
+                                entrepriseId = attachToMachine.getEntrepriseId();
+                            }
+                        }
+                    } catch (Exception e) {
+                        // Ignorer si la machine n'existe pas
+                        e.printStackTrace();
+                    }
+                }
+            } else {
+                // S'assurer que attachToMachineId n'est pas dans le modèle si non fourni
+                model.addAttribute("attachToMachineId", null);
             }
             
-            // Charger uniquement les machines principales (pas les machines de secours) pour permettre la sélection
-            List<Machine> machinesPrincipales = new ArrayList<>();
+            // Mettre à jour selectedEntrepriseId après avoir potentiellement récupéré entrepriseId
+            // Toujours définir selectedEntrepriseId dans le modèle, même si null
+            model.addAttribute("selectedEntrepriseId", StringUtils.hasText(entrepriseId) ? entrepriseId : null);
             if (StringUtils.hasText(entrepriseId)) {
-                List<Machine> allMachines = machineService.listMachines(entrepriseId);
-                machinesPrincipales = allMachines.stream()
-                    .filter(m -> m.getEstMachineSecours() == null || !m.getEstMachineSecours())
-                    .collect(Collectors.toList());
+                session.setAttribute("lastSelectedEntrepriseId", entrepriseId);
             }
-            model.addAttribute("machines", machinesPrincipales);
+            System.out.println("=== MachineController.showCreateForm: selectedEntrepriseId final = " + (StringUtils.hasText(entrepriseId) ? entrepriseId : "null") + " ===");
+            
+            if (!model.containsAttribute("machineForm")) {
+                MachineForm machineForm = new MachineForm();
+                if (StringUtils.hasText(entrepriseId)) {
+                    machineForm.setEntrepriseId(entrepriseId);
+                }
+                // Si attachTo est fourni, pré-remplir comme machine de secours
+                if (StringUtils.hasText(attachToMachineId)) {
+                    machineForm.setEstMachineSecours(true);
+                    machineForm.setMachinePrincipaleId(attachToMachineId);
+                }
+                model.addAttribute("machineForm", machineForm);
+            } else {
+                Object existing = model.asMap().get("machineForm");
+                if (existing instanceof MachineForm form) {
+                    if (StringUtils.hasText(entrepriseId)) {
+                        form.setEntrepriseId(entrepriseId);
+                    }
+                }
+            }
+
+            // Charger les catégories avec gestion d'erreur
+            try {
+                model.addAttribute("categories", categoryService.findAll());
+            } catch (Exception e) {
+                e.printStackTrace();
+                model.addAttribute("categories", new ArrayList<>());
+            }
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "Erreur lors du chargement des entreprises: " + e.getMessage());
+            e.printStackTrace();
+            redirectAttributes.addFlashAttribute("error", "Erreur lors du chargement du formulaire: " + e.getMessage());
+            if (StringUtils.hasText(entrepriseId)) {
+                return "redirect:/machines?entrepriseId=" + entrepriseId;
+            }
             return "redirect:/machines";
         }
 
-        if (!model.containsAttribute("machineForm")) {
-            MachineForm machineForm = new MachineForm();
-            if (StringUtils.hasText(entrepriseId)) {
-            machineForm.setEntrepriseId(entrepriseId);
-            }
-            // Si attachTo est fourni, pré-remplir comme machine de secours
-            if (StringUtils.hasText(attachToMachineId)) {
-                machineForm.setEstMachineSecours(true);
-                machineForm.setMachinePrincipaleId(attachToMachineId);
-            }
-            model.addAttribute("machineForm", machineForm);
-        } else {
-            Object existing = model.asMap().get("machineForm");
-            if (existing instanceof MachineForm form) {
-                if (StringUtils.hasText(entrepriseId)) {
-                form.setEntrepriseId(entrepriseId);
-                }
-            }
-        }
-
-        model.addAttribute("categories", categoryService.findAll());
         return "machines/create";
     }
 
@@ -792,6 +916,9 @@ public class MachineController {
     public String createMachine(@ModelAttribute("machineForm") MachineForm machineForm,
                                 @RequestParam(value = "machineType", required = false) String machineTypeSelection,
                                 @RequestParam(value = "photoFiles", required = false) MultipartFile[] photoFiles,
+                                @RequestParam(value = "attachTo", required = false) String attachToMachineId,
+                                @RequestParam(value = "customFieldNames", required = false) String[] customFieldNames,
+                                @RequestParam(value = "customFieldValues", required = false) String[] customFieldValues,
                                 RedirectAttributes redirectAttributes,
                                 HttpServletRequest request) {
         if (!ensureAuthenticated(request, redirectAttributes)) {
@@ -836,6 +963,41 @@ public class MachineController {
         }
         
         applyMachineTypeSelection(machineForm, machineTypeSelection);
+
+        String normalizedParentId = StringUtils.hasText(machineForm.getMachinePrincipaleId())
+            ? machineForm.getMachinePrincipaleId().trim()
+            : null;
+        machineForm.setMachinePrincipaleId(StringUtils.hasText(normalizedParentId) ? normalizedParentId : null);
+
+        // Si attachTo est présent, forcer la machine à être une machine de secours et la rattacher
+        if (StringUtils.hasText(attachToMachineId)) {
+            try {
+                // Vérifier que la machine principale existe
+                Machine machinePrincipale = machineService.getMachine(entrepriseId, attachToMachineId);
+                if (machinePrincipale == null) {
+                    redirectAttributes.addFlashAttribute("error", "La machine principale sélectionnée n'existe pas.");
+                    redirectAttributes.addFlashAttribute("machineForm", machineForm);
+                    return "redirect:/machines/create?entrepriseId=" + machineForm.getEntrepriseId() + "&attachTo=" + attachToMachineId;
+                }
+                
+                // Vérifier que la machine principale n'est pas une machine de secours
+                if (machinePrincipale.getEstMachineSecours() != null && machinePrincipale.getEstMachineSecours()) {
+                    redirectAttributes.addFlashAttribute("error", "Une machine de secours ne peut pas être une machine principale.");
+                    redirectAttributes.addFlashAttribute("machineForm", machineForm);
+                    return "redirect:/machines/create?entrepriseId=" + machineForm.getEntrepriseId() + "&attachTo=" + attachToMachineId;
+                }
+                
+                // Forcer la machine à être une machine de secours et la rattacher
+                machineForm.setEstMachineSecours(true);
+                machineForm.setEstMachineEntrepot(false);
+                machineForm.setMachinePrincipaleId(attachToMachineId);
+                machineForm.setEnProgrammation(false);
+            } catch (Exception e) {
+                redirectAttributes.addFlashAttribute("error", "Erreur lors de la vérification de la machine principale: " + e.getMessage());
+                redirectAttributes.addFlashAttribute("machineForm", machineForm);
+                return "redirect:/machines/create?entrepriseId=" + machineForm.getEntrepriseId() + "&attachTo=" + attachToMachineId;
+            }
+        }
 
         // Validation : au moins numéro de série OU adresse IP doit être renseigné SAUF pour les machines entrepôt
         Boolean estMachineEntrepot = machineForm.getEstMachineEntrepot() != null ? machineForm.getEstMachineEntrepot() : false;
@@ -887,6 +1049,20 @@ public class MachineController {
             
             machine.setSupprime(false);
 
+            // Traiter les champs personnalisés
+            if (customFieldNames != null && customFieldValues != null && customFieldNames.length == customFieldValues.length) {
+                Map<String, Object> champsPersonnalises = new HashMap<>();
+                for (int i = 0; i < customFieldNames.length; i++) {
+                    if (StringUtils.hasText(customFieldNames[i]) && StringUtils.hasText(customFieldValues[i])) {
+                        String fieldName = customFieldNames[i].trim().toLowerCase().replaceAll("[^a-z0-9_]", "_");
+                        champsPersonnalises.put(fieldName, customFieldValues[i].trim());
+                    }
+                }
+                if (!champsPersonnalises.isEmpty()) {
+                    machine.setChampsPersonnalises(champsPersonnalises);
+                }
+            }
+            
             String machineId = machineService.createMachine(machineForm.getEntrepriseId(), machine);
             
             // Préserver la session après création
@@ -905,7 +1081,14 @@ public class MachineController {
                 machine.setPhotos(uploadedPhotos);
                 machineService.updateMachine(machineForm.getEntrepriseId(), machineId, machine);
             }
-            redirectAttributes.addFlashAttribute("success", "Machine créée avec succès.");
+            
+            // Message de succès personnalisé selon si la machine a été rattachée
+            if (StringUtils.hasText(attachToMachineId) && machine.getMachinePrincipaleId() != null && machine.getMachinePrincipaleId().equals(attachToMachineId)) {
+                redirectAttributes.addFlashAttribute("success", "Machine de secours créée et rattachée à la machine principale avec succès.");
+            } else {
+                redirectAttributes.addFlashAttribute("success", "Machine créée avec succès.");
+            }
+            
             // Préserver l'entrepriseId dans la session (session déjà déclarée plus haut)
             session.setAttribute("lastSelectedEntrepriseId", machineForm.getEntrepriseId());
             session.setAttribute("authenticated", true);
@@ -917,7 +1100,7 @@ public class MachineController {
             return "redirect:/machines/create?entrepriseId=" + machineForm.getEntrepriseId();
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Erreur lors de la création de la machine: " + e.getMessage());
-            return "redirect:/machines?entrepriseId=" + machineForm.getEntrepriseId();
+        return "redirect:/machines?entrepriseId=" + machineForm.getEntrepriseId();
         }
     }
 
@@ -950,6 +1133,9 @@ public class MachineController {
 
             // Charger uniquement les machines principales (pas les machines de secours) pour permettre la sélection
             List<Machine> allMachines = machineService.listMachines(entrepriseId);
+            if (allMachines == null) {
+                allMachines = new ArrayList<>();
+            }
             List<Machine> machinesPrincipales = allMachines.stream()
                 .filter(m -> m.getEstMachineSecours() == null || !m.getEstMachineSecours())
                 .filter(m -> !m.getMachineId().equals(machineId)) // Exclure la machine en cours d'édition
@@ -983,6 +1169,7 @@ public class MachineController {
             model.addAttribute("existingPhotos", machine.getPhotos());
             model.addAttribute("machine", machine); // Pour afficher les infos de suivi
             model.addAttribute("categories", categoryService.findAll());
+
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Erreur lors du chargement de la machine: " + e.getMessage());
             return "redirect:/machines?entrepriseId=" + entrepriseId;
@@ -998,6 +1185,8 @@ public class MachineController {
                                 @RequestParam(value = "machineType", required = false) String machineTypeSelection,
                                 @RequestParam(value = "photoFiles", required = false) MultipartFile[] photoFiles,
                                 @RequestParam(value = "deletePhotos", required = false) List<String> deletePhotos,
+                                @RequestParam(value = "customFieldNames", required = false) String[] customFieldNames,
+                                @RequestParam(value = "customFieldValues", required = false) String[] customFieldValues,
                                 RedirectAttributes redirectAttributes,
                                 HttpServletRequest request) {
         if (!ensureAuthenticated(request, redirectAttributes)) {
@@ -1083,61 +1272,64 @@ public class MachineController {
 
             // Récupérer la machine existante pour préserver certains champs
             Machine existingMachine = machineService.getMachine(entrepriseId, machineId);
+            
+            // Traiter les champs personnalisés
+            if (customFieldNames != null && customFieldValues != null && customFieldNames.length == customFieldValues.length) {
+                Map<String, Object> champsPersonnalises = new HashMap<>();
+                for (int i = 0; i < customFieldNames.length; i++) {
+                    if (StringUtils.hasText(customFieldNames[i]) && StringUtils.hasText(customFieldValues[i])) {
+                        String fieldName = customFieldNames[i].trim().toLowerCase().replaceAll("[^a-z0-9_]", "_");
+                        champsPersonnalises.put(fieldName, customFieldValues[i].trim());
+                    }
+                }
+                machine.setChampsPersonnalises(champsPersonnalises);
+            } else if (existingMachine != null && existingMachine.getChampsPersonnalises() != null) {
+                // Si aucun champ personnalisé n'est fourni, préserver ceux existants
+                machine.setChampsPersonnalises(existingMachine.getChampsPersonnalises());
+            }
+            
             if (existingMachine != null) {
-                // Gestion de la conversion d'une machine entrepôt en machine normale
                 Boolean wasEntrepot = existingMachine.getEstMachineEntrepot() != null && existingMachine.getEstMachineEntrepot();
                 if (wasEntrepot && !estMachineEntrepot) {
-                    // La machine entrepôt devient une machine normale (principale ou secours)
                     machine.setEnProgrammation(false);
                     if (machine.getOperationnel() == null || !machine.getOperationnel()) {
                         machine.setOperationnel(true);
                     }
                     machine.setEnReparation(false);
                 } else if (estMachineEntrepot) {
-                    // Si c'est une machine entrepôt, masquer le type principale/secours
                     machine.setEstMachineSecours(false);
                     machine.setMachinePrincipaleId(null);
                 }
                 
                 if (!estMachineEntrepot) {
-                    // Si la machine était en réparation et qu'on la remet fonctionnelle, elle redevient une machine de secours
                     if (existingMachine.getEnReparation() != null && existingMachine.getEnReparation() 
                         && machine.getOperationnel() != null && machine.getOperationnel()
                         && machine.getEnReparation() != null && !machine.getEnReparation()) {
-                        // La machine redevient une machine de secours (pas principale)
                         machine.setEstMachineSecours(true);
                         machine.setEnReparation(false);
                     } else if (machine.getEnReparation() != null && machine.getEnReparation()) {
-                        // Si on met en réparation, la machine devient non fonctionnelle et n'est plus secours ni principale
                         machine.setOperationnel(false);
                         machine.setEstMachineSecours(false);
                         machine.setMachinePrincipaleId(null);
                     }
                     
-                    // Si la machine devient non fonctionnelle, la mettre automatiquement en réparation
                     if (machine.getOperationnel() != null && !machine.getOperationnel() 
                         && (existingMachine.getOperationnel() == null || existingMachine.getOperationnel())) {
-                        // La machine vient de devenir non fonctionnelle
                         machine.setEnReparation(true);
                         
-                        // Vérifier si c'est une machine principale avec des machines de secours attachées
                         boolean isMachinePrincipale = existingMachine.getEstMachineSecours() == null || !existingMachine.getEstMachineSecours();
                         if (isMachinePrincipale) {
-                            // Récupérer toutes les machines de secours attachées à cette machine principale
                             List<Machine> allMachines = machineService.listMachines(entrepriseId);
                             List<Machine> machinesSecoursRattachees = allMachines.stream()
                                 .filter(m -> m.getEstMachineSecours() != null && m.getEstMachineSecours())
                                 .filter(m -> m.getMachinePrincipaleId() != null && m.getMachinePrincipaleId().equals(machineId))
-                                .filter(m -> m.getEnReparation() == null || !m.getEnReparation()) // Exclure celles déjà en réparation
-                                .filter(m -> m.getOperationnel() != null && m.getOperationnel()) // Seulement les fonctionnelles
+                                .filter(m -> m.getEnReparation() == null || !m.getEnReparation())
+                                .filter(m -> m.getOperationnel() != null && m.getOperationnel())
                                 .collect(Collectors.toList());
                             
-                            // Si des machines de secours sont disponibles, proposer de les promouvoir
                             if (!machinesSecoursRattachees.isEmpty()) {
-                                // Sauvegarder d'abord l'état non fonctionnel et en réparation
                                 machineService.updateMachine(entrepriseId, machineId, machine);
                                 
-                                // Rediriger vers la page de sélection de la machine de secours à promouvoir
                                 redirectAttributes.addFlashAttribute("info", "Cette machine principale est maintenant non fonctionnelle. Veuillez sélectionner une machine de secours pour la remplacer.");
                                 HttpSession session = request.getSession(true);
                                 session.setAttribute("authenticated", true);
@@ -1164,6 +1356,202 @@ public class MachineController {
             redirectAttributes.addFlashAttribute("error", "Erreur lors de la mise à jour de la machine: " + e.getMessage());
             return "redirect:/machines/" + entrepriseId + "/" + machineId + "/edit";
         }
+    }
+
+    @PostMapping("/{entrepriseId}/{machineId}/components/new")
+    public String addComponent(@PathVariable String entrepriseId,
+                               @PathVariable String machineId,
+                               @RequestParam("componentCategoryId") Long componentCategoryId,
+                               @RequestParam("componentName") String componentName,
+                               @RequestParam(value = "componentSerial", required = false) String componentSerial,
+                               @RequestParam(value = "componentEtat", required = false) String componentEtat,
+                               @RequestParam(value = "componentType", required = false) String componentType,
+                               @RequestParam(value = "componentNotes", required = false) String componentNotes,
+                               RedirectAttributes redirectAttributes,
+                               HttpServletRequest request) {
+        if (!ensureAuthenticated(request, redirectAttributes)) {
+            return "redirect:/login";
+        }
+        if (!isSuperAdmin(request)) {
+            redirectAttributes.addFlashAttribute("error", "Seul le super administrateur peut modifier les périphériques.");
+            return "redirect:/machines/" + entrepriseId + "/" + machineId + "/edit";
+        }
+        if (componentCategoryId == null) {
+            redirectAttributes.addFlashAttribute("error", "Sélectionnez une catégorie pour le périphérique.");
+            return "redirect:/machines/" + entrepriseId + "/" + machineId + "/edit";
+        }
+        try {
+            Category category = categoryService.getCategory(componentCategoryId);
+            if (category == null) {
+                redirectAttributes.addFlashAttribute("error", "Catégorie de périphérique introuvable.");
+                return "redirect:/machines/" + entrepriseId + "/" + machineId + "/edit";
+            }
+            Component component = new Component();
+            component.setEntrepriseId(entrepriseId);
+            component.setCategoryId(componentCategoryId);
+            component.setCategoryName(category.getName());
+            component.setNom(componentName);
+            component.setNumeroSerie(componentSerial);
+            component.setEtat(StringUtils.hasText(componentEtat) ? componentEtat : "fonctionnel");
+            component.setNotes(componentNotes);
+            long now = System.currentTimeMillis();
+            component.setCreeLe(now);
+            component.setModifieLe(now);
+            String type = StringUtils.hasText(componentType) ? componentType : "standard";
+            switch (type) {
+                case "secours" -> {
+                    component.setMachineId(machineId);
+                    component.setLocation("secours");
+                }
+                case "neuf" -> {
+                    component.setMachineId(null);
+                    component.setLocation("stock");
+                }
+                default -> {
+                    component.setMachineId(machineId);
+                    component.setLocation("machine");
+                    type = "standard";
+                }
+            }
+            component.setTypePeripherique(type);
+            componentService.createComponent(entrepriseId, component);
+            if ("neuf".equals(type)) {
+                redirectAttributes.addFlashAttribute("success", "Périphérique neuf ajouté au stock. Vous pourrez l'attacher plus tard.");
+            } else if ("secours".equals(type)) {
+                redirectAttributes.addFlashAttribute("success", "Périphérique de secours rattaché à la machine.");
+            } else {
+                redirectAttributes.addFlashAttribute("success", "Périphérique rattaché à la machine.");
+            }
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Erreur lors de l'ajout du périphérique: " + e.getMessage());
+        }
+        return "redirect:/machines/" + entrepriseId + "/" + machineId + "/edit";
+    }
+
+    @PostMapping("/{entrepriseId}/{machineId}/components/attach")
+    public String attachExistingComponent(@PathVariable String entrepriseId,
+                                          @PathVariable String machineId,
+                                          @RequestParam("componentId") String componentId,
+                                          RedirectAttributes redirectAttributes,
+                                          HttpServletRequest request) {
+        if (!ensureAuthenticated(request, redirectAttributes)) {
+            return "redirect:/login";
+        }
+        if (!isSuperAdmin(request)) {
+            redirectAttributes.addFlashAttribute("error", "Seul le super administrateur peut modifier les périphériques.");
+            return "redirect:/machines/" + entrepriseId + "/" + machineId + "/edit";
+        }
+        try {
+            Component component = componentService.getComponent(entrepriseId, componentId);
+            if (component == null) {
+                redirectAttributes.addFlashAttribute("error", "Périphérique introuvable.");
+            } else {
+                component.setMachineId(machineId);
+                component.setLocation("machine");
+                if (!StringUtils.hasText(component.getTypePeripherique()) || "neuf".equals(component.getTypePeripherique())) {
+                    component.setTypePeripherique("standard");
+                }
+                component.setModifieLe(System.currentTimeMillis());
+                componentService.updateComponent(entrepriseId, componentId, component);
+                redirectAttributes.addFlashAttribute("success", "Périphérique rattaché à la machine.");
+            }
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Erreur lors du rattachement du périphérique: " + e.getMessage());
+        }
+        return "redirect:/machines/" + entrepriseId + "/" + machineId + "/edit";
+    }
+
+    @PostMapping("/{entrepriseId}/{machineId}/components/{componentId}/detach")
+    public String detachComponent(@PathVariable String entrepriseId,
+                                  @PathVariable String machineId,
+                                  @PathVariable String componentId,
+                                  RedirectAttributes redirectAttributes,
+                                  HttpServletRequest request) {
+        if (!ensureAuthenticated(request, redirectAttributes)) {
+            return "redirect:/login";
+        }
+        if (!isSuperAdmin(request)) {
+            redirectAttributes.addFlashAttribute("error", "Seul le super administrateur peut modifier les périphériques.");
+            return "redirect:/machines/" + entrepriseId + "/" + machineId + "/edit";
+        }
+        try {
+            Component component = componentService.getComponent(entrepriseId, componentId);
+            if (component == null) {
+                redirectAttributes.addFlashAttribute("error", "Périphérique introuvable.");
+            } else {
+                component.setMachineId(null);
+                component.setLocation("stock");
+                component.setTypePeripherique("neuf");
+                component.setModifieLe(System.currentTimeMillis());
+                componentService.updateComponent(entrepriseId, componentId, component);
+                redirectAttributes.addFlashAttribute("success", "Périphérique détaché. Il est disponible dans le stock.");
+            }
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Erreur lors du détachement du périphérique: " + e.getMessage());
+        }
+        return "redirect:/machines/" + entrepriseId + "/" + machineId + "/edit";
+    }
+
+    @PostMapping("/{entrepriseId}/{machineId}/components/{componentId}/delete")
+    public String deleteComponent(@PathVariable String entrepriseId,
+                                  @PathVariable String machineId,
+                                  @PathVariable String componentId,
+                                  RedirectAttributes redirectAttributes,
+                                  HttpServletRequest request) {
+        if (!ensureAuthenticated(request, redirectAttributes)) {
+            return "redirect:/login";
+        }
+        if (!isSuperAdmin(request)) {
+            redirectAttributes.addFlashAttribute("error", "Seul le super administrateur peut modifier les périphériques.");
+            return "redirect:/machines/" + entrepriseId + "/" + machineId + "/edit";
+        }
+        try {
+            componentService.deleteComponent(entrepriseId, componentId);
+            redirectAttributes.addFlashAttribute("success", "Périphérique supprimé.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Erreur lors de la suppression du périphérique: " + e.getMessage());
+        }
+        return "redirect:/machines/" + entrepriseId + "/" + machineId + "/edit";
+    }
+
+    @PostMapping("/{entrepriseId}/{machineId}/components/{componentId}/etat")
+    public String updateComponentEtat(@PathVariable String entrepriseId,
+                                      @PathVariable String machineId,
+                                      @PathVariable String componentId,
+                                      @RequestParam("etat") String etat,
+                                      @RequestParam(value = "typePeripherique", required = false) String typePeripherique,
+                                      RedirectAttributes redirectAttributes,
+                                      HttpServletRequest request) {
+        if (!ensureAuthenticated(request, redirectAttributes)) {
+            return "redirect:/login";
+        }
+        if (!isSuperAdmin(request)) {
+            redirectAttributes.addFlashAttribute("error", "Seul le super administrateur peut modifier les périphériques.");
+            return "redirect:/machines/" + entrepriseId + "/" + machineId + "/edit";
+        }
+        try {
+            Component component = componentService.getComponent(entrepriseId, componentId);
+            if (component == null) {
+                redirectAttributes.addFlashAttribute("error", "Périphérique introuvable.");
+            } else {
+                component.setEtat(etat);
+                if (StringUtils.hasText(typePeripherique)) {
+                    component.setTypePeripherique(typePeripherique.trim().toLowerCase());
+                    if ("neuf".equals(component.getTypePeripherique())) {
+                        component.setMachineId(null);
+                        component.setLocation("stock");
+                    } else if (component.getMachineId() == null) {
+                        component.setLocation("stock");
+                    }
+                }
+                component.setModifieLe(System.currentTimeMillis());
+                componentService.updateComponent(entrepriseId, componentId, component);
+                redirectAttributes.addFlashAttribute("success", "Périphérique mis à jour.");
+            }
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Erreur lors de la mise à jour du périphérique: " + e.getMessage());
+        }
+        return "redirect:/machines/" + entrepriseId + "/" + machineId + "/edit";
     }
 
     @PostMapping("/{entrepriseId}/{machineId}/delete")

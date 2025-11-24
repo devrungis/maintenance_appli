@@ -1,7 +1,9 @@
 package com.maintenance.maintenance.model.entity;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class Machine {
@@ -32,6 +34,7 @@ public class Machine {
     private String supprimePar; // Utilisateur qui a supprimé la machine
     private Long supprimeLe; // Date de suppression (timestamp)
     private Boolean supprime; // true si la machine est supprimée (soft delete)
+    private Map<String, Object> champsPersonnalises = new HashMap<>(); // Champs personnalisés dynamiques
 
     public String getMachineId() {
         return machineId;
@@ -239,6 +242,14 @@ public class Machine {
 
     public void setSupprime(Boolean supprime) {
         this.supprime = supprime;
+    }
+
+    public Map<String, Object> getChampsPersonnalises() {
+        return champsPersonnalises != null ? champsPersonnalises : new HashMap<>();
+    }
+
+    public void setChampsPersonnalises(Map<String, Object> champsPersonnalises) {
+        this.champsPersonnalises = champsPersonnalises != null ? champsPersonnalises : new HashMap<>();
     }
 
     @Override
