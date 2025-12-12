@@ -44,21 +44,57 @@ public class StockController {
      * Vérifie si l'utilisateur est connecté (tous les rôles autorisés)
      */
     private boolean ensureAuthenticated(HttpServletRequest request, RedirectAttributes redirectAttributes) {
-        // Toujours créer/obtenir une session
-        HttpSession session = request.getSession(true);
-        
-        // Vérifier si l'utilisateur est authentifié via Spring Security
-        if (org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication() != null 
-            && org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().isAuthenticated()
-            && !"anonymousUser".equals(org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getPrincipal().toString())) {
-            // Restaurer/mettre à jour la session
+        // D'abord vérifier Spring Security (priorité)
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() 
+            && !"anonymousUser".equals(auth.getPrincipal().toString())) {
+            // Utilisateur authentifié via Spring Security, créer/récupérer la session
+            HttpSession session = request.getSession(true);
             session.setAttribute("authenticated", true);
+            session.setAttribute("sessionCreated", System.currentTimeMillis());
+            // Récupérer email et role depuis Spring Security si disponible
+            if (auth.getPrincipal() instanceof String) {
+                String email = (String) auth.getPrincipal();
+                session.setAttribute("email", email);
+            }
             return true;
+        }
+        
+        // Sinon, vérifier la session HTTP
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            redirectAttributes.addFlashAttribute("error", "Votre session a expiré. Veuillez vous reconnecter.");
+            return false;
+        }
+        
+        // Vérifier si la session est expirée
+        try {
+            Long sessionCreated = (Long) session.getAttribute("sessionCreated");
+            if (sessionCreated != null) {
+                long sessionAge = System.currentTimeMillis() - sessionCreated;
+                long sessionMaxAge = 1800 * 1000; // 30 minutes
+                if (sessionAge > sessionMaxAge) {
+                    // Session expirée, l'invalider et rediriger
+                    try {
+                        session.invalidate();
+                    } catch (Exception e) {
+                        // Ignorer les erreurs d'invalidation
+                    }
+                    redirectAttributes.addFlashAttribute("error", "Votre session a expiré. Veuillez vous reconnecter.");
+                    return false;
+                }
+            }
+        } catch (IllegalStateException e) {
+            // Session déjà invalidée
+            redirectAttributes.addFlashAttribute("error", "Votre session a expiré. Veuillez vous reconnecter.");
+            return false;
         }
         
         // Vérifier si la session contient déjà l'authentification
         Boolean authenticated = (Boolean) session.getAttribute("authenticated");
         if (authenticated != null && authenticated) {
+            // Mettre à jour le timestamp pour prolonger la session
+            session.setAttribute("sessionCreated", System.currentTimeMillis());
             return true;
         }
         

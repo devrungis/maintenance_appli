@@ -42,7 +42,9 @@ public class SecurityConfig {
                     .requestMatchers("/ent/**").hasRole("SUPERADMIN") // Seul le superadmin peut accéder aux pages de gestion
                     .requestMatchers("/users/create", "/users", "/users/*/delete").hasRole("SUPERADMIN") // Seul le superadmin peut créer/lister/supprimer des utilisateurs
                     .requestMatchers("/users/*/edit").authenticated() // Tout utilisateur authentifié peut modifier son profil (contrôle dans le controller)
-                    .requestMatchers("/dashboard", "/machines", "/machines/**", "/categories", "/categories/**", "/stock", "/stock/**", "/alerts", "/reports", "/calendar", "/inventory", "/tickets").authenticated()
+                    .requestMatchers("/dashboard", "/machines", "/machines/**", "/categories", "/categories/**", "/stock", "/stock/**", "/reports", "/calendar", "/inventory", "/tickets", "/tickets/**").authenticated()
+                    .requestMatchers("/alertes", "/alertes/**", "/alerts").permitAll() // Permettre l'accès, le contrôleur vérifiera l'authentification
+                    .requestMatchers("/rappels", "/rappels/**").permitAll() // Permettre l'accès, le contrôleur vérifiera l'authentification
                     .requestMatchers("/media/**").permitAll() // Autoriser l'accès aux médias (images)
                     .anyRequest().authenticated();
                 System.out.println("=== SecurityConfig: Autorisations configurées ===");
@@ -55,6 +57,24 @@ public class SecurityConfig {
                     System.out.println("=== SecurityConfig: AuthenticationEntryPoint déclenché ===");
                     System.out.println("URI: " + request.getRequestURI());
                     System.out.println("Exception: " + authException.getMessage());
+                    
+                    // Pour les endpoints API, retourner du JSON au lieu d'une redirection
+                    if (request.getRequestURI().startsWith("/tickets/api/") || 
+                        request.getRequestURI().startsWith("/api/")) {
+                        if (!response.isCommitted()) {
+                            try {
+                                response.setStatus(401);
+                                response.setContentType("application/json");
+                                response.setCharacterEncoding("UTF-8");
+                                response.getWriter().write("{\"error\":\"Non authentifié\"}");
+                                response.getWriter().flush();
+                            } catch (Exception e) {
+                                System.err.println("Erreur lors de l'écriture de la réponse JSON: " + e.getMessage());
+                            }
+                            return;
+                        }
+                    }
+                    
                     // Ne pas rediriger pour les pages statiques (éviter les boucles)
                     if (!request.getRequestURI().startsWith("/css") && 
                         !request.getRequestURI().startsWith("/js") && 

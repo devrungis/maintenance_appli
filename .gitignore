@@ -32,7 +32,10 @@ build/
 ### VS Code ###
 .vscode/
 
-# Sensitive credentials
+# Sensitive credentials and configuration files
+src/main/resources/application.properties
+src/main/resources/application-local.properties
+src/main/resources/application-prod.properties
 src/main/resources/*firebase-adminsdk*.json
 src/main/resources/firebase-credentials/
 *.keystore
@@ -40,5 +43,27 @@ src/main/resources/firebase-credentials/
 *.pem
 *.jks
 *.env
+.env
+.env.local
+.env.production
 config/secrets/**
+
+# Uploaded files and user content
+uploads/
+!uploads/.gitkeep
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
 

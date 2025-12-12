@@ -30,6 +30,7 @@ body {
     background: var(--background-color);
     color: var(--text-primary);
     line-height: 1.6;
+    overflow-x: hidden;
 }
 
 /* Utilitaires */
@@ -41,6 +42,20 @@ body {
 #mainApp {
     display: flex;
     min-height: 100vh;
+}
+
+#mainApp .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    width: 250px;
+    z-index: 1000;
+}
+
+#mainApp .main-content {
+    margin-left: 250px;
+    width: calc(100% - 250px);
 }
 
 /* Masquer toutes les pages par défaut */
@@ -61,6 +76,10 @@ body {
     display: flex;
     flex-direction: column;
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    position: fixed;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 1000;
 }
 
 /* Système de notifications */
@@ -182,36 +201,41 @@ body {
 }
 
 .sidebar-header {
-    padding: 1.5rem;
+    padding: 1rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     text-align: center;
+    flex-shrink: 0;
 }
 
 .sidebar-header i {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
     color: var(--primary-color);
 }
 
 .sidebar-header h2 {
-    font-size: 1.2rem;
+    font-size: 1rem;
     font-weight: 600;
+    margin: 0;
 }
 
 .sidebar-menu {
     flex: 1;
-    padding: 1rem 0;
+    padding: 0.5rem 0;
     list-style: none;
+    overflow-y: auto;
+    flex-shrink: 1;
 }
 
 .menu-item {
-    padding: 1rem 1.5rem;
+    padding: 0.75rem 1rem;
     cursor: pointer;
     transition: background-color 0.2s ease;
     border-left: 3px solid transparent;
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    font-size: 1rem;
 }
 
 .menu-item:hover {
@@ -223,14 +247,31 @@ body {
     border-left-color: var(--primary-color);
 }
 
+.menu-item a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: white;
+    text-decoration: none;
+    width: 100%;
+    font-size: 1rem;
+}
+
 .menu-item i {
     width: 20px;
     font-size: 1.1rem;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.menu-item span {
+    font-size: 1rem;
 }
 
 .sidebar-footer {
-    padding: 1rem;
+    padding: 0.75rem;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
 }
 
 /* Contenu principal */
@@ -239,6 +280,9 @@ body {
     padding: 2rem;
     background: var(--background-color);
     overflow-y: auto;
+    overflow-x: hidden;
+    margin-left: 250px;
+    height: 100vh;
 }
 
 .content-page {
@@ -2345,9 +2389,9 @@ body {
     left: 0;
     right: 0;
     height: var(--header-height);
-    background: var(--card-background);
+    background: #ffffff;
     border-bottom: 1px solid var(--border-color);
-    z-index: 1000;
+    z-index: 1002;
     box-shadow: var(--shadow);
 }
 
@@ -2363,15 +2407,21 @@ body {
     background: none;
     border: none;
     font-size: 1.5rem;
-    color: var(--text-primary);
+    color: #1f2937;
     cursor: pointer;
     padding: 0.5rem;
     border-radius: 8px;
     transition: background-color 0.2s ease;
+    z-index: 1003;
+    position: relative;
 }
 
 .menu-toggle:hover {
     background: var(--background-color);
+}
+
+.menu-toggle:active {
+    background: #e5e7eb;
 }
 
 .app-title {
@@ -2428,11 +2478,11 @@ body {
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
+    z-index: 1001;
     opacity: 0;
     visibility: hidden;
     transition: all 0.3s ease;
-    backdrop-filter: blur(2px);
+    /* backdrop-filter: blur(2px); */ /* Désactivé pour éviter le flou */
 }
 
 .sidebar-overlay.show {
@@ -2443,7 +2493,8 @@ body {
 /* Responsive Breakpoints */
 @media (max-width: 768px) {
     /* Masquer la sidebar desktop */
-    .sidebar {
+    .sidebar, #mainSidebar {
+        width: 280px !important; /* Plus large sur mobile */
         transform: translateX(-100%);
         transition: transform 0.3s ease;
         position: fixed;
@@ -2452,21 +2503,83 @@ body {
         height: 100vh;
         z-index: 1001;
         box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+        background: #1e293b !important; /* Assurer le fond */
     }
     
-    .sidebar.open {
+    .sidebar.open, #mainSidebar.open {
         transform: translateX(0);
     }
     
     /* Afficher le header mobile */
     .mobile-header {
+        display: flex !important;
+        flex-direction: column !important;
+        z-index: 1002 !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        background: #ffffff !important;
+        border-bottom: 1px solid #e5e7eb !important;
+        height: 60px !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    .mobile-header .header-content {
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
+        padding: 0 1rem !important;
+        height: 100% !important;
+    }
+    
+    .mobile-header .menu-toggle {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 40px !important;
+        height: 40px !important;
+        background: none !important;
+        border: none !important;
+        cursor: pointer !important;
+        padding: 0.5rem !important;
+        z-index: 1003 !important;
+    }
+    
+    .mobile-header .menu-toggle i {
+        font-size: 1.5rem !important;
+        color: #1f2937 !important;
+        display: block !important;
+    }
+    
+    /* Afficher l'overlay sur mobile */
+    .sidebar-overlay {
         display: block;
     }
     
     /* Ajuster le contenu principal */
-    .main-content {
+    #mainApp .main-content {
+        margin-left: 0;
+        width: 100%;
         margin-top: var(--header-height);
         padding: 1rem;
+    }
+    
+    .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+        margin-top: 60px !important; /* Hauteur du mobile-header */
+        padding: 1rem !important;
+        padding-top: 80px !important; /* Espace pour le header mobile */
+        box-sizing: border-box !important;
+    }
+    
+    /* Assurer que toutes les pages ont le bon padding sur mobile */
+    .page .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding: 1rem !important;
+        padding-top: 80px !important;
     }
     
     /* Ajuster les grilles */
@@ -3148,6 +3261,75 @@ body {
     
     .sidebar-overlay {
         background: rgba(0, 0, 0, 0.7);
+    }
+}
+
+/* Responsive pour très petits écrans (iPhone SE, etc.) */
+@media (max-width: 375px) {
+    .main-content {
+        padding: 0.5rem !important;
+        padding-top: 70px !important;
+    }
+    
+    .page .main-content {
+        padding: 0.5rem !important;
+        padding-top: 70px !important;
+    }
+    
+    .mobile-header {
+        height: 55px !important;
+    }
+    
+    .page-header {
+        padding: 0.5rem;
+    }
+    
+    .page-header h1 {
+        font-size: 1.1rem;
+    }
+    
+    .card {
+        padding: 0.75rem !important;
+    }
+    
+    .btn {
+        padding: 0.45rem 0.65rem;
+        font-size: 0.75rem;
+    }
+}
+
+/* Responsive pour écrans extra petits (320px) */
+@media (max-width: 320px) {
+    .main-content {
+        padding: 0.5rem !important;
+        padding-top: 65px !important;
+    }
+    
+    .page .main-content {
+        padding: 0.5rem !important;
+        padding-top: 65px !important;
+    }
+    
+    .mobile-header {
+        height: 50px !important;
+        padding: 0 0.5rem !important;
+    }
+    
+    .mobile-header .menu-toggle {
+        width: 35px !important;
+        height: 35px !important;
+    }
+    
+    .mobile-header .menu-toggle i {
+        font-size: 1.25rem !important;
+    }
+    
+    .page-header h1 {
+        font-size: 1rem;
+    }
+    
+    .card {
+        padding: 0.5rem !important;
     }
 }
 

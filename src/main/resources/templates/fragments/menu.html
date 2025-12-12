@@ -1,8 +1,29 @@
 <!DOCTYPE html>
 <html lang="fr" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <body>
+    <!-- Header mobile -->
+    <header class="mobile-header" th:fragment="mobileHeader">
+        <div class="header-content">
+            <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div style="flex: 1; margin-left: 1rem;">
+                <h1 class="app-title">
+                    <i class="fas fa-wrench"></i>
+                    Maintenance
+                </h1>
+                <div id="currentEnterpriseMobile" style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                    <!-- Entreprise actuelle -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Overlay pour sidebar mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <!-- Fragment du menu/sidebar -->
-    <nav class="sidebar" th:fragment="menu">
+    <nav class="sidebar" id="mainSidebar" th:fragment="menu">
         <style>
             :root {
                 --primary-color: #3b82f6;
@@ -17,35 +38,70 @@
                 display: flex;
                 flex-direction: column;
                 box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+                position: fixed;
+                height: 100vh;
+                overflow-y: auto;
+                z-index: 1001;
+                transition: transform 0.3s ease;
+            }
+            
+            /* Mobile styles */
+            @media (max-width: 768px) {
+                .sidebar {
+                    width: 280px !important; /* Plus large sur mobile pour meilleure lisibilité */
+                    transform: translateX(-100%);
+                    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+                    top: 0;
+                    left: 0;
+                }
+                
+                .sidebar.open {
+                    transform: translateX(0);
+                }
+            }
+            
+            @media (min-width: 769px) {
+                .mobile-header {
+                    display: none;
+                }
+                
+                .sidebar-overlay {
+                    display: none !important;
+                }
             }
             .sidebar-header {
-                padding: 1.5rem;
+                padding: 1rem;
                 border-bottom: 1px solid rgba(255, 255, 255, 0.1);
                 text-align: center;
+                flex-shrink: 0;
             }
             .sidebar-header i {
-                font-size: 2rem;
-                margin-bottom: 0.5rem;
+                font-size: 1.5rem;
+                margin-bottom: 0.25rem;
                 color: var(--primary-color);
                 display: block;
             }
             .sidebar-header h2 {
-                font-size: 1.2rem;
+                font-size: 1rem;
                 font-weight: 600;
+                margin: 0;
             }
             .sidebar-menu {
                 flex: 1;
-                padding: 1rem 0;
+                padding: 0.5rem 0;
                 list-style: none;
+                overflow-y: auto;
+                flex-shrink: 1;
             }
             .menu-item {
-                padding: 1rem 1.5rem;
+                padding: 0.75rem 1rem;
                 cursor: pointer;
                 transition: background-color 0.2s ease;
                 border-left: 3px solid transparent;
                 display: flex;
                 align-items: center;
                 gap: 0.75rem;
+                font-size: 1rem;
             }
             .menu-item:hover {
                 background: rgba(255, 255, 255, 0.1);
@@ -61,14 +117,21 @@
                 color: white;
                 text-decoration: none;
                 width: 100%;
+                font-size: 1rem;
             }
             .menu-item i {
                 width: 20px;
                 font-size: 1.1rem;
+                text-align: center;
+                flex-shrink: 0;
+            }
+            .menu-item span {
+                font-size: 1rem;
             }
             .sidebar-footer {
-                padding: 1rem;
+                padding: 0.75rem;
                 border-top: 1px solid rgba(255, 255, 255, 0.1);
+                flex-shrink: 0;
             }
             .btn {
                 padding: 0.75rem 1.5rem;
@@ -93,20 +156,149 @@
             #enterpriseSelector:hover {
                 background: rgba(255, 255, 255, 0.15);
             }
+            
+            /* Header mobile - géré par le CSS global dans styles.css */
+            
+            .header-content {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                height: 100%;
+                padding: 0 1rem;
+            }
+            
+            .menu-toggle {
+                background: none;
+                border: none;
+                font-size: 1.5rem;
+                color: #1f2937;
+                cursor: pointer;
+                padding: 0.5rem;
+                border-radius: 8px;
+                transition: background-color 0.2s ease;
+                z-index: 1003;
+                position: relative;
+            }
+            
+            .menu-toggle:hover {
+                background: #f8fafc;
+            }
+            
+            .menu-toggle:active {
+                background: #e5e7eb;
+            }
+            
+            .app-title {
+                font-size: 1.2rem;
+                font-weight: 600;
+                color: #1f2937;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                margin: 0;
+            }
+            
+            .app-title i {
+                color: #3b82f6;
+            }
+            
+            /* Overlay pour sidebar mobile */
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 1001;
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+                /* backdrop-filter: blur(2px); */ /* Désactivé pour éviter le flou */
+            }
+            
+            .sidebar-overlay.show {
+                opacity: 1;
+                visibility: visible;
+            }
+            
+            @media (max-width: 768px) {
+                .mobile-header {
+                    display: flex !important;
+                    flex-direction: column !important;
+                    position: fixed !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    right: 0 !important;
+                    z-index: 1002 !important;
+                    background: #ffffff !important;
+                    border-bottom: 1px solid #e5e7eb !important;
+                    height: 60px !important;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+                }
+                
+                .mobile-header .header-content {
+                    display: flex !important;
+                    align-items: center !important;
+                    width: 100% !important;
+                    padding: 0 1rem !important;
+                    height: 100% !important;
+                }
+                
+                .mobile-header .menu-toggle {
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    width: 40px !important;
+                    height: 40px !important;
+                    background: none !important;
+                    border: none !important;
+                    cursor: pointer !important;
+                    padding: 0.5rem !important;
+                    z-index: 1003 !important;
+                }
+                
+                .mobile-header .menu-toggle i {
+                    font-size: 1.5rem !important;
+                    color: #1f2937 !important;
+                    display: block !important;
+                }
+                
+                .sidebar-overlay {
+                    display: block;
+                }
+            }
+            
+            @media (min-width: 769px) {
+                .mobile-header {
+                    display: none;
+                }
+                
+                .sidebar-overlay {
+                    display: none !important;
+                }
+            }
         </style>
+        
+        <!-- Note: Le mobile-header et l'overlay sont maintenant dans chaque page directement, comme sur le dashboard -->
         
         <div class="sidebar-header">
             <i class="fas fa-wrench"></i>
             <h2>Maintenance</h2>
         </div>
-        <div id="currentEnterpriseInfo" style="padding: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.85rem; color: rgba(255, 255, 255, 0.8);">
-            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                <i class="fas fa-building"></i>
-                <strong id="currentEnterpriseName">-</strong>
-            </div>
-            <div id="enterpriseSelector" style="padding: 0.5rem; background: rgba(255, 255, 255, 0.1); border-radius: 4px; cursor: pointer;" onclick="if(typeof window.showEnterpriseSelector === 'function') { window.showEnterpriseSelector(); } else { console.error('showEnterpriseSelector n\'est pas définie'); }">
-                <i class="fas fa-exchange-alt"></i> Changer d'entreprise
-            </div>
+        <div id="currentEnterpriseInfo" style="padding: 0.75rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.85rem; color: rgba(255, 255, 255, 0.8);">
+            <label for="menuEntrepriseSelect" style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: rgba(255, 255, 255, 0.7);">
+                <i class="fas fa-building"></i> Entreprise
+            </label>
+            <select id="menuEntrepriseSelect" onchange="if(typeof changeMenuEnterprise === 'function') { changeMenuEnterprise(); }" style="width: 100%; padding: 0.5rem; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 4px; background: rgba(255, 255, 255, 0.1); color: white; font-size: 0.85rem; cursor: pointer;">
+                <option value="">-- Sélectionner --</option>
+                <option th:each="ent : ${enterprises}" 
+                        th:value="${ent.entrepriseId}" 
+                        th:text="${ent.nom}"
+                        th:selected="${selectedEntrepriseId != null and selectedEntrepriseId == ent.entrepriseId}">
+                </option>
+            </select>
         </div>
         <ul class="sidebar-menu">
             <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/dashboard' ? 'active' : ''}">
@@ -121,40 +313,37 @@
                     <span>Machines</span>
                 </a>
             </li>
-            <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI != null and #httpServletRequest.requestURI.startsWith('/stock') ? 'active' : ''}">
-                <a th:href="@{/stock}">
-                    <i class="fas fa-boxes"></i>
-                    <span>Stock</span>
-                </a>
-            </li>
             <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI != null and #httpServletRequest.requestURI.startsWith('/categories') ? 'active' : ''}">
                 <a th:href="@{/categories}">
                     <i class="fas fa-tags"></i>
                     <span>Catégories</span>
                 </a>
             </li>
-            <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/alerts' ? 'active' : ''}">
-                <a th:href="@{/alerts}">
-                    <i class="fas fa-bell"></i>
-                    <span>Alertes</span>
+            <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI != null and #httpServletRequest.requestURI.startsWith('/stock') ? 'active' : ''}">
+                <a th:href="@{/stock}">
+                    <i class="fas fa-boxes"></i>
+                    <span>Stock</span>
                 </a>
             </li>
-            <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/reports' ? 'active' : ''}">
-                <a th:href="@{/reports}">
+            <li class="menu-item" th:classappend="${#httpServletRequest != null and (#httpServletRequest.requestURI == '/rapports' or #httpServletRequest.requestURI.startsWith('/rapports')) ? 'active' : ''}">
+                <a th:href="@{/rapports}">
                     <i class="fas fa-chart-bar"></i>
                     <span>Rapports</span>
-                </a>
-            </li>
-            <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/calendar' ? 'active' : ''}">
-                <a th:href="@{/calendar}">
-                    <i class="fas fa-calendar-alt"></i>
-                    <span>Calendrier</span>
                 </a>
             </li>
             <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/tickets' ? 'active' : ''}">
                 <a th:href="@{/tickets}">
                     <i class="fas fa-ticket-alt"></i>
                     <span>Tickets</span>
+                </a>
+            </li>
+            <!-- Afficher "Rappels" uniquement si l'utilisateur n'est pas technicien -->
+            <li class="menu-item" 
+                th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI != null and #httpServletRequest.requestURI.contains('/rappels') ? 'active' : ''}"
+                th:if="${userRole == null or userRole != 'technicien'}">
+                <a th:href="@{/rappels}">
+                    <i class="fas fa-bell"></i>
+                    <span>Rappels</span>
                 </a>
             </li>
             <!-- Afficher "Utilisateurs" uniquement si l'utilisateur est superadmin -->
@@ -186,7 +375,171 @@
         </div>
     </nav>
     <script>
+        // Gestion du menu mobile
+        (function() {
+            function initMobileMenu() {
+                const menuToggle = document.getElementById('menuToggle');
+                const sidebar = document.getElementById('mainSidebar');
+                const overlay = document.getElementById('sidebarOverlay');
+                
+                if (!menuToggle || !sidebar || !overlay) {
+                    console.warn('Éléments du menu mobile non trouvés');
+                    return;
+                }
+                
+                function openSidebar() {
+                    sidebar.classList.add('open');
+                    overlay.style.display = 'block';
+                    setTimeout(() => overlay.classList.add('show'), 10);
+                    document.body.style.overflow = 'hidden';
+                }
+                
+                function closeSidebar() {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('show');
+                    setTimeout(() => {
+                        overlay.style.display = 'none';
+                    }, 300);
+                    document.body.style.overflow = '';
+                }
+                
+                // Toggle menu au clic sur le bouton burger
+                menuToggle.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (sidebar.classList.contains('open')) {
+                        closeSidebar();
+                    } else {
+                        openSidebar();
+                    }
+                });
+                
+                // Fermer au clic sur l'overlay
+                overlay.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    closeSidebar();
+                });
+                
+                // Fermer au clic sur un lien du menu (navigation)
+                const menuLinks = sidebar.querySelectorAll('a');
+                menuLinks.forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        // Ne pas fermer si c'est un lien externe ou un formulaire
+                        if (link.href && !link.href.startsWith('javascript:') && !link.onclick) {
+                            if (window.innerWidth <= 768) {
+                                // Fermer immédiatement pour une meilleure UX
+                                closeSidebar();
+                            }
+                        }
+                    });
+                });
+                
+                // Fermer aussi au clic sur les boutons de formulaire dans le menu
+                const menuButtons = sidebar.querySelectorAll('button');
+                menuButtons.forEach(button => {
+                    if (button.type !== 'submit' || button.closest('form')) {
+                        button.addEventListener('click', () => {
+                            if (window.innerWidth <= 768) {
+                                closeSidebar();
+                            }
+                        });
+                    }
+                });
+                
+                // Fermer avec Escape
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+                        closeSidebar();
+                    }
+                });
+                
+                // Empêcher la fermeture en cliquant dans la sidebar
+                sidebar.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+            }
+            
+            // Initialiser quand le DOM est prêt
+            function tryInit() {
+                const menuToggle = document.getElementById('menuToggle');
+                const sidebar = document.getElementById('mainSidebar');
+                const overlay = document.getElementById('sidebarOverlay');
+                
+                if (menuToggle && sidebar && overlay) {
+                    console.log('🔵 Éléments trouvés, initialisation du menu mobile');
+                    initMobileMenu();
+                } else {
+                    console.warn('🔵 Éléments non trouvés, nouvelle tentative dans 100ms');
+                    console.log('menuToggle:', menuToggle);
+                    console.log('sidebar:', sidebar);
+                    console.log('overlay:', overlay);
+                    setTimeout(tryInit, 100);
+                }
+            }
+            
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', tryInit);
+            } else {
+                // Attendre un peu pour s'assurer que tous les éléments sont présents
+                setTimeout(tryInit, 100);
+            }
+        })();
+        
         console.log('🔵 SCRIPT DU MENU CHARGÉ - Timestamp:', new Date().toISOString());
+        
+        // Script ULTRA SIMPLE et DIRECT pour le menu mobile
+        // Utilise une délégation d'événements pour s'assurer que ça fonctionne toujours
+        document.addEventListener('click', function(e) {
+            // Vérifier si le clic est sur le bouton menuToggle
+            if (e.target && (e.target.id === 'menuToggle' || e.target.closest('#menuToggle'))) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const sidebar = document.getElementById('mainSidebar');
+                const overlay = document.getElementById('sidebarOverlay');
+                
+                if (!sidebar || !overlay) {
+                    console.warn('🔴 Sidebar ou overlay non trouvés');
+                    return;
+                }
+                
+                console.log('🔵 Clic sur menuToggle détecté via délégation');
+                
+                if (sidebar.classList.contains('open')) {
+                    // Fermer
+                    console.log('🔵 Fermeture du menu');
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('show');
+                    setTimeout(() => overlay.style.display = 'none', 300);
+                    document.body.style.overflow = '';
+                } else {
+                    // Ouvrir
+                    console.log('🔵 Ouverture du menu');
+                    sidebar.classList.add('open');
+                    overlay.style.display = 'block';
+                    setTimeout(() => overlay.classList.add('show'), 10);
+                    document.body.style.overflow = 'hidden';
+                }
+            }
+            
+            // Vérifier si le clic est sur l'overlay
+            if (e.target && e.target.id === 'sidebarOverlay') {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const sidebar = document.getElementById('mainSidebar');
+                const overlay = document.getElementById('sidebarOverlay');
+                
+                if (sidebar && overlay) {
+                    console.log('🔵 Clic sur overlay, fermeture du menu');
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('show');
+                    setTimeout(() => overlay.style.display = 'none', 300);
+                    document.body.style.overflow = '';
+                }
+            }
+        }, true); // Utiliser capture phase pour intercepter tôt
         
         // Initialiser window.enterprises si non défini
         if (typeof window.enterprises === 'undefined') {
@@ -293,13 +646,36 @@
                         return response.text().then(text => {
                             console.error('Corps de la réponse d\'erreur:', text);
                             throw new Error('Erreur HTTP: ' + response.status + ' - ' + text);
+                        }).catch(err => {
+                            console.error('Erreur lors de la lecture de la réponse:', err);
+                            throw err;
                         });
                     }
-                    return response.json();
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        return response.json();
+                    } else {
+                        return response.text().then(text => {
+                            console.error('Réponse non-JSON reçue:', text.substring(0, 200));
+                            throw new Error('Réponse non-JSON reçue du serveur');
+                        });
+                    }
                 })
                 .then(enterprises => {
+                    if (!enterprises) {
+                        console.warn('⚠️ Réponse null ou undefined');
+                        window.enterprises = [];
+                        return [];
+                    }
+                    
+                    if (!Array.isArray(enterprises)) {
+                        console.warn('⚠️ Réponse n\'est pas un tableau:', typeof enterprises);
+                        window.enterprises = [];
+                        return [];
+                    }
+                    
                     console.log('Données JSON reçues:', enterprises);
-                    window.enterprises = enterprises || [];
+                    window.enterprises = enterprises;
                     console.log('Entreprises chargées dans window.enterprises:', window.enterprises);
                     console.log('Nombre d\'entreprises:', window.enterprises.length);
                     if (window.enterprises.length === 0) {
@@ -488,11 +864,30 @@
                 .then(function(response) {
                     console.log('🔵 Réponse reçue - Status:', response.status, response.statusText);
                     if (!response.ok) {
-                        throw new Error('HTTP ' + response.status + ' - ' + response.statusText);
+                        return response.text().then(text => {
+                            console.error('🔵 Erreur HTTP - Corps:', text.substring(0, 200));
+                            throw new Error('HTTP ' + response.status + ' - ' + response.statusText);
+                        });
                     }
-                    return response.json();
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        return response.json();
+                    } else {
+                        return response.text().then(text => {
+                            console.error('🔵 Réponse non-JSON:', text.substring(0, 200));
+                            throw new Error('Réponse non-JSON reçue');
+                        });
+                    }
                 })
                 .then(function(enterprises) {
+                    if (!enterprises) {
+                        console.warn('🔵 Réponse null ou undefined');
+                        enterprises = [];
+                    }
+                    if (!Array.isArray(enterprises)) {
+                        console.warn('🔵 Réponse n\'est pas un tableau:', typeof enterprises);
+                        enterprises = [];
+                    }
                     console.log('🔵 Données reçues:', enterprises);
                     console.log('🔵 Nombre d\'entreprises:', enterprises ? enterprises.length : 0);
                     
@@ -600,6 +995,73 @@
             const modal = document.getElementById('selectEnterpriseModal');
             if (event.target === modal) {
                 window.closeEnterpriseModal();
+            }
+        });
+        
+        // Fonction pour changer l'entreprise depuis le menu
+        window.changeMenuEnterprise = function() {
+            const select = document.getElementById('menuEntrepriseSelect');
+            const entrepriseId = select ? select.value : null;
+            
+            if (!entrepriseId) {
+                return;
+            }
+            
+            // Trouver l'entreprise dans la liste
+            const enterprises = document.querySelectorAll('#menuEntrepriseSelect option');
+            let selectedEnterprise = null;
+            enterprises.forEach(opt => {
+                if (opt.value === entrepriseId) {
+                    selectedEnterprise = {
+                        entrepriseId: entrepriseId,
+                        nom: opt.textContent
+                    };
+                }
+            });
+            
+            if (selectedEnterprise) {
+                // Sauvegarder dans localStorage
+                localStorage.setItem('currentEnterprise', JSON.stringify(selectedEnterprise));
+                
+                // Mettre à jour l'affichage
+                const nameElement = document.getElementById('currentEnterpriseName');
+                if (nameElement) {
+                    nameElement.textContent = selectedEnterprise.nom;
+                }
+                
+                const mobileElement = document.getElementById('currentEnterpriseMobile');
+                if (mobileElement) {
+                    mobileElement.textContent = selectedEnterprise.nom;
+                }
+                
+                // Rediriger vers la page actuelle avec le paramètre entrepriseId
+                const currentPath = window.location.pathname;
+                const urlParams = new URLSearchParams(window.location.search);
+                urlParams.set('entrepriseId', entrepriseId);
+                window.location.href = currentPath + '?' + urlParams.toString();
+            }
+        };
+        
+        // Initialiser le sélecteur au chargement
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuEntrepriseSelect = document.getElementById('menuEntrepriseSelect');
+            if (menuEntrepriseSelect) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const entrepriseId = urlParams.get('entrepriseId');
+                if (entrepriseId) {
+                    menuEntrepriseSelect.value = entrepriseId;
+                } else {
+                    // Essayer de charger depuis localStorage
+                    const currentEnterprise = localStorage.getItem('currentEnterprise');
+                    if (currentEnterprise) {
+                        try {
+                            const enterprise = JSON.parse(currentEnterprise);
+                            menuEntrepriseSelect.value = enterprise.entrepriseId || '';
+                        } catch (e) {
+                            console.error('Erreur lors du parsing:', e);
+                        }
+                    }
+                }
             }
         });
     </script>

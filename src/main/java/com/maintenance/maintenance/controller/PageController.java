@@ -23,11 +23,6 @@ public class PageController {
         return "redirect:/dashboard";
     }
 
-    @GetMapping("/dashboard")
-    public String dashboard() {
-        return "index";
-    }
-
     @GetMapping("/alerts")
     public String alerts() {
         return "index";
@@ -40,7 +35,8 @@ public class PageController {
 
     @GetMapping("/reports")
     public String reports() {
-        return "index";
+        // Le RapportsController gère maintenant cette route
+        return "redirect:/rapports";
     }
 
     @GetMapping("/calendar")
@@ -50,11 +46,6 @@ public class PageController {
 
     @GetMapping("/inventory")
     public String inventory() {
-        return "index";
-    }
-
-    @GetMapping("/tickets")
-    public String tickets() {
         return "index";
     }
 

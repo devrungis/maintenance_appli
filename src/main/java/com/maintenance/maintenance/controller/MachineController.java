@@ -9,6 +9,8 @@ import com.maintenance.maintenance.service.MachineService;
 import com.maintenance.maintenance.service.LocalFileStorageService;
 import com.maintenance.maintenance.service.CategoryService;
 import com.maintenance.maintenance.service.ComponentService;
+import com.maintenance.maintenance.service.TicketService;
+import com.maintenance.maintenance.model.entity.Ticket;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,31 +52,70 @@ public class MachineController {
     @Autowired
     private ComponentService componentService;
 
+    @Autowired
+    private TicketService ticketService;
+
     /**
      * Vérifie si l'utilisateur est connecté (tous les rôles autorisés)
      */
     private boolean ensureAuthenticated(HttpServletRequest request, RedirectAttributes redirectAttributes) {
-        // Toujours créer/obtenir une session
-        HttpSession session = request.getSession(true);
-        
-        // Vérifier si l'utilisateur est authentifié via Spring Security
-        if (org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication() != null 
-            && org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().isAuthenticated()
-            && !"anonymousUser".equals(org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getPrincipal().toString())) {
-            // Restaurer/mettre à jour la session
+        // D'abord vérifier Spring Security (priorité)
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() 
+            && !"anonymousUser".equals(auth.getPrincipal().toString())) {
+            // Utilisateur authentifié via Spring Security, créer/récupérer la session
+            HttpSession session = request.getSession(true);
             session.setAttribute("authenticated", true);
+            session.setAttribute("sessionCreated", System.currentTimeMillis());
+            // Récupérer email et role depuis Spring Security si disponible
+            if (auth.getPrincipal() instanceof String) {
+                String email = (String) auth.getPrincipal();
+                session.setAttribute("email", email);
+            }
             return true;
+        }
+        
+        // Sinon, vérifier la session HTTP
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            redirectAttributes.addFlashAttribute("error", "Votre session a expiré. Veuillez vous reconnecter.");
+            return false;
+        }
+        
+        // Vérifier si la session est expirée
+        try {
+            Long sessionCreated = (Long) session.getAttribute("sessionCreated");
+            if (sessionCreated != null) {
+                long sessionAge = System.currentTimeMillis() - sessionCreated;
+                long sessionMaxAge = 1800 * 1000; // 30 minutes
+                if (sessionAge > sessionMaxAge) {
+                    // Session expirée, l'invalider et rediriger
+                    try {
+                        session.invalidate();
+                    } catch (Exception e) {
+                        // Ignorer les erreurs d'invalidation
+                    }
+                    redirectAttributes.addFlashAttribute("error", "Votre session a expiré. Veuillez vous reconnecter.");
+                    return false;
+                }
+            }
+        } catch (IllegalStateException e) {
+            // Session déjà invalidée
+            redirectAttributes.addFlashAttribute("error", "Votre session a expiré. Veuillez vous reconnecter.");
+            return false;
         }
         
         // Vérifier si la session contient déjà l'authentification
         Boolean authenticated = (Boolean) session.getAttribute("authenticated");
         if (authenticated != null && authenticated) {
+            // Mettre à jour le timestamp pour prolonger la session
+            session.setAttribute("sessionCreated", System.currentTimeMillis());
             return true;
         }
         
         redirectAttributes.addFlashAttribute("error", "Vous devez être connecté pour accéder à cette page.");
-            return false;
-        }
+        return false;
+    }
 
     /**
      * Vérifie si l'utilisateur est superadmin
@@ -126,8 +167,20 @@ public class MachineController {
             List<Machine> machines = new ArrayList<>();
             
             if (StringUtils.hasText(entrepriseId)) {
-                allMachines = machineService.listMachines(entrepriseId);
-                session.setAttribute("lastSelectedEntrepriseId", entrepriseId);
+                try {
+                    allMachines = machineService.listMachines(entrepriseId);
+                    if (allMachines == null) {
+                        System.err.println("=== listMachines a retourné null pour entrepriseId: " + entrepriseId + " ===");
+                        allMachines = new ArrayList<>();
+                    }
+                    System.out.println("=== Machines récupérées: " + allMachines.size() + " pour entrepriseId: " + entrepriseId + " ===");
+                    session.setAttribute("lastSelectedEntrepriseId", entrepriseId);
+                } catch (Exception e) {
+                    System.err.println("=== Erreur lors de la récupération des machines: " + e.getMessage() + " ===");
+                    e.printStackTrace();
+                    allMachines = new ArrayList<>();
+                    redirectAttributes.addFlashAttribute("error", "Erreur lors du chargement des machines: " + e.getMessage());
+                }
                 
                 // Appliquer tous les filtres en une seule passe
                 machines = allMachines.stream()
@@ -530,16 +583,16 @@ public class MachineController {
             // Si action = "detach", détacher la machine de secours
             if ("detach".equals(detach) || "true".equals(detach)) {
                 try {
-                    machine.setMachinePrincipaleId(null);
-                    // La machine reste de secours, prête à être rattachée à une autre principale
-                    machine.setEstMachineSecours(true);
-                    machineService.updateMachine(entrepriseId, machineId, machine);
-                    redirectAttributes.addFlashAttribute("success", "Machine détachée avec succès.");
-                    
-                    HttpSession session = request.getSession(true);
-                    session.setAttribute("authenticated", true);
-                    session.setAttribute("lastSelectedEntrepriseId", entrepriseId);
-                    return "redirect:/machines?entrepriseId=" + entrepriseId;
+                machine.setMachinePrincipaleId(null);
+                // La machine reste de secours, prête à être rattachée à une autre principale
+                machine.setEstMachineSecours(true);
+                machineService.updateMachine(entrepriseId, machineId, machine);
+                redirectAttributes.addFlashAttribute("success", "Machine détachée avec succès.");
+                
+                HttpSession session = request.getSession(true);
+                session.setAttribute("authenticated", true);
+                session.setAttribute("lastSelectedEntrepriseId", entrepriseId);
+                return "redirect:/machines?entrepriseId=" + entrepriseId;
                 } catch (Exception e) {
                     redirectAttributes.addFlashAttribute("error", "Erreur lors du détachement: " + e.getMessage());
                     e.printStackTrace();
@@ -846,19 +899,19 @@ public class MachineController {
                 
                 // Essayer de charger la machine principale
                 if (StringUtils.hasText(entrepriseId)) {
-                    try {
-                        attachToMachine = machineService.getMachine(entrepriseId, attachToMachineId);
+                try {
+                    attachToMachine = machineService.getMachine(entrepriseId, attachToMachineId);
                         if (attachToMachine != null) {
-                            model.addAttribute("attachToMachine", attachToMachine);
+                    model.addAttribute("attachToMachine", attachToMachine);
                             // S'assurer que entrepriseId est bien défini
                             if (!StringUtils.hasText(entrepriseId)) {
                                 entrepriseId = attachToMachine.getEntrepriseId();
                             }
                         }
-                    } catch (Exception e) {
-                        // Ignorer si la machine n'existe pas
+                } catch (Exception e) {
+                    // Ignorer si la machine n'existe pas
                         e.printStackTrace();
-                    }
+                }
                 }
             } else {
                 // S'assurer que attachToMachineId n'est pas dans le modèle si non fourni
@@ -872,30 +925,30 @@ public class MachineController {
                 session.setAttribute("lastSelectedEntrepriseId", entrepriseId);
             }
             System.out.println("=== MachineController.showCreateForm: selectedEntrepriseId final = " + (StringUtils.hasText(entrepriseId) ? entrepriseId : "null") + " ===");
-            
-            if (!model.containsAttribute("machineForm")) {
-                MachineForm machineForm = new MachineForm();
+
+        if (!model.containsAttribute("machineForm")) {
+            MachineForm machineForm = new MachineForm();
+            if (StringUtils.hasText(entrepriseId)) {
+            machineForm.setEntrepriseId(entrepriseId);
+            }
+            // Si attachTo est fourni, pré-remplir comme machine de secours
+            if (StringUtils.hasText(attachToMachineId)) {
+                machineForm.setEstMachineSecours(true);
+                machineForm.setMachinePrincipaleId(attachToMachineId);
+            }
+            model.addAttribute("machineForm", machineForm);
+        } else {
+            Object existing = model.asMap().get("machineForm");
+            if (existing instanceof MachineForm form) {
                 if (StringUtils.hasText(entrepriseId)) {
-                    machineForm.setEntrepriseId(entrepriseId);
-                }
-                // Si attachTo est fourni, pré-remplir comme machine de secours
-                if (StringUtils.hasText(attachToMachineId)) {
-                    machineForm.setEstMachineSecours(true);
-                    machineForm.setMachinePrincipaleId(attachToMachineId);
-                }
-                model.addAttribute("machineForm", machineForm);
-            } else {
-                Object existing = model.asMap().get("machineForm");
-                if (existing instanceof MachineForm form) {
-                    if (StringUtils.hasText(entrepriseId)) {
-                        form.setEntrepriseId(entrepriseId);
-                    }
+                form.setEntrepriseId(entrepriseId);
                 }
             }
+        }
 
             // Charger les catégories avec gestion d'erreur
             try {
-                model.addAttribute("categories", categoryService.findAll());
+        model.addAttribute("categories", categoryService.findAll());
             } catch (Exception e) {
                 e.printStackTrace();
                 model.addAttribute("categories", new ArrayList<>());
@@ -1062,31 +1115,66 @@ public class MachineController {
                     machine.setChampsPersonnalises(champsPersonnalises);
                 }
             }
+
+            String machineId = null;
+            try {
+                machineId = machineService.createMachine(machineForm.getEntrepriseId(), machine);
+                System.out.println("=== Machine créée avec succès, ID: " + machineId + " ===");
+            } catch (Exception e) {
+                System.err.println("=== Erreur lors de la création de la machine: " + e.getMessage() + " ===");
+                e.printStackTrace();
+                redirectAttributes.addFlashAttribute("error", "Erreur lors de la création de la machine: " + e.getMessage());
+                return "redirect:/machines?entrepriseId=" + machineForm.getEntrepriseId();
+            }
             
-            String machineId = machineService.createMachine(machineForm.getEntrepriseId(), machine);
+            if (machineId == null || machineId.isEmpty()) {
+                redirectAttributes.addFlashAttribute("error", "Erreur: Impossible de créer la machine (ID null).");
+                return "redirect:/machines?entrepriseId=" + machineForm.getEntrepriseId();
+            }
             
             // Préserver la session après création
             HttpSession session = request.getSession(true);
             session.setAttribute("authenticated", true);
             session.setAttribute("lastSelectedEntrepriseId", machineForm.getEntrepriseId());
 
-            List<String> uploadedPhotos = localFileStorageService.saveMachinePhotos(
-                machineForm.getEntrepriseId(),
-                machineId,
-                photoFiles,
-                3
-            );
-
-            if (!uploadedPhotos.isEmpty()) {
-                machine.setPhotos(uploadedPhotos);
-                machineService.updateMachine(machineForm.getEntrepriseId(), machineId, machine);
+            // Sauvegarder les photos de manière robuste (comme pour les commentaires)
+            List<String> uploadedPhotos = new ArrayList<>();
+            if (photoFiles != null && photoFiles.length > 0) {
+                try {
+                    uploadedPhotos = localFileStorageService.saveMachinePhotos(
+                        machineForm.getEntrepriseId(),
+                        machineId,
+                        photoFiles,
+                        3
+                    );
+                    
+                    // S'assurer que les photos sont sauvegardées même si certaines échouent
+                    if (!uploadedPhotos.isEmpty()) {
+                        machine.setPhotos(uploadedPhotos);
+                        try {
+                            machineService.updateMachine(machineForm.getEntrepriseId(), machineId, machine);
+                            System.out.println("=== Machine mise à jour avec photos: " + uploadedPhotos.size() + " photo(s) ===");
+                        } catch (Exception e) {
+                            System.err.println("=== Erreur lors de la mise à jour de la machine avec photos: " + e.getMessage() + " ===");
+                            e.printStackTrace();
+                            // La machine est créée, même si les photos ne sont pas sauvegardées
+                        }
+                    } else {
+                        System.err.println("=== Aucune photo n'a pu être sauvegardée ===");
+                    }
+                } catch (Exception e) {
+                    System.err.println("=== Erreur lors de la sauvegarde des photos: " + e.getMessage() + " ===");
+                    e.printStackTrace();
+                    // Continuer même si les photos échouent - la machine est déjà créée
+                    redirectAttributes.addFlashAttribute("warning", "Machine créée mais certaines photos n'ont pas pu être sauvegardées.");
+                }
             }
             
             // Message de succès personnalisé selon si la machine a été rattachée
             if (StringUtils.hasText(attachToMachineId) && machine.getMachinePrincipaleId() != null && machine.getMachinePrincipaleId().equals(attachToMachineId)) {
                 redirectAttributes.addFlashAttribute("success", "Machine de secours créée et rattachée à la machine principale avec succès.");
             } else {
-                redirectAttributes.addFlashAttribute("success", "Machine créée avec succès.");
+            redirectAttributes.addFlashAttribute("success", "Machine créée avec succès.");
             }
             
             // Préserver l'entrepriseId dans la session (session déjà déclarée plus haut)
@@ -1240,16 +1328,116 @@ public class MachineController {
             }
 
             int remainingSlots = Math.max(0, 3 - updatedPhotos.size());
-            if (remainingSlots > 0) {
-                List<String> uploadedPhotos = localFileStorageService.saveMachinePhotos(entrepriseId, machineId, photoFiles, remainingSlots);
-                updatedPhotos.addAll(uploadedPhotos);
+            if (remainingSlots > 0 && photoFiles != null && photoFiles.length > 0) {
+                try {
+                    List<String> uploadedPhotos = localFileStorageService.saveMachinePhotos(entrepriseId, machineId, photoFiles, remainingSlots);
+                    if (!uploadedPhotos.isEmpty()) {
+                        updatedPhotos.addAll(uploadedPhotos);
+                        System.out.println("=== Photos supplémentaires sauvegardées: " + uploadedPhotos.size() + " photo(s) ===");
+                    }
+                } catch (Exception e) {
+                    System.err.println("=== Erreur lors de la sauvegarde des nouvelles photos: " + e.getMessage() + " ===");
+                    e.printStackTrace();
+                    // Continuer avec les photos existantes
+                }
             }
 
+            // Récupérer la machine existante AVANT les modifications pour détecter les changements
+            Machine existingMachine = machineService.getMachine(entrepriseId, machineId);
+            
             Machine machine = machineForm.toMachine();
             machine.setPhotos(updatedPhotos);
             populateCategoryDetails(machine, machineForm);
 
             boolean estActuellementEntrepot = machine.getEstMachineEntrepot() != null && machine.getEstMachineEntrepot();
+            
+            // Détecter si la machine passe en panne AVANT les modifications automatiques
+            boolean machinePasseEnPanne = false;
+            if (existingMachine != null && !estActuellementEntrepot) {
+                // État actuel de la machine existante
+                boolean existingOperationnel = existingMachine.getOperationnel() != null && existingMachine.getOperationnel();
+                boolean existingEnReparation = existingMachine.getEnReparation() != null && existingMachine.getEnReparation();
+                
+                // État demandé dans le formulaire (null = pas modifié, donc on garde l'existant)
+                Boolean formOperationnel = machineForm.getOperationnel();
+                Boolean formEnReparation = machineForm.getEnReparation();
+                
+                // Si operationnel n'est pas spécifié dans le formulaire, on garde la valeur existante
+                boolean newOperationnel = formOperationnel != null ? formOperationnel : existingOperationnel;
+                // Si enReparation n'est pas spécifié dans le formulaire, on garde la valeur existante
+                boolean newEnReparation = formEnReparation != null ? formEnReparation : existingEnReparation;
+                
+                // Détecter si operationnel passe de true à false
+                boolean operationnelPasseAFalse = existingOperationnel && !newOperationnel;
+                
+                // Détecter si enReparation passe de false à true
+                boolean enReparationPasseATrue = !existingEnReparation && newEnReparation;
+                
+                machinePasseEnPanne = operationnelPasseAFalse || enReparationPasseATrue;
+                
+                System.out.println("=== Détection panne machine ===");
+                System.out.println("Existing - operationnel: " + existingOperationnel + ", enReparation: " + existingEnReparation);
+                System.out.println("Form - operationnel: " + formOperationnel + ", enReparation: " + formEnReparation);
+                System.out.println("New - operationnel: " + newOperationnel + ", enReparation: " + newEnReparation);
+                System.out.println("Machine passe en panne: " + machinePasseEnPanne);
+                
+                // Créer automatiquement un ticket si la machine passe en panne
+                if (machinePasseEnPanne) {
+                    try {
+                        // Vérifier s'il existe déjà un ticket ouvert pour cette machine
+                        List<Ticket> ticketsExistants = ticketService.listTickets(entrepriseId);
+                        boolean ticketExistant = ticketsExistants.stream()
+                            .anyMatch(t -> machineId.equals(t.getMachineId()) 
+                                && (t.getStatut().equals("a_faire") || t.getStatut().equals("en_cours")));
+                        
+                        if (!ticketExistant) {
+                            // Créer un nouveau ticket
+                            Ticket ticket = new Ticket();
+                            ticket.setEntrepriseId(entrepriseId);
+                            ticket.setTitre("Panne machine: " + (machine.getNom() != null ? machine.getNom() : existingMachine.getNom()));
+                            ticket.setDescription("Machine mise en panne automatiquement.");
+                            if (StringUtils.hasText(machineForm.getNotes())) {
+                                ticket.setDescription(ticket.getDescription() + " Notes: " + machineForm.getNotes());
+                            } else if (existingMachine.getNotes() != null && StringUtils.hasText(existingMachine.getNotes())) {
+                                ticket.setDescription(ticket.getDescription() + " Notes: " + existingMachine.getNotes());
+                            }
+                            ticket.setStatut("a_faire");
+                            ticket.setPriorite("haute");
+                            ticket.setMachineId(machineId);
+                            ticket.setMachineNom(machine.getNom() != null ? machine.getNom() : existingMachine.getNom());
+                            ticket.setCategorie("Panne");
+                            
+                            // Récupérer les informations de l'utilisateur créateur
+                            HttpSession session = request.getSession(true);
+                            String userId = (String) session.getAttribute("userId");
+                            ticket.setCreePar(userId);
+                            if (StringUtils.hasText(userId)) {
+                                try {
+                                    Map<String, Object> user = firebaseRealtimeService.getUserById(userId);
+                                    if (user != null) {
+                                        String nom = (String) user.get("nom");
+                                        String prenom = (String) user.get("prenom");
+                                        ticket.setCreeParNom((prenom != null ? prenom + " " : "") + (nom != null ? nom : ""));
+                                    }
+                                } catch (Exception e) {
+                                    System.err.println("Erreur lors de la récupération de l'utilisateur créateur: " + e.getMessage());
+                                }
+                            }
+                            
+                            ticketService.createTicket(entrepriseId, ticket);
+                            System.out.println("=== Ticket créé automatiquement pour la machine en panne: " + ticket.getMachineNom() + " ===");
+                            redirectAttributes.addFlashAttribute("info", "Un ticket a été créé automatiquement pour cette machine en panne.");
+                        } else {
+                            redirectAttributes.addFlashAttribute("info", "Un ticket existe déjà pour cette machine en panne.");
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Erreur lors de la création automatique du ticket: " + e.getMessage());
+                        e.printStackTrace();
+                        // Ne pas bloquer la mise à jour de la machine si la création du ticket échoue
+                    }
+                }
+            }
+            
             if (estActuellementEntrepot) {
                 machine.setEnProgrammation(true);
                 machine.setOperationnel(false);
@@ -1269,9 +1457,6 @@ public class MachineController {
                     machine.setOperationnel(false);
                 }
             }
-
-            // Récupérer la machine existante pour préserver certains champs
-            Machine existingMachine = machineService.getMachine(entrepriseId, machineId);
             
             // Traiter les champs personnalisés
             if (customFieldNames != null && customFieldValues != null && customFieldNames.length == customFieldValues.length) {
@@ -1315,8 +1500,6 @@ public class MachineController {
                     
                     if (machine.getOperationnel() != null && !machine.getOperationnel() 
                         && (existingMachine.getOperationnel() == null || existingMachine.getOperationnel())) {
-                        machine.setEnReparation(true);
-                        
                         boolean isMachinePrincipale = existingMachine.getEstMachineSecours() == null || !existingMachine.getEstMachineSecours();
                         if (isMachinePrincipale) {
                             List<Machine> allMachines = machineService.listMachines(entrepriseId);

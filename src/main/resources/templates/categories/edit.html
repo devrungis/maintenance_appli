@@ -18,12 +18,58 @@
         .main-content {
             flex: 1;
             padding: 2rem;
+            margin-left: 250px;
+            width: calc(100% - 250px);
+            height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            z-index: 1000;
         }
         .page-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2rem;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 20px;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            position: relative;
+            overflow: hidden;
+        }
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+            border-radius: 20px 20px 0 0;
+        }
+        .page-header h1 {
+            color: #111827;
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #111827, #64748b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 0;
+        }
+        .header-actions {
+            display: flex;
+            gap: 1rem;
         }
         .card {
             background: white;
@@ -97,13 +143,14 @@
     <main class="main-content">
         <div class="page-header">
             <div>
-                <h1>Modifier la catégorie</h1>
-                <p>Actualisez les informations de cette catégorie.</p>
+                <h1><i class="fa fa-tags" style="color: #3b82f6;"></i> Modifier la catégorie</h1>
+                <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 1rem;">Actualisez les informations de cette catégorie.</p>
             </div>
-            <a th:href="@{/categories}" class="btn btn-secondary">
-                <i class="fa fa-arrow-left"></i>
-                Retour
-            </a>
+            <div class="header-actions">
+                <a th:href="@{/categories}" class="btn btn-secondary">
+                    <i class="fa fa-arrow-left"></i> Retour
+                </a>
+            </div>
         </div>
 
         <div class="card">

@@ -2,7 +2,9 @@
 <html lang="fr" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion des Machines</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
@@ -27,12 +29,54 @@
             padding: 2rem;
             overflow-y: auto;
             height: 100vh;
+            margin-left: 250px;
+        }
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            z-index: 1000;
         }
         .page-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2rem;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 20px;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            position: relative;
+            overflow: hidden;
+        }
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+            border-radius: 20px 20px 0 0;
+        }
+        .page-header h1 {
+            color: #111827;
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #111827, #64748b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 0;
+        }
+        .header-actions {
+            display: flex;
+            gap: 1rem;
         }
         .filters {
             margin-bottom: 1.5rem;
@@ -335,21 +379,43 @@
     </style>
 </head>
 <body>
+
+    <!-- Header mobile -->
+    <header class="mobile-header">
+        <div class="header-content">
+            <button class="menu-toggle" id="menuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div style="flex: 1;">
+                <h1 class="app-title">
+                    <i class="fas fa-wrench"></i>
+                    Maintenance
+                </h1>
+                <div id="currentEnterpriseMobile" style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                    <!-- Entreprise actuelle -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Overlay pour sidebar mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
 <div class="page">
     <th:block th:replace="fragments/menu :: menu"></th:block>
     <th:block th:replace="fragments/notifications :: notifications"></th:block>
     <main class="main-content">
         <div class="page-header">
             <div>
-                <h1 style="margin: 0; font-size: 2rem; font-weight: 700; color: #111827;">
-                    <i class="fa fa-cogs" style="color: var(--primary); margin-right: 0.5rem;"></i>
+                <h1>
+                    <i class="fa fa-cogs" style="color: var(--primary);"></i>
                     Gestion des Machines
                 </h1>
                 <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 1rem;">
                     Ajoutez, consultez et gérez les machines par entreprise
                 </p>
             </div>
-            <div>
+            <div class="header-actions">
                 <a th:href="@{|/machines/create?entrepriseId=${selectedEntrepriseId != null and selectedEntrepriseId != '' ? selectedEntrepriseId : ''}|}" 
                    class="btn btn-primary">
                     <i class="fa fa-plus"></i>
@@ -840,6 +906,57 @@
         window.addEventListener('scroll', handleScroll);
     });
 </script>
+
+<script>
+// Script simple pour le menu mobile
+(function() {
+    function initMenu() {
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('mainSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        
+        if (!menuToggle || !sidebar || !overlay) {
+            return false;
+        }
+        
+        menuToggle.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (sidebar.classList.contains('open')) {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('show');
+                setTimeout(() => overlay.style.display = 'none', 300);
+                document.body.style.overflow = '';
+            } else {
+                sidebar.classList.add('open');
+                overlay.style.display = 'block';
+                setTimeout(() => overlay.classList.add('show'), 10);
+                document.body.style.overflow = 'hidden';
+            }
+        };
+        
+        overlay.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            sidebar.classList.remove('open');
+            overlay.classList.remove('show');
+            setTimeout(() => overlay.style.display = 'none', 300);
+            document.body.style.overflow = '';
+        };
+        
+        return true;
+    }
+    
+    if (!initMenu()) {
+        setTimeout(function() {
+            if (!initMenu()) {
+                setTimeout(initMenu, 500);
+            }
+        }, 100);
+    }
+})();
+</script>
+
 </body>
 </html>
 

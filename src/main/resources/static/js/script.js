@@ -191,9 +191,6 @@ function reloadAllData() {
             case 'categories':
                 renderCategories();
                 break;
-            case 'alerts':
-                renderAlerts();
-                break;
             case 'repairs':
                 renderRepairs();
                 break;
@@ -316,6 +313,37 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!checkLogin()) {
             return;
         }
+    }
+    
+    // Détecter l'URL et afficher la page correspondante
+    const pathname = window.location.pathname;
+    let pageToShow = 'dashboard'; // Par défaut
+    
+    if (pathname.includes('/alerts')) {
+        pageToShow = 'alerts';
+    } else if (pathname.includes('/machines')) {
+        pageToShow = 'machines';
+    } else if (pathname.includes('/categories')) {
+        pageToShow = 'categories';
+    } else if (pathname.includes('/repairs')) {
+        pageToShow = 'repairs';
+    } else if (pathname.includes('/reports')) {
+        pageToShow = 'reports';
+    } else if (pathname.includes('/calendar')) {
+        pageToShow = 'calendar';
+    } else if (pathname.includes('/inventory')) {
+        pageToShow = 'inventory';
+    } else if (pathname.includes('/tickets')) {
+        pageToShow = 'tickets';
+    } else if (pathname.includes('/users')) {
+        pageToShow = 'users';
+    } else if (pathname.includes('/enterprises') || pathname.includes('/ent')) {
+        pageToShow = 'enterprises';
+    }
+    
+    // Afficher la page correspondante si la fonction existe
+    if (typeof navigateToPage === 'function') {
+        navigateToPage(pageToShow);
     }
     
     const addEnterpriseForm = document.getElementById('addEnterpriseForm');
@@ -698,7 +726,7 @@ const demoData = {
             name: 'Patrice Martin',
             email: 'patrice@maintenance.com',
             username: 'patrice',
-            password: 'patrice123',
+            password: 'CHANGEME', // ⚠️ Ne pas utiliser en production - données de test uniquement
             role: 'technician',
             department: 'Maintenance',
             phone: '01 23 45 67 88',
@@ -723,7 +751,7 @@ const demoData = {
             name: 'David Dubois',
             email: 'david@maintenance.com',
             username: 'david',
-            password: 'david123',
+            password: 'CHANGEME', // ⚠️ Ne pas utiliser en production - données de test uniquement
             role: 'technician',
             department: 'Maintenance',
             phone: '01 23 45 67 89',
@@ -753,7 +781,7 @@ const demoData = {
             name: 'Sophie Leroy',
             email: 'sophie@maintenance.com',
             username: 'sophie',
-            password: 'sophie123',
+            password: 'CHANGEME', // ⚠️ Ne pas utiliser en production - données de test uniquement
             role: 'manager',
             department: 'Maintenance',
             phone: '01 23 45 67 90',
@@ -778,7 +806,7 @@ const demoData = {
             name: 'Thomas Bernard',
             email: 'thomas@maintenance.com',
             username: 'thomas',
-            password: 'thomas123',
+            password: 'CHANGEME', // ⚠️ Ne pas utiliser en production - données de test uniquement
             role: 'technician',
             department: 'Maintenance',
             phone: '01 23 45 67 91',
@@ -989,10 +1017,6 @@ function setupEventListeners() {
     const addSubCategoryForm = document.getElementById('addSubCategoryForm');
     if (addSubCategoryForm) addSubCategoryForm.addEventListener('submit', handleAddSubCategory);
     
-    // Modals - Alertes
-    const addAlertForm = document.getElementById('addAlertForm');
-    if (addAlertForm) addAlertForm.addEventListener('submit', handleAddAlert);
-    
     // Modals - Réparations
     const addRepairForm = document.getElementById('addRepairForm');
     if (addRepairForm) addRepairForm.addEventListener('submit', handleAddRepair);
@@ -1187,25 +1211,31 @@ function removeNotification(button) {
 
 // Fonctions pour les notifications de tickets
 function checkTicketNotifications() {
+    // Vérifier que tickets est défini et est un tableau
+    if (!tickets || !Array.isArray(tickets)) {
+        return;
+    }
+    
     const urgentTickets = tickets.filter(ticket => 
-        ticket.priority === 'urgent' && (ticket.status === 'open' || ticket.status === 'in_progress')
+        ticket && ticket.priority === 'urgent' && (ticket.status === 'open' || ticket.status === 'in_progress')
     );
     
     const overdueTickets = tickets.filter(ticket => {
-        if (!ticket.expectedDate) return false;
+        if (!ticket || !ticket.expectedDate) return false;
         const expectedDate = new Date(ticket.expectedDate);
         const now = new Date();
         return expectedDate < now && (ticket.status === 'open' || ticket.status === 'in_progress');
     });
     
     const newTickets = tickets.filter(ticket => {
+        if (!ticket || !ticket.createdAt) return false;
         const createdDate = new Date(ticket.createdAt);
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
         return createdDate > oneHourAgo;
     });
     
     // Notifications pour tickets urgents
-    if (urgentTickets.length > 0) {
+    if (urgentTickets.length > 0 && typeof showNotification === 'function') {
         showNotification(
             'Tickets Urgents',
             `${urgentTickets.length} ticket(s) urgent(s) nécessitent une attention immédiate`,
@@ -1215,7 +1245,7 @@ function checkTicketNotifications() {
     }
     
     // Notifications pour tickets en retard
-    if (overdueTickets.length > 0) {
+    if (overdueTickets.length > 0 && typeof showNotification === 'function') {
         showNotification(
             'Tickets en Retard',
             `${overdueTickets.length} ticket(s) dépassent leur date d'échéance`,
@@ -1225,7 +1255,7 @@ function checkTicketNotifications() {
     }
     
     // Notifications pour nouveaux tickets
-    if (newTickets.length > 0) {
+    if (newTickets.length > 0 && typeof showNotification === 'function') {
         showNotification(
             'Nouveaux Tickets',
             `${newTickets.length} nouveau(x) ticket(s) créé(s) récemment`,
@@ -1251,6 +1281,11 @@ function updateNotificationBadges() {
     
     // Mettre à jour le badge du menu Tickets
     const ticketsMenuItem = document.querySelector('[data-page="tickets"]');
+    if (!ticketsMenuItem) {
+        // L'élément n'existe pas dans le DOM (peut-être sur une autre page)
+        return;
+    }
+    
     if (urgentTickets > 0 || newTickets > 0) {
         ticketsMenuItem.classList.add('has-notifications');
         const badge = ticketsMenuItem.querySelector('.notification-badge') || document.createElement('span');
@@ -1347,9 +1382,6 @@ function navigateToPage(pageName) {
         case 'categories':
             renderCategories();
             break;
-        case 'alerts':
-            renderAlerts();
-            break;
         case 'repairs':
             renderRepairs();
             break;
@@ -1379,33 +1411,64 @@ function updateDashboard() {
     const dashboard = document.getElementById('dashboard');
     if (!dashboard) return; // Pas sur la page dashboard
     
-    const totalMachines = machines.length;
-    const pendingMaintenance = maintenanceAlerts.filter(alert => 
-        new Date(alert.date) > new Date() && !alert.completed
-    ).length;
-    const completedMaintenance = maintenanceHistory.length;
-    const overdueMaintenance = maintenanceAlerts.filter(alert => 
-        new Date(alert.date) < new Date() && !alert.completed
-    ).length;
-    const activeRepairs = repairs.filter(repair => 
-        repair.status === 'in_progress' || repair.status === 'pending'
-    ).length;
-    const openTickets = tickets.filter(ticket => 
-        ticket.status === 'open' || ticket.status === 'in_progress' || ticket.status === 'pending'
-    ).length;
-    const urgentTickets = tickets.filter(ticket => 
-        ticket.priority === 'urgent' && (ticket.status === 'open' || ticket.status === 'in_progress')
-    ).length;
+    // Récupérer l'entreprise sélectionnée depuis le sélecteur du dashboard
+    const entrepriseSelect = document.getElementById('dashboardEntrepriseSelect');
+    const entrepriseId = entrepriseSelect ? entrepriseSelect.value : null;
     
-    document.getElementById('totalMachines').textContent = totalMachines;
-    document.getElementById('openTickets').textContent = openTickets;
-    document.getElementById('pendingMaintenance').textContent = pendingMaintenance;
-    document.getElementById('activeRepairs').textContent = activeRepairs;
-    document.getElementById('completedMaintenance').textContent = completedMaintenance;
-    document.getElementById('urgentTickets').textContent = urgentTickets;
+    if (!entrepriseId) {
+        // Utiliser les valeurs par défaut si pas d'entreprise sélectionnée
+        document.getElementById('totalMachines').textContent = '0';
+        document.getElementById('openTickets').textContent = '0';
+        document.getElementById('pendingMaintenance').textContent = '0';
+        document.getElementById('activeRepairs').textContent = '0';
+        document.getElementById('completedMaintenance').textContent = '0';
+        document.getElementById('urgentTickets').textContent = '0';
+        return;
+    }
     
-    // Mettre à jour le badge de notification mobile
-    updateNotificationBadge();
+    // Charger les statistiques depuis l'API
+    fetch('/dashboard/api/stats?entrepriseId=' + encodeURIComponent(entrepriseId))
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error('Erreur lors du chargement des statistiques:', data.error);
+                return;
+            }
+            
+            document.getElementById('totalMachines').textContent = data.totalMachines || 0;
+            document.getElementById('openTickets').textContent = data.openTickets || 0;
+            document.getElementById('pendingMaintenance').textContent = data.pendingMaintenance || 0;
+            document.getElementById('activeRepairs').textContent = data.activeRepairs || 0;
+            document.getElementById('completedMaintenance').textContent = data.completedMaintenance || 0;
+            document.getElementById('urgentTickets').textContent = data.urgentTickets || 0;
+            
+            // Mettre à jour le badge de notification mobile
+            updateNotificationBadge();
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des statistiques:', error);
+            // Utiliser les valeurs par défaut en cas d'erreur
+            document.getElementById('totalMachines').textContent = '0';
+            document.getElementById('openTickets').textContent = '0';
+            document.getElementById('pendingMaintenance').textContent = '0';
+            document.getElementById('activeRepairs').textContent = '0';
+            document.getElementById('completedMaintenance').textContent = '0';
+            document.getElementById('urgentTickets').textContent = '0';
+        });
+}
+
+// Fonction pour charger les stats du dashboard quand l'entreprise change
+function loadDashboardStats() {
+    const entrepriseSelect = document.getElementById('dashboardEntrepriseSelect');
+    const entrepriseId = entrepriseSelect ? entrepriseSelect.value : null;
+    
+    if (entrepriseId) {
+        // Rediriger vers la page dashboard avec le paramètre entrepriseId
+        window.location.href = '/dashboard?entrepriseId=' + encodeURIComponent(entrepriseId);
+    } else {
+        // Si aucune entreprise sélectionnée, juste mettre à jour les stats à 0
+        updateDashboard();
+    }
 }
 
 
@@ -1845,95 +1908,682 @@ function deleteSubCategory(id) {
     }
 }
 
-// Gestion des alertes et maintenances
-function renderAlerts() {
-    const scheduledContainer = document.getElementById('scheduledMaintenance');
-    const historyContainer = document.getElementById('maintenanceHistory');
-    
-    // Maintenances programmées
-    const scheduledAlerts = maintenanceAlerts.filter(alert => !alert.completed);
-    scheduledContainer.innerHTML = scheduledAlerts.map(alert => {
-        const machine = machines.find(m => m.id === alert.machineId);
-        const isOverdue = new Date(alert.date) < new Date();
-        const alertClass = isOverdue ? 'overdue' : 'scheduled';
+// Gestion des alertes et maintenances - SUPPRIMÉ
+
+function loadEnterprisesForAlerts() {
+    const select = document.getElementById('alertsEntrepriseSelect');
+    if (!select) return;
+
+    fetch('/ent/api/list', {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        if (response.status === 403) {
+            // Accès refusé - gérer gracieusement
+            console.warn('Accès refusé pour charger les entreprises');
+            return [];
+        }
+        if (!response.ok) {
+            throw new Error(`Erreur ${response.status} lors du chargement des entreprises`);
+        }
+        return response.json();
+    })
+    .then(enterprises => {
+        if (!enterprises || !Array.isArray(enterprises)) {
+            enterprises = [];
+        }
         
-        return `
-            <div class="alert-item ${alertClass}">
-                <div class="alert-header">
-                    <span class="alert-machine">${machine ? machine.name : 'Machine supprimée'}</span>
-                    <span class="alert-date">${formatDate(alert.date)}</span>
-                </div>
-                <div class="alert-description">${alert.description}</div>
-                <div class="alert-actions">
-                    <button class="btn btn-sm btn-success" onclick="completeMaintenance(${alert.id})">
-                        <i class="fas fa-check"></i> Maintenance faite
-                    </button>
-                    <button class="btn btn-sm btn-secondary" onclick="rescheduleMaintenance(${alert.id})">
-                        <i class="fas fa-calendar"></i> Reprogrammer
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteAlert(${alert.id})">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </div>
-        `;
-    }).join('');
+        select.innerHTML = '<option value="">Sélectionner une entreprise</option>';
+        enterprises.forEach(entreprise => {
+            const option = document.createElement('option');
+            option.value = entreprise.entrepriseId || entreprise.id;
+            option.textContent = entreprise.nom || entreprise.name || 'Sans nom';
+            select.appendChild(option);
+        });
+
+        // Sélectionner l'entreprise actuelle si disponible
+        const currentEnterprise = JSON.parse(localStorage.getItem('currentEnterprise') || '{}');
+        if (currentEnterprise.entrepriseId || currentEnterprise.id) {
+            select.value = currentEnterprise.entrepriseId || currentEnterprise.id;
+            loadAlertes();
+        } else if (enterprises.length > 0) {
+            select.value = enterprises[0].entrepriseId || enterprises[0].id;
+            loadAlertes();
+        }
+    })
+    .catch(error => {
+        console.error('Erreur lors du chargement des entreprises:', error);
+        // Ne pas afficher de notification si c'est juste un problème d'accès
+        if (!error.message || !error.message.includes('403')) {
+            if (typeof showNotification === 'function') {
+                showNotification('Erreur lors du chargement des entreprises', 'error');
+            }
+        }
+    });
+}
+
+function loadAlertes() {
+    const select = document.getElementById('alertsEntrepriseSelect');
+    const alertsList = document.getElementById('alertsList');
+    const alertsEmpty = document.getElementById('alertsEmpty');
+    const alertsLoading = document.getElementById('alertsLoading');
     
-    // Historique des maintenances
-    historyContainer.innerHTML = maintenanceHistory.map(history => {
-        const machine = machines.find(m => m.id === history.machineId);
+    // Vérifier que les éléments DOM existent
+    if (!alertsList || !alertsEmpty || !alertsLoading) {
+        // Les éléments n'existent pas sur cette page
+        return;
+    }
+    
+    const entrepriseId = select ? select.value : '';
+    
+    if (!entrepriseId) {
+        alertsList.innerHTML = '';
+        alertsEmpty.style.display = 'block';
+        alertsLoading.style.display = 'none';
+        return;
+    }
+
+    alertsLoading.style.display = 'block';
+    alertsEmpty.style.display = 'none';
+    alertsList.innerHTML = '';
+
+    fetch(`/alertes/api/list?entrepriseId=${entrepriseId}`, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        if (response.status === 403) {
+            // Accès refusé - l'utilisateur n'est probablement pas superadmin
+            throw new Error('Accès refusé. Seul le superadmin peut accéder aux alertes.');
+        }
+        if (!response.ok) {
+            throw new Error(`Erreur ${response.status}: Erreur lors du chargement des alertes`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        alertes = data || [];
+        filteredAlertes = [...alertes];
+        displayAlertes();
+    })
+    .catch(error => {
+        console.error('Erreur lors du chargement des alertes:', error);
+        alertsLoading.style.display = 'none';
+        
+        // Afficher un message d'erreur approprié
+        if (error.message && error.message.includes('Accès refusé')) {
+            alertsEmpty.innerHTML = `
+                <i class="fas fa-lock" style="font-size: 3rem; color: var(--text-secondary); margin-bottom: 1rem;"></i>
+                <h3 style="color: var(--text-secondary); margin-bottom: 0.5rem;">Accès refusé</h3>
+                <p style="color: var(--text-secondary);">Seul le superadmin peut accéder aux alertes.</p>
+            `;
+            alertsEmpty.style.display = 'block';
+        } else if (typeof showNotification === 'function') {
+            showNotification('Erreur lors du chargement des alertes: ' + error.message, 'error');
+        }
+    });
+}
+
+function displayAlertes() {
+    const container = document.getElementById('alertsList');
+    const loading = document.getElementById('alertsLoading');
+    const empty = document.getElementById('alertsEmpty');
+
+    // Vérifier que les éléments DOM existent
+    if (!container || !loading || !empty) {
+        return;
+    }
+
+    loading.style.display = 'none';
+
+    if (!filteredAlertes || filteredAlertes.length === 0) {
+        empty.style.display = 'block';
+        container.innerHTML = '';
+        return;
+    }
+
+    empty.style.display = 'none';
+    container.innerHTML = filteredAlertes.map(alerte => {
+        const dateVerification = alerte.dateVerification ? new Date(alerte.dateVerification) : null;
+        const isOverdue = dateVerification && dateVerification < new Date() && !alerte.verifie;
+        const statusClass = alerte.verifie ? 'verified' : (alerte.envoye ? 'sent' : 'pending');
+        const statusText = alerte.verifie ? 'Vérifiée' : (alerte.envoye ? 'Envoyée' : 'En attente');
+        const statusIcon = alerte.verifie ? 'fa-check-circle' : (alerte.envoye ? 'fa-paper-plane' : 'fa-clock');
+
         return `
-            <div class="alert-item completed">
-                <div class="alert-header">
-                    <span class="alert-machine">${machine ? machine.name : 'Machine supprimée'}</span>
-                    <span class="alert-date">${formatDate(history.date)}</span>
+            <div class="alerte-card ${statusClass} ${isOverdue ? 'overdue' : ''}" data-alerte-id="${alerte.alerteId}">
+                <div class="alerte-header">
+                    <div>
+                        <h3 style="margin: 0 0 0.25rem 0; font-size: 1.1rem; color: var(--text-primary);">
+                            <i class="fas fa-cog" style="margin-right: 0.5rem; color: var(--primary-color);"></i>
+                            ${alerte.machineNom || 'Machine inconnue'}
+                        </h3>
+                        <span class="alerte-badge ${statusClass}" style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; background: ${getStatusColor(statusClass)}; color: white;">
+                            <i class="fas ${statusIcon}"></i> ${statusText}
+                        </span>
+                    </div>
                 </div>
-                <div class="alert-description">${history.description}</div>
-                <div class="alert-description">
-                    <small>Effectuée par: ${history.technician || 'Non spécifié'}</small>
+                <div class="alerte-meta" style="margin: 1rem 0; color: var(--text-secondary); font-size: 0.9rem;">
+                    ${dateVerification ? `
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <i class="fas fa-calendar-check"></i>
+                            <span>Date de vérification: ${formatDate(dateVerification)}</span>
+                            ${isOverdue ? '<span style="color: var(--danger-color); font-weight: 600;">⚠ En retard</span>' : ''}
+                        </div>
+                    ` : ''}
+                    ${alerte.creeParNom ? `
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <i class="fas fa-user"></i>
+                            <span>Créée par: ${alerte.creeParNom}</span>
+                        </div>
+                    ` : ''}
+                    ${alerte.activerRelance && alerte.nombreRelances > 0 ? `
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-redo"></i>
+                            <span>Relances: ${alerte.nombreRelancesEnvoyees || 0}/${alerte.nombreRelances}</span>
+                        </div>
+                    ` : ''}
+                </div>
+                ${alerte.description ? `
+                    <div class="alerte-description" style="margin: 1rem 0; padding: 0.75rem; background: var(--bg-secondary); border-radius: 6px; color: var(--text-primary);">
+                        ${alerte.description}
+                    </div>
+                ` : ''}
+                ${alerte.verifie && alerte.dateVerificationReelle ? `
+                    <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color); color: var(--success-color); font-size: 0.9rem;">
+                        <i class="fas fa-check-circle"></i> Vérifiée le ${formatDate(new Date(alerte.dateVerificationReelle))}
+                    </div>
+                ` : ''}
+                <div class="alerte-actions" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color); display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    ${!alerte.verifie ? `
+                        <button class="btn btn-sm btn-success" onclick="marquerAlerteVerifiee('${alerte.entrepriseId}', '${alerte.alerteId}')" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                            <i class="fas fa-check"></i> Vérifier
+                        </button>
+                    ` : ''}
+                    <button class="btn btn-sm btn-warning" onclick="editAlerte('${alerte.entrepriseId}', '${alerte.alerteId}')" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                        <i class="fas fa-edit"></i> Modifier
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteAlerteConfirm('${alerte.entrepriseId}', '${alerte.alerteId}')" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                        <i class="fas fa-trash"></i> Supprimer
+                    </button>
                 </div>
             </div>
         `;
     }).join('');
 }
 
-function showAddAlertModal() {
+function getStatusColor(status) {
+    switch(status) {
+        case 'verified': return '#10b981';
+        case 'sent': return '#3b82f6';
+        case 'pending': return '#f59e0b';
+        default: return '#6b7280';
+    }
+}
+
+function formatDate(date) {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function setupAlertsFilters() {
+    const searchInput = document.getElementById('alertsSearch');
+    const statusFilter = document.getElementById('alertsStatusFilter');
+    const dateFilter = document.getElementById('alertsDateFilter');
+    const entrepriseSelect = document.getElementById('alertsEntrepriseSelect');
+
+    // Vérifier que les éléments existent avant d'ajouter les listeners
+    if (searchInput) {
+        // Retirer l'ancien listener s'il existe pour éviter les doublons
+        searchInput.removeEventListener('input', applyAlertsFilters);
+        searchInput.addEventListener('input', applyAlertsFilters);
+    }
+    if (statusFilter) {
+        statusFilter.removeEventListener('change', applyAlertsFilters);
+        statusFilter.addEventListener('change', applyAlertsFilters);
+    }
+    if (dateFilter) {
+        dateFilter.removeEventListener('change', applyAlertsFilters);
+        dateFilter.addEventListener('change', applyAlertsFilters);
+    }
+    if (entrepriseSelect) {
+        entrepriseSelect.removeEventListener('change', loadAlertes);
+        entrepriseSelect.addEventListener('change', loadAlertes);
+    }
+}
+
+function applyAlertsFilters() {
+    const searchTerm = (document.getElementById('alertsSearch')?.value || '').toLowerCase();
+    const statusFilter = document.getElementById('alertsStatusFilter')?.value || 'all';
+    const dateFilter = document.getElementById('alertsDateFilter')?.value || 'all';
+    const now = new Date();
+
+    filteredAlertes = alertes.filter(alerte => {
+        // Filtre de recherche
+        if (searchTerm) {
+            const searchIn = `${alerte.machineNom || ''} ${alerte.description || ''}`.toLowerCase();
+            if (!searchIn.includes(searchTerm)) return false;
+        }
+
+        // Filtre de statut
+        if (statusFilter !== 'all') {
+            if (statusFilter === 'pending' && (alerte.verifie || alerte.envoye)) return false;
+            if (statusFilter === 'sent' && !alerte.envoye) return false;
+            if (statusFilter === 'verified' && !alerte.verifie) return false;
+        }
+
+        // Filtre de date
+        if (dateFilter !== 'all' && alerte.dateVerification) {
+            const alertDate = new Date(alerte.dateVerification);
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const alertDay = new Date(alertDate.getFullYear(), alertDate.getMonth(), alertDate.getDate());
+
+            if (dateFilter === 'today' && alertDay.getTime() !== today.getTime()) return false;
+            if (dateFilter === 'week') {
+                const weekAgo = new Date(today);
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                if (alertDate < weekAgo) return false;
+            }
+            if (dateFilter === 'month') {
+                const monthAgo = new Date(today);
+                monthAgo.setMonth(monthAgo.getMonth() - 1);
+                if (alertDate < monthAgo) return false;
+            }
+            if (dateFilter === 'overdue' && (alertDate >= now || alerte.verifie)) return false;
+        }
+
+        return true;
+    });
+
+    displayAlertes();
+}
+
+// Fonction pour afficher le modal d'ajout d'alerte
+async function showAddAlertModal() {
+    // Vérifier si l'utilisateur est superadmin
+    const isSuperAdmin = await checkIfSuperAdmin();
+    if (!isSuperAdmin) {
+        showNotification('Accès refusé. Seul le superadmin peut créer des alertes.', 'error');
+        return;
+    }
+
+    const entrepriseSelect = document.getElementById('alertsEntrepriseSelect');
+    const entrepriseId = entrepriseSelect ? entrepriseSelect.value : '';
+    
+    if (!entrepriseId) {
+        showNotification('Veuillez sélectionner une entreprise d\'abord', 'warning');
+        return;
+    }
+
     const alertMachineSelect = document.getElementById('alertMachine');
+    if (!alertMachineSelect) {
+        showNotification('Erreur: Le formulaire d\'alerte est introuvable', 'error');
+        return;
+    }
+
+    // Charger les machines de l'entreprise via une requête vers la page machines
+    try {
+        // Essayer de charger depuis l'endpoint machines avec entrepriseId
+        const response = await fetch(`/machines?entrepriseId=${entrepriseId}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'text/html'
+            },
+            credentials: 'same-origin'
+        });
+        
+        if (response.ok) {
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Extraire les machines depuis le HTML
+            const machineOptions = doc.querySelectorAll('select[name="machineId"] option, select[id*="machine"] option');
+            
     alertMachineSelect.innerHTML = '<option value="">Sélectionner une machine</option>';
     
-    machines.forEach(machine => {
-        const option = document.createElement('option');
-        option.value = machine.id;
-        option.textContent = `${machine.name} (${machine.location})`;
-        alertMachineSelect.appendChild(option);
-    });
+        if (machineOptions.length > 0) {
+            machineOptions.forEach(option => {
+                if (option.value && option.value !== '') {
+                    const newOption = document.createElement('option');
+                    newOption.value = option.value;
+                    newOption.textContent = option.textContent.trim();
+                    alertMachineSelect.appendChild(newOption);
+                }
+            });
+        } else {
+            // Si pas de machines trouvées dans le HTML, essayer une autre méthode
+            // Utiliser l'API Firebase directement via un endpoint si disponible
+            showNotification('Aucune machine trouvée pour cette entreprise', 'warning');
+        }
+        } else {
+            // Fallback: utiliser les machines déjà chargées dans la page si disponibles
+            alertMachineSelect.innerHTML = '<option value="">Sélectionner une machine</option>';
+            showNotification('Veuillez vous assurer que l\'entreprise a des machines', 'info');
+        }
+        
+        // Réinitialiser le formulaire
+        const form = document.getElementById('addAlertForm');
+        if (form) {
+            form.reset();
+            // Définir l'entrepriseId dans un champ caché
+            let hiddenInput = form.querySelector('input[name="entrepriseId"]');
+            if (!hiddenInput) {
+                hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'entrepriseId';
+                form.appendChild(hiddenInput);
+            }
+            hiddenInput.value = entrepriseId;
+            
+            // Réinitialiser le toggle des relances
+            const relanceCheckbox = document.getElementById('alertActiverRelance');
+            const relanceGroup = document.getElementById('addRelancesGroup');
+            if (relanceCheckbox && relanceGroup) {
+                relanceCheckbox.checked = false;
+                relanceGroup.style.display = 'none';
+            }
+        }
     
     document.getElementById('addAlertModal').classList.add('show');
+    } catch (error) {
+        console.error('Erreur lors du chargement des machines:', error);
+        // Afficher le modal quand même, l'utilisateur pourra sélectionner manuellement
+        alertMachineSelect.innerHTML = '<option value="">Sélectionner une machine</option>';
+        document.getElementById('addAlertModal').classList.add('show');
+        showNotification('Erreur lors du chargement des machines. Veuillez recharger la page.', 'error');
+    }
 }
 
-function handleAddAlert(e) {
+// Fonction pour créer une nouvelle alerte
+async function handleAddAlert(e) {
     e.preventDefault();
     
-    const alert = {
-        id: Date.now(),
-        machineId: parseInt(document.getElementById('alertMachine').value),
-        date: document.getElementById('alertDate').value,
-        time: document.getElementById('alertTime').value,
-        description: document.getElementById('alertDescription').value,
-        frequency: document.getElementById('alertFrequency').value,
-        completed: false,
-        createdAt: new Date()
+    const isSuperAdmin = await checkIfSuperAdmin();
+    if (!isSuperAdmin) {
+        showNotification('Accès refusé. Seul le superadmin peut créer des alertes.', 'error');
+        return;
+    }
+
+    const form = e.target;
+    const formData = new FormData(form);
+    
+    // Récupérer l'entrepriseId depuis le select ou le champ caché
+    const entrepriseSelect = document.getElementById('alertsEntrepriseSelect');
+    const entrepriseId = formData.get('entrepriseId') || (entrepriseSelect ? entrepriseSelect.value : '');
+    const machineId = formData.get('machineId') || document.getElementById('alertMachine')?.value;
+    const dateVerification = formData.get('dateVerification') || document.getElementById('alertDate')?.value;
+    const description = formData.get('description') || document.getElementById('alertDescription')?.value || '';
+    const activerRelance = formData.get('activerRelance') === 'on' || document.getElementById('alertActiverRelance')?.checked || false;
+    const nombreRelances = formData.get('nombreRelances') || document.getElementById('alertNombreRelances')?.value || '0';
+
+    if (!entrepriseId) {
+        showNotification('Veuillez sélectionner une entreprise', 'error');
+        return;
+    }
+
+    if (!machineId) {
+        showNotification('Veuillez sélectionner une machine', 'error');
+        return;
+    }
+
+    if (!dateVerification) {
+        showNotification('Veuillez sélectionner une date de vérification', 'error');
+        return;
+    }
+
+    // Créer un formulaire pour soumettre via POST
+    const submitForm = document.createElement('form');
+    submitForm.method = 'POST';
+    submitForm.action = '/alertes';
+    
+    const fields = {
+        entrepriseId: entrepriseId,
+        machineId: machineId,
+        dateVerification: dateVerification,
+        description: description
     };
-    
-    maintenanceAlerts.push(alert);
-    saveDataToStorage();
-    renderAlerts();
-    updateDashboard();
-    closeModal('addAlertModal');
-    document.getElementById('addAlertForm').reset();
-    
-    showNotification('Maintenance programmée avec succès', 'success');
+
+    // Ajouter activerRelance seulement si coché
+    if (activerRelance) {
+        fields.activerRelance = 'on';
+        fields.nombreRelances = nombreRelances;
+    }
+
+    Object.entries(fields).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = value;
+            submitForm.appendChild(input);
+        }
+    });
+
+    document.body.appendChild(submitForm);
+    submitForm.submit();
 }
+
+// Fonction pour marquer une alerte comme vérifiée
+async function marquerAlerteVerifiee(entrepriseId, alerteId) {
+    const isSuperAdmin = await checkIfSuperAdmin();
+    if (!isSuperAdmin) {
+        showNotification('Accès refusé. Seul le superadmin peut marquer une alerte comme vérifiée.', 'error');
+        return;
+    }
+
+    if (!confirm('Êtes-vous sûr de vouloir marquer cette machine comme vérifiée ?')) {
+        return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/alertes/${entrepriseId}/${alerteId}/verifie`;
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// Fonction pour éditer une alerte
+async function editAlerte(entrepriseId, alerteId) {
+    const isSuperAdmin = await checkIfSuperAdmin();
+    if (!isSuperAdmin) {
+        showNotification('Accès refusé. Seul le superadmin peut modifier une alerte.', 'error');
+        return;
+    }
+
+    // Charger les détails de l'alerte
+    try {
+        const response = await fetch(`/alertes/api/list?entrepriseId=${entrepriseId}`);
+        const data = await response.json();
+        const alerte = data.find(a => a.alerteId === alerteId);
+        
+        if (!alerte) {
+            showNotification('Alerte introuvable', 'error');
+            return;
+        }
+
+        // Créer ou afficher le modal d'édition
+        showEditAlerteModal(alerte, entrepriseId);
+    } catch (error) {
+        console.error('Erreur lors du chargement de l\'alerte:', error);
+        showNotification('Erreur lors du chargement de l\'alerte', 'error');
+    }
+}
+
+// Fonction pour afficher le modal d'édition
+function showEditAlerteModal(alerte, entrepriseId) {
+    // Créer le modal s'il n'existe pas
+    let editModal = document.getElementById('editAlerteModal');
+    if (!editModal) {
+        editModal = createEditAlerteModal();
+    }
+
+    // Remplir le formulaire
+    const dateVerification = alerte.dateVerification ? new Date(alerte.dateVerification).toISOString().split('T')[0] : '';
+    
+    document.getElementById('editAlerteId').value = alerte.alerteId;
+    document.getElementById('editAlerteEntrepriseId').value = entrepriseId;
+    document.getElementById('editAlerteDateVerification').value = dateVerification;
+    document.getElementById('editAlerteDescription').value = alerte.description || '';
+    document.getElementById('editAlerteActiverRelance').checked = alerte.activerRelance || false;
+    document.getElementById('editAlerteNombreRelances').value = alerte.nombreRelances || 0;
+    
+    toggleRelancesEdit();
+    
+    editModal.classList.add('show');
+}
+
+// Fonction pour supprimer une alerte
+async function deleteAlerteConfirm(entrepriseId, alerteId) {
+    const isSuperAdmin = await checkIfSuperAdmin();
+    if (!isSuperAdmin) {
+        showNotification('Accès refusé. Seul le superadmin peut supprimer une alerte.', 'error');
+        return;
+    }
+
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette alerte ? Cette action est irréversible.')) {
+        return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/alertes/${entrepriseId}/${alerteId}/delete`;
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// Fonction pour créer le modal d'édition d'alerte
+function createEditAlerteModal() {
+    const modal = document.createElement('div');
+    modal.id = 'editAlerteModal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Modifier l'Alerte</h2>
+                <span class="close" onclick="closeModal('editAlerteModal')">&times;</span>
+            </div>
+            <form id="editAlerteForm" onsubmit="handleEditAlerte(event)">
+                <input type="hidden" id="editAlerteId" name="alerteId">
+                <input type="hidden" id="editAlerteEntrepriseId" name="entrepriseId">
+                <div class="form-group">
+                    <label for="editAlerteDateVerification">Date de vérification *</label>
+                    <input type="date" id="editAlerteDateVerification" name="dateVerification" required>
+                </div>
+                <div class="form-group">
+                    <label for="editAlerteDescription">Description</label>
+                    <textarea id="editAlerteDescription" name="description" placeholder="Description de la vérification à effectuer..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="editAlerteActiverRelance" name="activerRelance" onchange="toggleRelancesEdit()">
+                        Activer les relances
+                    </label>
+                </div>
+                <div class="form-group" id="editRelancesGroup" style="display: none;">
+                    <label for="editAlerteNombreRelances">Nombre de relances</label>
+                    <input type="number" id="editAlerteNombreRelances" name="nombreRelances" min="0" max="10" value="0" placeholder="Ex: 3">
+                    <small style="color: #6b7280; font-size: 0.85rem;">Les relances seront envoyées toutes les 24h si la machine n'est pas vérifiée</small>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editAlerteModal')">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Modifier</button>
+                </div>
+            </form>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    return modal;
+}
+
+// Fonction pour gérer la soumission du formulaire d'édition
+async function handleEditAlerte(e) {
+    e.preventDefault();
+    
+    const isSuperAdmin = await checkIfSuperAdmin();
+    if (!isSuperAdmin) {
+        showNotification('Accès refusé. Seul le superadmin peut modifier une alerte.', 'error');
+        return;
+    }
+
+    const form = e.target;
+    const formData = new FormData(form);
+    const entrepriseId = formData.get('entrepriseId');
+    const alerteId = formData.get('alerteId');
+    const dateVerification = formData.get('dateVerification');
+    const description = formData.get('description') || '';
+    const activerRelance = formData.get('activerRelance') === 'on';
+    const nombreRelances = formData.get('nombreRelances') || '0';
+
+    if (!entrepriseId || !alerteId || !dateVerification) {
+        showNotification('Veuillez remplir tous les champs obligatoires', 'error');
+        return;
+    }
+
+    // Créer un formulaire pour soumettre via POST
+    const submitForm = document.createElement('form');
+    submitForm.method = 'POST';
+    submitForm.action = `/alertes/${entrepriseId}/${alerteId}`;
+    
+    const fields = {
+        dateVerification: dateVerification,
+        description: description,
+        activerRelance: activerRelance ? 'on' : '',
+        nombreRelances: nombreRelances
+    };
+
+    Object.entries(fields).forEach(([key, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = value;
+        submitForm.appendChild(input);
+    });
+
+    document.body.appendChild(submitForm);
+    submitForm.submit();
+}
+
+// Fonction pour toggle les relances dans le formulaire d'édition
+function toggleRelancesEdit() {
+    const checkbox = document.getElementById('editAlerteActiverRelance');
+    const group = document.getElementById('editRelancesGroup');
+    if (checkbox && group) {
+        group.style.display = checkbox.checked ? 'block' : 'none';
+    }
+}
+
+// Fonction pour toggle les relances dans le formulaire d'ajout
+function toggleRelancesAdd() {
+    const checkbox = document.getElementById('alertActiverRelance');
+    const group = document.getElementById('addRelancesGroup');
+    if (checkbox && group) {
+        group.style.display = checkbox.checked ? 'block' : 'none';
+    }
+}
+
+// Fonction pour créer le modal d'alerte si nécessaire
+function createAlerteModal() {
+    // Le modal existe déjà dans index.html, pas besoin de le créer
+    showNotification('Veuillez sélectionner une entreprise d\'abord', 'warning');
+}
+
 
 function completeMaintenance(alertId) {
     const alert = maintenanceAlerts.find(a => a.id === alertId);
@@ -1964,7 +2614,6 @@ function completeMaintenance(alertId) {
         }
         
         saveDataToStorage();
-        renderAlerts();
         updateDashboard();
         showNotification('Maintenance marquée comme terminée', 'success');
     }
@@ -2010,7 +2659,6 @@ function rescheduleMaintenance(alertId) {
     if (newDate) {
         alert.date = newDate;
         saveDataToStorage();
-        renderAlerts();
         updateDashboard();
         showNotification('Maintenance reprogrammée', 'success');
     }
@@ -2020,7 +2668,6 @@ function deleteAlert(alertId) {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette alerte ?')) {
         maintenanceAlerts = maintenanceAlerts.filter(a => a.id !== alertId);
         saveDataToStorage();
-        renderAlerts();
         updateDashboard();
         showNotification('Alerte supprimée', 'success');
     }

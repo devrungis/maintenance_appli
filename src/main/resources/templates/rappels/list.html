@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Rappels</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #1d4ed8;
+            --danger: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --border: #e5e7eb;
+            --bg: #f8fafc;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: #111827;
+            margin: 0;
+            padding: 0;
+        }
+        .page {
+            display: flex;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            height: 100vh;
+            margin-left: 250px;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+                margin-top: 60px;
+                padding: 1rem;
+                height: auto;
+                min-height: calc(100vh - 60px);
+            }
+        }
+        .sidebar {
+            width: 250px;
+            background: #1e293b;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+        .sidebar-header {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .sidebar-header i {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+            color: #3b82f6;
+        }
+        .sidebar-header h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        .sidebar-menu {
+            flex: 1;
+            padding: 0.5rem 0;
+            list-style: none;
+            overflow-y: auto;
+            flex-shrink: 1;
+        }
+        .menu-item {
+            padding: 0.65rem 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            border-left: 3px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .menu-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .menu-item.active {
+            background: rgba(59, 130, 246, 0.2);
+            border-left-color: #3b82f6;
+        }
+        .menu-item a {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: white;
+            text-decoration: none;
+            width: 100%;
+        }
+        .menu-item i {
+            width: 20px;
+            font-size: 1.1rem;
+        }
+        .sidebar-footer {
+            padding: 0.75rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+        }
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            width: 100%;
+            justify-content: center;
+        }
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 20px;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            position: relative;
+            overflow: hidden;
+        }
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+            border-radius: 20px 20px 0 0;
+        }
+        .page-title {
+            color: #111827;
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #111827, #64748b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 0;
+        }
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+        }
+        .filters {
+            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .filters select, .filters input {
+            padding: 0.65rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: white;
+            font-size: 0.95rem;
+        }
+        .filters label {
+            color: #374151;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        .btn-success {
+            background: var(--success);
+            color: #fff;
+        }
+        .btn-danger {
+            background: var(--danger);
+            color: #fff;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: #111827;
+        }
+        .rappels-container {
+            margin-top: 1rem;
+        }
+        .rappels-table {
+            width: 100%;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .rappels-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .rappels-table th {
+            background: #f9fafb;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 2px solid var(--border);
+        }
+        .rappels-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .rappels-table tr:hover {
+            background: #f9fafb;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .status-sent {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .status-verified {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .status-overdue {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6b7280;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #374151;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        .form-group input[type="checkbox"] {
+            width: auto;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #10b981;
+        }
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+    </style>
+    <script>
+        // Définir les fonctions globalement immédiatement
+        function loadRappels() {
+            const entrepriseId = document.getElementById('entrepriseSelect').value;
+            const urlParams = new URLSearchParams(window.location.search);
+            const filtre = urlParams.get('filtre') || 'actif';
+            if (entrepriseId) {
+                window.location.href = '/rappels?entrepriseId=' + entrepriseId + '&filtre=' + filtre;
+            }
+        }
+
+        function showAddRappelModal() {
+            const entrepriseId = document.getElementById('entrepriseSelect');
+            if (!entrepriseId || !entrepriseId.value) {
+                alert('Veuillez sélectionner une entreprise d\'abord.');
+                return;
+            }
+            const addEntrepriseId = document.getElementById('addEntrepriseId');
+            const addRappelModal = document.getElementById('addRappelModal');
+            if (!addEntrepriseId || !addRappelModal) {
+                console.error('Éléments du modal non trouvés', {
+                    addEntrepriseId: !!addEntrepriseId,
+                    addRappelModal: !!addRappelModal
+                });
+                // Attendre un peu et réessayer
+                setTimeout(function() {
+                    const retryAddEntrepriseId = document.getElementById('addEntrepriseId');
+                    const retryAddRappelModal = document.getElementById('addRappelModal');
+                    if (retryAddEntrepriseId && retryAddRappelModal) {
+                        retryAddEntrepriseId.value = entrepriseId.value;
+                        retryAddRappelModal.classList.add('active');
+                    } else {
+                        alert('Erreur: Le formulaire n\'est pas encore chargé. Veuillez réessayer.');
+                    }
+                }, 100);
+                return;
+            }
+            addEntrepriseId.value = entrepriseId.value;
+            addRappelModal.classList.add('active');
+        }
+
+        function closeAddRappelModal() {
+            const modal = document.getElementById('addRappelModal');
+            const form = document.getElementById('addRappelForm');
+            if (modal) modal.classList.remove('active');
+            if (form) form.reset();
+        }
+
+        function toggleRelancesAdd() {
+            const checkbox = document.getElementById('addActiverRelance');
+            const group = document.getElementById('addNombreRelancesGroup');
+            if (checkbox && group) {
+                group.style.display = checkbox.checked ? 'block' : 'none';
+            }
+        }
+
+        function showEditRappelModal(entrepriseId, rappelId) {
+            if (!entrepriseId || !rappelId) {
+                alert('Erreur: Informations du rappel manquantes.');
+                return;
+            }
+            
+            // Charger les données du rappel via API
+            fetch('/rappels/api/list?entrepriseId=' + encodeURIComponent(entrepriseId))
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erreur HTTP: ' + response.status);
+                    }
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new Error('La réponse n\'est pas du JSON');
+                    }
+                    return response.json();
+                })
+                .then(rappels => {
+                    if (!Array.isArray(rappels)) {
+                        throw new Error('La réponse n\'est pas un tableau');
+                    }
+                    const rappel = rappels.find(r => r.rappelId === rappelId);
+                    if (!rappel) {
+                        alert('Rappel non trouvé.');
+                        return;
+                    }
+                    
+                    const editMachineNom = document.getElementById('editMachineNom');
+                    const editDescription = document.getElementById('editDescription');
+                    const editDateVerification = document.getElementById('editDateVerification');
+                    const editActiverRelance = document.getElementById('editActiverRelance');
+                    const editNombreRelances = document.getElementById('editNombreRelances');
+                    const editRappelForm = document.getElementById('editRappelForm');
+                    const editRappelModal = document.getElementById('editRappelModal');
+                    
+                    if (!editRappelModal) {
+                        alert('Erreur: Le modal de modification n\'est pas disponible.');
+                        return;
+                    }
+                    
+                    if (editMachineNom) editMachineNom.value = rappel.machineNom || '';
+                    if (editDescription) editDescription.value = rappel.description || '';
+                    
+                    // Convertir le timestamp en date YYYY-MM-DD (en tenant compte du timezone local)
+                    if (editDateVerification && rappel.dateVerification) {
+                        const date = new Date(rappel.dateVerification);
+                        if (!isNaN(date.getTime())) {
+                            // Utiliser les méthodes locales pour éviter le décalage de timezone
+                            const year = date.getFullYear();
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const dateStr = year + '-' + month + '-' + day;
+                            editDateVerification.value = dateStr;
+                        }
+                    }
+                    
+                    if (editActiverRelance) editActiverRelance.checked = rappel.activerRelance || false;
+                    if (editNombreRelances) editNombreRelances.value = rappel.nombreRelances || 1;
+                    toggleRelancesEdit();
+                    
+                    // Mettre à jour l'action du formulaire
+                    if (editRappelForm) {
+                        editRappelForm.action = '/rappels/' + encodeURIComponent(entrepriseId) + '/' + encodeURIComponent(rappelId);
+                    }
+                    
+                    editRappelModal.classList.add('active');
+                })
+                .catch(error => {
+                    console.error('Erreur lors du chargement du rappel:', error);
+                    alert('Erreur lors du chargement du rappel: ' + error.message);
+                });
+        }
+
+        function closeEditRappelModal() {
+            const modal = document.getElementById('editRappelModal');
+            if (modal) modal.classList.remove('active');
+        }
+
+        function toggleRelancesEdit() {
+            const checkbox = document.getElementById('editActiverRelance');
+            const group = document.getElementById('editNombreRelancesGroup');
+            if (checkbox && group) {
+                group.style.display = checkbox.checked ? 'block' : 'none';
+            }
+        }
+
+        function marquerVerifie(entrepriseId, rappelId) {
+            if (confirm('Êtes-vous sûr de vouloir marquer ce rappel comme vérifié ? Il sera ajouté à l\'historique.')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/rappels/' + entrepriseId + '/' + rappelId + '/verifie';
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        function deleteRappelConfirm(entrepriseId, rappelId) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer ce rappel ?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/rappels/' + entrepriseId + '/' + rappelId + '/delete';
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+        
+        // Formater les dates au chargement de la page
+        function formatDates() {
+            const dateElements = document.querySelectorAll('.date-display');
+            dateElements.forEach(function(el) {
+                const timestamp = el.getAttribute('data-date');
+                if (timestamp) {
+                    const date = new Date(parseInt(timestamp));
+                    const day = date.getDate().toString().padStart(2, '0');
+                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                    const year = date.getFullYear();
+                    el.textContent = day + '/' + month + '/' + year;
+                }
+            });
+        }
+        
+        // S'assurer que le DOM est chargé avant d'utiliser les fonctions
+        function ensureDOMReady(callback) {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', callback);
+            } else {
+                callback();
+            }
+        }
+        
+        // Fonction pour changer l'entreprise depuis le menu
+        function changeMenuEnterprise() {
+            const select = document.getElementById('menuEntrepriseSelect');
+            const entrepriseId = select ? select.value : null;
+            
+            if (!entrepriseId) {
+                return;
+            }
+            
+            // Rediriger vers la page rappels avec le paramètre entrepriseId
+            window.location.href = '/rappels?entrepriseId=' + encodeURIComponent(entrepriseId);
+        }
+        
+        // Initialiser au chargement de la page
+        ensureDOMReady(function() {
+            console.log('Page rappels chargée - Fonctions JavaScript définies');
+            formatDates();
+            
+            // Initialiser le sélecteur d'entreprise dans le menu
+            const menuEntrepriseSelect = document.getElementById('menuEntrepriseSelect');
+            if (menuEntrepriseSelect) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const entrepriseId = urlParams.get('entrepriseId');
+                if (entrepriseId) {
+                    menuEntrepriseSelect.value = entrepriseId;
+                }
+            }
+            
+            // Vérifier que les modals sont présents
+            const addModal = document.getElementById('addRappelModal');
+            const editModal = document.getElementById('editRappelModal');
+            if (!addModal) {
+                console.error('Modal addRappelModal non trouvé');
+            }
+            if (!editModal) {
+                console.error('Modal editRappelModal non trouvé');
+            }
+        });
+    </script>
+</head>
+<body>
+
+    <!-- Header mobile -->
+    <header class="mobile-header">
+        <div class="header-content">
+            <button class="menu-toggle" id="menuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div style="flex: 1;">
+                <h1 class="app-title">
+                    <i class="fas fa-wrench"></i>
+                    Maintenance
+                </h1>
+                <div id="currentEnterpriseMobile" style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                    <!-- Entreprise actuelle -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Overlay pour sidebar mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="page">
+        <!-- Sidebar -->
+        <th:block th:replace="fragments/menu :: menu"></th:block>
+        <div class="main-content">
+            <div class="page-header">
+                <h1><i class="fas fa-bell"></i> Gestion des Rappels</h1>
+                <div class="header-actions">
+                    <button th:if="${filtre == null or filtre == 'actif'}" class="btn btn-primary" onclick="showAddRappelModal()">
+                        <i class="fas fa-plus"></i> Nouveau Rappel
+                    </button>
+                </div>
+            </div>
+
+            <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+            <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+            <div class="filters">
+                <label for="entrepriseSelect">Entreprise:</label>
+                <select id="entrepriseSelect" onchange="loadRappels()">
+                    <option value="">-- Sélectionner une entreprise --</option>
+                    <option th:each="ent : ${enterprises}" 
+                            th:value="${ent.entrepriseId}" 
+                            th:text="${ent.nom}"
+                            th:selected="${selectedEntrepriseId == ent.entrepriseId}">
+                    </option>
+                </select>
+                
+                <!-- Onglets pour filtrer -->
+                <div style="display: flex; gap: 0.5rem; margin-left: auto;">
+                    <a th:href="@{'/rappels?entrepriseId=' + ${selectedEntrepriseId} + '&filtre=actif'}" 
+                       class="btn" 
+                       th:classappend="${filtre == null or filtre == 'actif' ? 'btn-primary' : 'btn-outline'}"
+                       style="text-decoration: none;">
+                        Rappels Actifs
+                    </a>
+                    <a th:href="@{'/rappels?entrepriseId=' + ${selectedEntrepriseId} + '&filtre=historique'}" 
+                       class="btn" 
+                       th:classappend="${filtre == 'historique' ? 'btn-primary' : 'btn-outline'}"
+                       style="text-decoration: none;">
+                        Historique
+                    </a>
+                </div>
+            </div>
+
+            <!-- Afficher les rappels actifs -->
+            <div class="rappels-container" th:if="${filtre == null or filtre == 'actif'}">
+                <div class="rappels-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Machine</th>
+                                <th>Description</th>
+                                <th>Date de vérification</th>
+                                <th>Statut</th>
+                                <th>Relances</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rappelsList">
+                            <tr th:if="${rappels == null or rappels.isEmpty()}">
+                                <td colspan="6" class="empty-state">
+                                    Aucun rappel trouvé. Créez votre premier rappel en cliquant sur "Nouveau Rappel".
+                                </td>
+                            </tr>
+                            <tr th:if="${rappels != null and !rappels.isEmpty()}" th:each="rappel : ${rappels}">
+                                <td th:text="${rappel.machineNom != null ? rappel.machineNom : 'N/A'}">N/A</td>
+                                <td th:text="${rappel.description != null ? rappel.description : ''}">-</td>
+                                <td>
+                                    <span th:if="${rappel.dateVerification != null and rappel.dateVerification > 0}" 
+                                          th:attr="data-date=${rappel.dateVerification}"
+                                          class="date-display">-</span>
+                                    <span th:unless="${rappel.dateVerification != null and rappel.dateVerification > 0}">-</span>
+                                </td>
+                                <td>
+                                    <span class="status-badge" 
+                                          th:classappend="${(rappel.verifie != null and rappel.verifie) ? 'status-verified' : ((rappel.envoye != null and rappel.envoye) ? 'status-sent' : 'status-pending')}"
+                                          th:text="${(rappel.verifie != null and rappel.verifie) ? 'Vérifié' : ((rappel.envoye != null and rappel.envoye) ? 'Envoyé' : 'En attente')}">
+                                        En attente
+                                    </span>
+                                </td>
+                                <td>
+                                    <span th:if="${rappel.activerRelance != null and rappel.activerRelance}">
+                                        <span th:text="${rappel.nombreRelancesEnvoyees != null ? rappel.nombreRelancesEnvoyees : 0}">0</span> / 
+                                        <span th:text="${rappel.nombreRelances != null ? rappel.nombreRelances : 0}">0</span>
+                                    </span>
+                                    <span th:unless="${rappel.activerRelance != null and rappel.activerRelance}">-</span>
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button th:if="${rappel.verifie == null or !rappel.verifie}" 
+                                                class="btn btn-success btn-sm" 
+                                                th:data-entreprise-id="${rappel.entrepriseId}"
+                                                th:data-rappel-id="${rappel.rappelId}"
+                                                onclick="marquerVerifie(this.getAttribute('data-entreprise-id'), this.getAttribute('data-rappel-id'))">
+                                            <i class="fas fa-check"></i> Vérifié
+                                        </button>
+                                        <button th:if="${rappel.verifie == null or !rappel.verifie}" 
+                                                class="btn btn-outline btn-sm" 
+                                                th:data-entreprise-id="${rappel.entrepriseId}"
+                                                th:data-rappel-id="${rappel.rappelId}"
+                                                onclick="showEditRappelModal(this.getAttribute('data-entreprise-id'), this.getAttribute('data-rappel-id'))">
+                                            <i class="fas fa-edit"></i> Modifier
+                                        </button>
+                                        <button class="btn btn-danger btn-sm" 
+                                                th:data-entreprise-id="${rappel.entrepriseId}"
+                                                th:data-rappel-id="${rappel.rappelId}"
+                                                onclick="deleteRappelConfirm(this.getAttribute('data-entreprise-id'), this.getAttribute('data-rappel-id'))">
+                                            <i class="fas fa-trash"></i> Supprimer
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Afficher l'historique -->
+            <div class="rappels-container" th:if="${filtre == 'historique'}">
+                <div class="rappels-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Machine</th>
+                                <th>Description</th>
+                                <th>Date programmée</th>
+                                <th>Date vérifiée</th>
+                                <th>Vérifié par</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historiqueList">
+                            <tr th:if="${rappels == null or rappels.isEmpty()}">
+                                <td colspan="6" class="empty-state">
+                                    Aucun rappel vérifié dans l'historique.
+                                </td>
+                            </tr>
+                            <tr th:if="${rappels != null and !rappels.isEmpty()}" th:each="rappel : ${rappels}">
+                                <td th:text="${rappel.machineNom != null ? rappel.machineNom : 'N/A'}">N/A</td>
+                                <td th:text="${rappel.description != null ? rappel.description : ''}">-</td>
+                                <td>
+                                    <span th:if="${rappel.dateVerification != null and rappel.dateVerification > 0}" 
+                                          th:attr="data-date=${rappel.dateVerification}"
+                                          class="date-display">-</span>
+                                    <span th:unless="${rappel.dateVerification != null and rappel.dateVerification > 0}">-</span>
+                                </td>
+                                <td>
+                                    <span th:if="${rappel.dateVerificationReelle != null and rappel.dateVerificationReelle > 0}" 
+                                          th:attr="data-date=${rappel.dateVerificationReelle}"
+                                          class="date-display">-</span>
+                                    <span th:unless="${rappel.dateVerificationReelle != null and rappel.dateVerificationReelle > 0}">-</span>
+                                </td>
+                                <td th:text="${rappel.creeParNom != null ? rappel.creeParNom : 'N/A'}">N/A</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn btn-danger btn-sm" 
+                                                th:data-entreprise-id="${rappel.entrepriseId}"
+                                                th:data-rappel-id="${rappel.rappelId}"
+                                                onclick="deleteRappelConfirm(this.getAttribute('data-entreprise-id'), this.getAttribute('data-rappel-id'))">
+                                            <i class="fas fa-trash"></i> Supprimer
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ajouter Rappel -->
+    <div id="addRappelModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Nouveau Rappel</h2>
+                <button class="btn btn-outline" onclick="closeAddRappelModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="addRappelForm" method="post" th:action="@{/rappels}">
+                <input type="hidden" name="entrepriseId" th:value="${selectedEntrepriseId}" id="addEntrepriseId">
+                <div class="form-group">
+                    <label for="addMachineId">Machine *</label>
+                    <select name="machineId" id="addMachineId" required>
+                        <option value="">-- Sélectionner une machine --</option>
+                        <option th:each="machine : ${machines}" 
+                                th:value="${machine.machineId}" 
+                                th:text="${machine.nom}">
+                        </option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="addDescription">Description</label>
+                    <textarea name="description" id="addDescription" placeholder="Description du rappel..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="addDateVerification">Date de vérification *</label>
+                    <input type="date" name="dateVerification" id="addDateVerification" required>
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="activerRelance" id="addActiverRelance" onchange="toggleRelancesAdd()">
+                        <label for="addActiverRelance">Activer les relances</label>
+                    </div>
+                </div>
+                <div class="form-group" id="addNombreRelancesGroup" style="display: none;">
+                    <label for="addNombreRelances">Nombre de relances</label>
+                    <input type="number" name="nombreRelances" id="addNombreRelances" min="1" value="1">
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-outline" onclick="closeAddRappelModal()">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Créer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Modifier Rappel -->
+    <div id="editRappelModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Modifier le Rappel</h2>
+                <button class="btn btn-outline" onclick="closeEditRappelModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="editRappelForm" method="post">
+                <div class="form-group">
+                    <label for="editMachineNom">Machine</label>
+                    <input type="text" id="editMachineNom" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="editDescription">Description</label>
+                    <textarea name="description" id="editDescription" placeholder="Description du rappel..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editDateVerification">Date de vérification *</label>
+                    <input type="date" name="dateVerification" id="editDateVerification" required>
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="activerRelance" id="editActiverRelance" onchange="toggleRelancesEdit()">
+                        <label for="editActiverRelance">Activer les relances</label>
+                    </div>
+                </div>
+                <div class="form-group" id="editNombreRelancesGroup" style="display: none;">
+                    <label for="editNombreRelances">Nombre de relances</label>
+                    <input type="number" name="nombreRelances" id="editNombreRelances" min="1" value="1">
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-outline" onclick="closeEditRappelModal()">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<script>
+// Script pour le menu mobile
+(function() {
+    function initMenu() {
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('mainSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (!menuToggle || !sidebar || !overlay) return false;
+        menuToggle.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (sidebar.classList.contains('open')) {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('show');
+                setTimeout(() => overlay.style.display = 'none', 300);
+                document.body.style.overflow = '';
+            } else {
+                sidebar.classList.add('open');
+                overlay.style.display = 'block';
+                setTimeout(() => overlay.classList.add('show'), 10);
+                document.body.style.overflow = 'hidden';
+            }
+        };
+        overlay.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            sidebar.classList.remove('open');
+            overlay.classList.remove('show');
+            setTimeout(() => overlay.style.display = 'none', 300);
+            document.body.style.overflow = '';
+        };
+        return true;
+    }
+    if (!initMenu()) {
+        setTimeout(function() {
+            if (!initMenu()) setTimeout(initMenu, 500);
+        }, 100);
+    }
+})();
+</script>
+
+</body>
+</html>
+

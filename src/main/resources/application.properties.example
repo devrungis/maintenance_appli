@@ -1,0 +1,71 @@
+spring.application.name=maintenance
+server.port=9001
+
+# Firebase configuration
+# Obtenez ces valeurs depuis votre console Firebase
+firebase.enabled=true
+firebase.api.key=YOUR_FIREBASE_API_KEY
+firebase.project.id=YOUR_FIREBASE_PROJECT_ID
+firebase.realtime.database.url=https://YOUR_PROJECT_ID-default-rtdb.REGION.firebasedatabase.app/
+# Placez votre fichier de credentials Firebase dans src/main/resources/
+# et nommez-le: YOUR_PROJECT_ID-firebase-adminsdk-XXXXX.json
+firebase.credentials.path=classpath:YOUR_FIREBASE_CREDENTIALS_FILE.json
+media.storage.base-path=uploads
+
+# JPA / Hibernate
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+spring.jpa.hibernate.ddl-auto=create-drop
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.defer-datasource-initialization=true
+
+# Datasource H2 (in-memory)
+spring.datasource.url=jdbc:h2:mem:maintenancedb
+spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=
+
+# H2 console
+spring.h2.console.enabled=true
+spring.h2.console.path=/h2-console
+
+# Logging (optional but helpful)
+logging.level.org.springframework.boot.context.properties=WARN
+logging.level.org.springframework.web.client.RestTemplate=WARN
+logging.level.org.apache.http=WARN
+logging.level.org.springframework.http=WARN
+spring.jpa.show-sql=false
+spring.jpa.properties.hibernate.format_sql=false
+
+# Thymeleaf
+spring.thymeleaf.cache=false
+
+# Session Management
+server.servlet.session.timeout=30m
+server.servlet.session.cookie.http-only=true
+server.servlet.session.cookie.secure=false
+server.servlet.session.cookie.max-age=1800
+server.servlet.session.tracking-modes=cookie
+
+# Spring Mail Configuration
+# Configuration SMTP - Configurez avec vos propres identifiants
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=YOUR_EMAIL@gmail.com
+spring.mail.password=YOUR_APP_PASSWORD
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.smtp.starttls.required=true
+# Timeouts réduits pour éviter les blocages
+spring.mail.properties.mail.smtp.connectiontimeout=5000
+spring.mail.properties.mail.smtp.timeout=5000
+spring.mail.properties.mail.smtp.writetimeout=5000
+# Ne pas bloquer le démarrage si SMTP est indisponible
+spring.mail.properties.mail.smtp.connectionpoolsize=1
+spring.mail.properties.mail.smtp.ssl.trust=smtp.gmail.com
+spring.mail.properties.mail.smtp.ssl.protocols=TLSv1.2
+spring.mail.default-encoding=UTF-8
+spring.mail.from=noreply@maintenance.com
+# Désactiver la vérification de la connexion au démarrage
+spring.mail.test-connection=false
+

@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Tickets</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #1d4ed8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --border: #e5e7eb;
+            --bg: #f8fafc;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: #111827;
+            margin: 0;
+            padding: 0;
+        }
+        .page {
+            display: flex;
+            min-height: 100vh;
+        }
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            margin-left: 250px;
+        }
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            z-index: 1000;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 20px;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            position: relative;
+            overflow: hidden;
+        }
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+            border-radius: 20px 20px 0 0;
+        }
+        .page-header h1 {
+            color: #1f2937;
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #1f2937, #64748b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 0;
+        }
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+        }
+        .filters {
+            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .filters select {
+            padding: 0.65rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: white;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        .kanban-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        .kanban-column {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 250px);
+        }
+        .kanban-column-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border);
+        }
+        .kanban-column-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        .kanban-column-header .count {
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        .kanban-column.a-faire .kanban-column-header h2 { color: #6b7280; }
+        .kanban-column.en-cours .kanban-column-header h2 { color: var(--primary); }
+        .kanban-column.termine .kanban-column-header h2 { color: var(--success); }
+        .kanban-column.historique .kanban-column-header h2 { color: #9ca3af; }
+        .kanban-column.a-faire .kanban-column-header .count { background: #6b7280; }
+        .kanban-column.en-cours .kanban-column-header .count { background: var(--primary); }
+        .kanban-column.termine .kanban-column-header .count { background: var(--success); }
+        .kanban-column.historique .kanban-column-header .count { background: #9ca3af; }
+        .kanban-column-content {
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .ticket-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: move;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .ticket-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+        .ticket-card.priorite-urgente {
+            border-left: 4px solid var(--danger);
+        }
+        .ticket-card.priorite-haute {
+            border-left: 4px solid var(--warning);
+        }
+        .ticket-card.priorite-normale {
+            border-left: 4px solid var(--primary);
+        }
+        .ticket-card.priorite-basse {
+            border-left: 4px solid #9ca3af;
+        }
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 0.75rem;
+        }
+        .ticket-title {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #1f2937;
+            margin: 0;
+        }
+        .ticket-priority {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .ticket-priority.urgente { background: #fee2e2; color: var(--danger); }
+        .ticket-priority.haute { background: #fef3c7; color: var(--warning); }
+        .ticket-priority.normale { background: #dbeafe; color: var(--primary); }
+        .ticket-priority.basse { background: #f3f4f6; color: #6b7280; }
+        .ticket-description {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 0.75rem;
+            line-height: 1.5;
+        }
+        .ticket-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+        .ticket-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .ticket-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border);
+        }
+        .btn-small {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.75rem;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-small.btn-success {
+            background: var(--success);
+            color: white;
+        }
+        .btn-small.btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+        .btn-small.btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        .btn-small:hover {
+            opacity: 0.9;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.show {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6b7280;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #374151;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #10b981;
+        }
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+        
+        /* Styles pour le chat des commentaires */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 500px;
+            background: #ffffff;
+            border-radius: 16px;
+            border: 2px solid #e2e8f0;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.75rem 0.5rem;
+            background: linear-gradient(to bottom, #f8fafc 0%, #ffffff 100%);
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            scroll-behavior: smooth;
+        }
+        
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        
+        .chat-message {
+            display: flex;
+            flex-direction: column;
+            padding: 0.5rem 0.75rem;
+            border-radius: 12px;
+            max-width: 60%;
+            min-width: 150px;
+            word-wrap: break-word;
+            animation: slideInMessage 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+        }
+        
+        @keyframes slideInMessage {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .chat-message:hover {
+            transform: translateY(-3px) scale(1.01);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+        
+        .chat-message.own {
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        
+        .chat-message.other {
+            align-self: flex-start;
+            margin-right: auto;
+        }
+        
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.375rem;
+            gap: 0.5rem;
+        }
+        
+        .message-author {
+            font-weight: 700;
+            font-size: 0.75rem;
+            letter-spacing: 0.2px;
+        }
+        
+        .message-date {
+            font-size: 0.7rem;
+            opacity: 0.85;
+            font-weight: 500;
+        }
+        
+        .message-text {
+            line-height: 1.5;
+            font-size: 0.8rem;
+            word-break: break-word;
+        }
+        
+        .message-image {
+            margin-top: 0.5rem;
+            border-radius: 8px;
+            overflow: hidden;
+            max-width: 100%;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        
+        .message-image:hover {
+            transform: scale(1.02);
+        }
+        
+        .message-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+            max-width: 250px;
+        }
+        
+        .chat-input-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            padding: 1.25rem;
+            border-top: 2px solid #e2e8f0;
+            background: linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%);
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        .chat-actions {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        
+        .chat-image-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            border: 2px solid #cbd5e1;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #64748b;
+        }
+        
+        .chat-image-btn:hover {
+            background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .chat-image-preview {
+            position: relative;
+            margin-top: 0.75rem;
+            border-radius: 12px;
+            overflow: hidden;
+            max-width: 300px;
+        }
+        
+        .chat-image-preview img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .remove-image-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(239, 68, 68, 0.9);
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        
+        .remove-image-btn:hover {
+            background: rgba(239, 68, 68, 1);
+            transform: scale(1.1);
+        }
+        
+        .message-image {
+            margin-top: 0.75rem;
+            border-radius: 12px;
+            overflow: hidden;
+            max-width: 100%;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        
+        .message-image:hover {
+            transform: scale(1.02);
+        }
+        
+        .message-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .chat-input-wrapper {
+            flex: 1;
+            position: relative;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            padding: 0.5rem;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+        
+        .chat-input-wrapper:focus-within {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .chat-input-container textarea {
+            width: 100%;
+            min-height: 80px;
+            max-height: 150px;
+            resize: none;
+            padding: 0.875rem 1rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            background: transparent;
+            line-height: 1.6;
+        }
+        
+        .chat-input-container textarea:focus {
+            outline: none;
+        }
+        
+        .chat-input-container textarea::placeholder {
+            color: #94a3b8;
+            font-style: italic;
+        }
+        
+        .chat-send-button {
+            align-self: flex-end;
+            padding: 1rem 2rem;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .chat-send-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+        
+        .chat-send-button:hover::before {
+            left: 100%;
+        }
+        
+        .chat-send-button:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 6px 24px rgba(59, 130, 246, 0.4);
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        }
+        
+        .chat-send-button:active {
+            transform: translateY(-1px) scale(0.98);
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        }
+        
+        .chat-send-button i {
+            font-size: 1.1rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .chat-send-button:hover i {
+            transform: translateX(3px);
+        }
+        
+        .chat-send-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .ticket-info-section {
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            border: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header mobile -->
+    <header class="mobile-header">
+        <div class="header-content">
+            <button class="menu-toggle" id="menuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div style="flex: 1;">
+                <h1 class="app-title">
+                    <i class="fas fa-wrench"></i>
+                    Maintenance
+                </h1>
+                <div id="currentEnterpriseMobile" style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                    <!-- Entreprise actuelle -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Overlay pour sidebar mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="page">
+    <th:block th:replace="fragments/menu :: menu"></th:block>
+    <div class="main-content">
+            <div class="page-header">
+                <h1><i class="fas fa-ticket-alt"></i> Gestion des Tickets</h1>
+                <div class="header-actions">
+                    <button th:if="${isSuperAdmin}" class="btn btn-primary" onclick="showCreateModal()">
+                        <i class="fas fa-plus"></i> Nouveau Ticket
+                    </button>
+                </div>
+            </div>
+
+            <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+            <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+            <div class="filters">
+                <label>Entreprise:</label>
+                <select id="entrepriseSelect" onchange="changeEntreprise()">
+                    <option value="">Sélectionner une entreprise</option>
+                    <option th:each="entreprise : ${enterprises}"
+                            th:value="${entreprise.entrepriseId}"
+                            th:text="${entreprise.nom}"
+                            th:selected="${selectedEntrepriseId == entreprise.entrepriseId}"></option>
+                </select>
+            </div>
+
+            <div th:if="${!#strings.isEmpty(selectedEntrepriseId)}" class="kanban-board">
+                <!-- Colonne À faire -->
+                <div class="kanban-column a-faire">
+                    <div class="kanban-column-header">
+                        <h2>À faire</h2>
+                        <span class="count" th:text="${#lists.size(ticketsAFaire)}">0</span>
+                    </div>
+                    <div class="kanban-column-content">
+                        <div th:each="ticket : ${ticketsAFaire}" class="ticket-card" 
+                             th:data-ticket-id="${ticket.ticketId}"
+                             th:data-statut="${ticket.statut}"
+                             th:data-titre="${ticket.titre != null ? ticket.titre : ''}"
+                             th:data-description="${ticket.description != null ? ticket.description : ''}"
+                             th:data-priorite="${ticket.priorite != null ? ticket.priorite : 'normale'}"
+                             th:data-machine-id="${ticket.machineId != null ? ticket.machineId : ''}"
+                             th:data-assigne-a="${ticket.assigneA != null ? ticket.assigneA : ''}"
+                             th:data-categorie="${ticket.categorie != null ? ticket.categorie : ''}"
+                             th:data-date-echeance="${ticket.dateEcheance != null ? ticket.dateEcheance : ''}"
+                             th:data-entreprise-id="${selectedEntrepriseId}"
+                             th:classappend="'priorite-' + ${ticket.priorite}"
+                             ondblclick="openTicketFollowUp(this)">
+                            <div class="ticket-header">
+                                <h3 class="ticket-title" th:text="${ticket.titre}">Titre</h3>
+                                <span class="ticket-priority" 
+                                      th:text="${ticket.priorite}"
+                                      th:classappend="${ticket.priorite}"></span>
+                            </div>
+                            <div class="ticket-description" th:text="${ticket.description}">Description</div>
+                            <div class="ticket-meta">
+                                <span th:if="${ticket.machineNom}">
+                                    <i class="fas fa-cogs"></i> <span th:text="${ticket.machineNom}"></span>
+                                </span>
+                                <span th:if="${ticket.assigneANom}">
+                                    <i class="fas fa-user"></i> <span th:text="${ticket.assigneANom}"></span>
+                                </span>
+                                <span th:if="${ticket.dateCreation}">
+                                    <i class="fas fa-calendar-plus"></i> <span th:attr="data-timestamp=${ticket.dateCreation}" class="format-date"></span>
+                                </span>
+                                <span th:if="${ticket.dateEcheance}">
+                                    <i class="fas fa-calendar-check"></i> <span th:text="'Échéance: '" th:attr="data-timestamp=${ticket.dateEcheance}" class="format-date"></span>
+                                </span>
+                            </div>
+                            <div class="ticket-actions">
+                                <button class="btn-small btn-success" 
+                                        type="button"
+                                        onclick="event.stopPropagation(); var tCard = this.closest('.ticket-card'); moveTicket(tCard ? tCard.getAttribute('data-ticket-id') : '', 'en_cours');">
+                                    <i class="fas fa-play"></i> Démarrer
+                                </button>
+                                <button th:if="${isSuperAdmin}" class="btn-small btn-warning btn-edit-ticket" 
+                                        type="button"
+                                        onclick="event.stopPropagation();">
+                                    <i class="fas fa-edit"></i> Modifier
+                                </button>
+                                <button th:if="${isSuperAdmin}" class="btn-small btn-danger" 
+                                        type="button"
+                                        onclick="event.stopPropagation(); var tCard = this.closest('.ticket-card'); deleteTicket(tCard ? tCard.getAttribute('data-ticket-id') : '');">
+                                    <i class="fas fa-trash"></i> Supprimer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Colonne En cours -->
+                <div class="kanban-column en-cours">
+                    <div class="kanban-column-header">
+                        <h2>En cours</h2>
+                        <span class="count" th:text="${#lists.size(ticketsEnCours)}">0</span>
+                    </div>
+                    <div class="kanban-column-content">
+                        <div th:each="ticket : ${ticketsEnCours}" class="ticket-card"
+                             th:data-ticket-id="${ticket.ticketId}"
+                             th:data-statut="${ticket.statut}"
+                             th:data-titre="${ticket.titre != null ? ticket.titre : ''}"
+                             th:data-description="${ticket.description != null ? ticket.description : ''}"
+                             th:data-priorite="${ticket.priorite != null ? ticket.priorite : 'normale'}"
+                             th:data-machine-id="${ticket.machineId != null ? ticket.machineId : ''}"
+                             th:data-assigne-a="${ticket.assigneA != null ? ticket.assigneA : ''}"
+                             th:data-categorie="${ticket.categorie != null ? ticket.categorie : ''}"
+                             th:data-date-echeance="${ticket.dateEcheance != null ? ticket.dateEcheance : ''}"
+                             th:data-entreprise-id="${selectedEntrepriseId}"
+                             th:classappend="'priorite-' + ${ticket.priorite}"
+                             ondblclick="openTicketFollowUp(this)">
+                            <div class="ticket-header">
+                                <h3 class="ticket-title" th:text="${ticket.titre}">Titre</h3>
+                                <span class="ticket-priority" 
+                                      th:text="${ticket.priorite}"
+                                      th:classappend="${ticket.priorite}"></span>
+                            </div>
+                            <div class="ticket-description" th:text="${ticket.description}">Description</div>
+                            <div class="ticket-meta">
+                                <span th:if="${ticket.machineNom}">
+                                    <i class="fas fa-cogs"></i> <span th:text="${ticket.machineNom}"></span>
+                                </span>
+                                <span th:if="${ticket.assigneANom}">
+                                    <i class="fas fa-user"></i> <span th:text="${ticket.assigneANom}"></span>
+                                </span>
+                                <span th:if="${ticket.dateCreation}">
+                                    <i class="fas fa-calendar-plus"></i> <span th:attr="data-timestamp=${ticket.dateCreation}" class="format-date"></span>
+                                </span>
+                                <span th:if="${ticket.dateEcheance}">
+                                    <i class="fas fa-calendar-check"></i> <span th:text="'Échéance: '" th:attr="data-timestamp=${ticket.dateEcheance}" class="format-date"></span>
+                                </span>
+                            </div>
+                            <div class="ticket-actions">
+                                <button class="btn-small btn-success" 
+                                        type="button"
+                                        onclick="event.stopPropagation(); var tCard = this.closest('.ticket-card'); moveTicket(tCard ? tCard.getAttribute('data-ticket-id') : '', 'termine');">
+                                    <i class="fas fa-check"></i> Terminer
+                                </button>
+                                <button th:if="${isSuperAdmin}" class="btn-small btn-warning btn-edit-ticket" 
+                                        type="button"
+                                        onclick="event.stopPropagation();">
+                                    <i class="fas fa-edit"></i> Modifier
+                                </button>
+                                <button th:if="${isSuperAdmin}" class="btn-small btn-danger" 
+                                        type="button"
+                                        onclick="event.stopPropagation(); var tCard = this.closest('.ticket-card'); deleteTicket(tCard ? tCard.getAttribute('data-ticket-id') : '');">
+                                    <i class="fas fa-trash"></i> Supprimer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Colonne Terminé -->
+                <div class="kanban-column termine">
+                    <div class="kanban-column-header">
+                        <h2>Terminé</h2>
+                        <span class="count" th:text="${#lists.size(ticketsTermines)}">0</span>
+                    </div>
+                    <div class="kanban-column-content">
+                        <div th:each="ticket : ${ticketsTermines}" class="ticket-card"
+                             th:data-ticket-id="${ticket.ticketId}"
+                             th:data-statut="${ticket.statut}"
+                             th:data-titre="${ticket.titre != null ? ticket.titre : ''}"
+                             th:data-description="${ticket.description != null ? ticket.description : ''}"
+                             th:data-priorite="${ticket.priorite != null ? ticket.priorite : 'normale'}"
+                             th:data-machine-id="${ticket.machineId != null ? ticket.machineId : ''}"
+                             th:data-assigne-a="${ticket.assigneA != null ? ticket.assigneA : ''}"
+                             th:data-categorie="${ticket.categorie != null ? ticket.categorie : ''}"
+                             th:data-date-echeance="${ticket.dateEcheance != null ? ticket.dateEcheance : ''}"
+                             th:data-entreprise-id="${selectedEntrepriseId}"
+                             th:classappend="'priorite-' + ${ticket.priorite}"
+                             ondblclick="openTicketFollowUp(this)">
+                            <div class="ticket-header">
+                                <h3 class="ticket-title" th:text="${ticket.titre}">Titre</h3>
+                                <span class="ticket-priority" 
+                                      th:text="${ticket.priorite}"
+                                      th:classappend="${ticket.priorite}"></span>
+                            </div>
+                            <div class="ticket-description" th:text="${ticket.description}">Description</div>
+                            <div class="ticket-meta">
+                                <span th:if="${ticket.machineNom}">
+                                    <i class="fas fa-cogs"></i> <span th:text="${ticket.machineNom}"></span>
+                                </span>
+                                <span th:if="${ticket.assigneANom}">
+                                    <i class="fas fa-user"></i> <span th:text="${ticket.assigneANom}"></span>
+                                </span>
+                                <span th:if="${ticket.dateCreation}">
+                                    <i class="fas fa-calendar-plus"></i> <span th:attr="data-timestamp=${ticket.dateCreation}" class="format-date"></span>
+                                </span>
+                                <span th:if="${ticket.dateEcheance}">
+                                    <i class="fas fa-calendar-check"></i> <span th:text="'Échéance: '" th:attr="data-timestamp=${ticket.dateEcheance}" class="format-date"></span>
+                                </span>
+                            </div>
+                            <div class="ticket-actions">
+                                <button class="btn-small btn-success" 
+                                        type="button"
+                                        onclick="event.stopPropagation(); var tCard = this.closest('.ticket-card'); archiveTicket(tCard ? tCard.getAttribute('data-ticket-id') : '');">
+                                    <i class="fas fa-archive"></i> Archiver
+                                </button>
+                                <button th:if="${isSuperAdmin}" class="btn-small btn-warning btn-edit-ticket" 
+                                        type="button"
+                                        onclick="event.stopPropagation();">
+                                    <i class="fas fa-edit"></i> Modifier
+                                </button>
+                                <button th:if="${isSuperAdmin}" class="btn-small btn-danger" 
+                                        type="button"
+                                        onclick="event.stopPropagation(); var tCard = this.closest('.ticket-card'); deleteTicket(tCard ? tCard.getAttribute('data-ticket-id') : '');">
+                                    <i class="fas fa-trash"></i> Supprimer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Colonne Historique -->
+                <div class="kanban-column historique">
+                    <div class="kanban-column-header">
+                        <h2>Historique</h2>
+                        <span class="count" th:text="${#lists.size(ticketsArchives)}">0</span>
+                    </div>
+                    <div class="kanban-column-content">
+                        <div th:each="ticket : ${ticketsArchives}" class="ticket-card"
+                             th:attr="data-ticket-id=${ticket.ticketId}, data-statut=${ticket.statut}, data-entreprise-id=${selectedEntrepriseId}, data-titre=${ticket.titre != null ? ticket.titre : ''}, data-description=${ticket.description != null ? ticket.description : ''}, data-priorite=${ticket.priorite != null ? ticket.priorite : 'normale'}, data-categorie=${ticket.categorie != null ? ticket.categorie : ''}"
+                             th:classappend="'priorite-' + ${ticket.priorite}"
+                             ondblclick="openTicketFollowUp(this)">
+                            <div class="ticket-header">
+                                <h3 class="ticket-title" th:text="${ticket.titre}">Titre</h3>
+                                <span class="ticket-priority" 
+                                      th:text="${ticket.priorite}"
+                                      th:classappend="${ticket.priorite}"></span>
+                            </div>
+                            <div class="ticket-description" th:text="${ticket.description}">Description</div>
+                            <div class="ticket-meta">
+                                <span th:if="${ticket.machineNom}">
+                                    <i class="fas fa-cogs"></i> <span th:text="${ticket.machineNom}"></span>
+                                </span>
+                                <span th:if="${ticket.assigneANom}">
+                                    <i class="fas fa-user"></i> <span th:text="${ticket.assigneANom}"></span>
+                                </span>
+                            </div>
+                            <div class="ticket-actions">
+                                <button th:if="${isSuperAdmin}" class="btn-small btn-danger" 
+                                        type="button"
+                                        onclick="event.stopPropagation(); deleteTicket('${ticket.ticketId}');">
+                                    <i class="fas fa-trash"></i> Supprimer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div th:if="${#strings.isEmpty(selectedEntrepriseId)}" style="text-align: center; padding: 3rem; background: white; border-radius: 12px; border: 1px solid var(--border);">
+                <i class="fas fa-info-circle" style="font-size: 3rem; color: var(--primary); margin-bottom: 1rem;"></i>
+                <h2 style="color: #6b7280; margin-bottom: 0.5rem;">Aucune entreprise sélectionnée</h2>
+                <p style="color: #9ca3af;">Veuillez sélectionner une entreprise pour voir les tickets.</p>
+            </div>
+            
+            <!-- Input caché pour l'ID de l'utilisateur actuel -->
+            <input type="hidden" id="currentUserId" th:value="${currentUserId}">
+    </div>
+</div>
+
+    <!-- Modal de création -->
+    <div id="createModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Nouveau Ticket</h2>
+                <button class="close-btn" onclick="closeModal('createModal')">&times;</button>
+            </div>
+            <form method="post" action="/tickets" id="createTicketForm">
+                <input type="hidden" name="entrepriseId" th:value="${selectedEntrepriseId}">
+                <div class="form-group">
+                    <label>Titre *</label>
+                    <input type="text" name="titre" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Priorité</label>
+                    <select name="priorite">
+                        <option value="basse">Basse</option>
+                        <option value="normale" selected>Normale</option>
+                        <option value="haute">Haute</option>
+                        <option value="urgente">Urgente</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Machine</label>
+                    <select name="machineId">
+                        <option value="">Aucune machine</option>
+                        <option th:each="machine : ${machines}"
+                                th:value="${machine.machineId}"
+                                th:text="${machine.nom}"></option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Assigné à</label>
+                    <select name="assigneA">
+                        <option value="">Non assigné</option>
+                        <option th:each="user : ${users}"
+                                th:value="${user.userId}"
+                                th:text="${(user.prenom ?: '') + ' ' + (user.nom ?: '')}"></option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Catégorie</label>
+                    <input type="text" name="categorie" placeholder="Ex: Maintenance, Réparation...">
+                </div>
+                <div class="form-group">
+                    <label>Date d'échéance</label>
+                    <input type="date" name="dateEcheance">
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" class="btn" onclick="closeModal('createModal')">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Créer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal d'édition -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Modifier le Ticket</h2>
+                <button class="close-btn" onclick="closeModal('editModal')">&times;</button>
+            </div>
+            <form method="post" id="editTicketForm">
+                <input type="hidden" id="editEntrepriseId" name="entrepriseId" th:value="${selectedEntrepriseId}">
+                <input type="hidden" id="editTicketId" name="ticketId">
+                <div class="form-group">
+                    <label>Titre *</label>
+                    <input type="text" id="editTitre" name="titre" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="editDescription" name="description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Priorité</label>
+                    <select id="editPriorite" name="priorite">
+                        <option value="basse">Basse</option>
+                        <option value="normale">Normale</option>
+                        <option value="haute">Haute</option>
+                        <option value="urgente">Urgente</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Machine</label>
+                    <select id="editMachineId" name="machineId">
+                        <option value="">Aucune machine</option>
+                        <option th:each="machine : ${machines}"
+                                th:value="${machine.machineId}"
+                                th:text="${machine.nom}"></option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Assigné à</label>
+                    <select id="editAssigneA" name="assigneA">
+                        <option value="">Non assigné</option>
+                        <option th:each="user : ${users}"
+                                th:value="${user.userId}"
+                                th:text="${(user.prenom ?: '') + ' ' + (user.nom ?: '')}"></option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Catégorie</label>
+                    <input type="text" id="editCategorie" name="categorie" placeholder="Ex: Maintenance, Réparation...">
+                </div>
+                <div class="form-group">
+                    <label>Date d'échéance</label>
+                    <input type="date" id="editDateEcheance" name="dateEcheance">
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" class="btn" onclick="closeModal('editModal')">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+    <script>
+        // Fonction pour formater les dates
+        function formatDate(timestamp) {
+            if (!timestamp) return '';
+            try {
+                const date = new Date(parseInt(timestamp));
+                if (isNaN(date.getTime())) return '';
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = date.getFullYear();
+                return day + '/' + month + '/' + year;
+            } catch (e) {
+                return '';
+            }
+        }
+
+        function formatDateForInput(timestamp) {
+            if (!timestamp) return '';
+            try {
+                const date = new Date(parseInt(timestamp));
+                if (isNaN(date.getTime())) return '';
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = date.getFullYear();
+                return year + '-' + month + '-' + day;
+            } catch (e) {
+                return '';
+            }
+        }
+
+        // Formater toutes les dates au chargement
+        function initializePage() {
+            try {
+                // Formater les dates
+                document.querySelectorAll('.format-date').forEach(function(element) {
+                    const timestamp = element.getAttribute('data-timestamp');
+                    if (timestamp) {
+                        const prefix = element.textContent.trim();
+                        if (prefix === 'Échéance:') {
+                            element.textContent = prefix + ' ' + formatDate(timestamp);
+                        } else {
+                            element.textContent = formatDate(timestamp);
+                        }
+                    }
+                });
+                
+            // Ajouter les event listeners pour les boutons d'édition
+            document.querySelectorAll('.btn-edit-ticket').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    // Récupérer les données depuis la carte parente
+                    const ticketCard = this.closest('.ticket-card');
+                    if (!ticketCard) return;
+                    
+                    const ticketId = ticketCard.getAttribute('data-ticket-id') || '';
+                    const titre = ticketCard.getAttribute('data-titre') || '';
+                    const description = ticketCard.getAttribute('data-description') || '';
+                    const priorite = ticketCard.getAttribute('data-priorite') || 'normale';
+                    const machineId = ticketCard.getAttribute('data-machine-id') || '';
+                    const assigneA = ticketCard.getAttribute('data-assigne-a') || '';
+                    const categorie = ticketCard.getAttribute('data-categorie') || '';
+                    const dateEcheance = ticketCard.getAttribute('data-date-echeance') || '';
+                    showEditModal(ticketId, titre, description, priorite, machineId, assigneA, categorie, dateEcheance);
+                });
+            });
+            } catch (e) {
+                console.error('Erreur lors de l\'initialisation:', e);
+            }
+        }
+
+        // Initialiser au chargement du DOM
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializePage);
+        } else {
+            initializePage();
+        }
+
+        function changeEntreprise() {
+            const entrepriseId = document.getElementById('entrepriseSelect').value;
+            if (entrepriseId) {
+                window.location.href = '/tickets?entrepriseId=' + entrepriseId;
+            }
+        }
+
+        function showCreateModal() {
+            const entrepriseId = document.getElementById('entrepriseSelect').value;
+            if (!entrepriseId) {
+                alert('Veuillez sélectionner une entreprise d\'abord.');
+                return;
+            }
+            document.getElementById('createModal').classList.add('show');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+
+        function moveTicket(ticketId, newStatut) {
+            const entrepriseId = document.getElementById('entrepriseSelect').value;
+            if (!entrepriseId) {
+                alert('Veuillez sélectionner une entreprise.');
+                return;
+            }
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/tickets/' + entrepriseId + '/' + ticketId + '/statut';
+            
+            const statutInput = document.createElement('input');
+            statutInput.type = 'hidden';
+            statutInput.name = 'statut';
+            statutInput.value = newStatut;
+            form.appendChild(statutInput);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        function archiveTicket(ticketId) {
+            if (!confirm('Voulez-vous archiver ce ticket ?')) {
+                return;
+            }
+            
+            const entrepriseId = document.getElementById('entrepriseSelect').value;
+            if (!entrepriseId) {
+                alert('Veuillez sélectionner une entreprise.');
+                return;
+            }
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/tickets/' + entrepriseId + '/' + ticketId + '/archive';
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        function showEditModal(ticketId, titre, description, priorite, machineId, assigneA, categorie, dateEcheance) {
+            const entrepriseId = document.getElementById('entrepriseSelect').value;
+            if (!entrepriseId) {
+                alert('Veuillez sélectionner une entreprise.');
+                return;
+            }
+            
+            // Remplir le formulaire d'édition
+            document.getElementById('editTicketId').value = ticketId || '';
+            document.getElementById('editEntrepriseId').value = entrepriseId;
+            document.getElementById('editTitre').value = titre || '';
+            document.getElementById('editDescription').value = description || '';
+            document.getElementById('editPriorite').value = priorite || 'normale';
+            document.getElementById('editMachineId').value = machineId || '';
+            document.getElementById('editAssigneA').value = assigneA || '';
+            document.getElementById('editCategorie').value = categorie || '';
+            
+            // Formater la date d'échéance si c'est un timestamp
+            if (dateEcheance) {
+                const dateEcheanceNum = parseInt(dateEcheance);
+                if (!isNaN(dateEcheanceNum) && dateEcheanceNum > 0) {
+                    // C'est un timestamp
+                    document.getElementById('editDateEcheance').value = formatDateForInput(dateEcheanceNum);
+                } else {
+                    // C'est déjà une date formatée ou vide
+                    document.getElementById('editDateEcheance').value = dateEcheance || '';
+                }
+            } else {
+                document.getElementById('editDateEcheance').value = '';
+            }
+            
+            // Mettre à jour l'action du formulaire
+            document.getElementById('editTicketForm').action = '/tickets/' + entrepriseId + '/' + ticketId;
+            
+            // Afficher le modal
+            document.getElementById('editModal').classList.add('show');
+        }
+
+        function deleteTicket(ticketId) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer ce ticket ? Cette action est irréversible.')) {
+                return;
+            }
+            
+            const entrepriseId = document.getElementById('entrepriseSelect').value;
+            if (!entrepriseId) {
+                alert('Veuillez sélectionner une entreprise.');
+                return;
+            }
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/tickets/' + entrepriseId + '/' + ticketId + '/delete';
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+    </script>
+
+    <!-- Modal de suivi du ticket (chat) -->
+    <div id="followUpModal" class="modal">
+        <div class="modal-content" style="max-width: 800px; width: 95%;">
+            <div class="modal-header">
+                <h2 id="followUpTicketTitle">Suivi du Ticket</h2>
+                <button class="close-btn" onclick="closeModal('followUpModal')">&times;</button>
+            </div>
+            
+            <!-- Informations du ticket -->
+            <div id="followUpTicketInfo" class="ticket-info-section">
+                <!-- Les infos seront chargées ici -->
+            </div>
+            
+            <!-- Zone de chat -->
+            <div class="chat-container">
+                <div id="chatMessages" class="chat-messages">
+                    <!-- Les messages seront chargés ici -->
+                </div>
+                <form id="chatForm" class="chat-input-container" enctype="multipart/form-data">
+                    <input type="hidden" id="chatEntrepriseId" name="entrepriseId">
+                    <input type="hidden" id="chatTicketId" name="ticketId">
+                    <div class="chat-input-wrapper">
+                        <textarea name="texte" id="chatMessageInput" placeholder="💬 Écrivez votre message d'avancement... (Entrée pour envoyer, Shift+Entrée pour nouvelle ligne)"></textarea>
+                        <div class="chat-image-preview" id="chatImagePreview" style="display: none;">
+                            <img id="chatImagePreviewImg" src="" alt="Aperçu">
+                            <button type="button" class="remove-image-btn" onclick="removeChatImage()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="chat-actions">
+                        <label for="chatImageInput" class="chat-image-btn" title="Ajouter une photo">
+                            <i class="fas fa-image"></i>
+                            <input type="file" id="chatImageInput" name="image" accept="image/*" style="display: none;" onchange="handleChatImageSelect(event)">
+                        </label>
+                        <button type="submit" class="chat-send-button">
+                            <i class="fas fa-paper-plane"></i>
+                            <span>Envoyer</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Couleurs pour les utilisateurs (générées à partir du hash du nom)
+        const userColors = {};
+        
+        function getUserColor(auteurId, auteurNom) {
+            if (!auteurId) return '#6b7280';
+            if (userColors[auteurId]) return userColors[auteurId];
+            
+            // Générer une couleur à partir du hash de l'ID
+            let hash = 0;
+            for (let i = 0; i < auteurId.length; i++) {
+                hash = auteurId.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            
+            // Palette de couleurs modernes et vibrantes
+            const colors = [
+                '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+                '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1',
+                '#14b8a6', '#a855f7', '#e11d48', '#0ea5e9', '#22c55e',
+                '#f43f5e', '#8b5cf6', '#06b6d4', '#f59e0b', '#10b981'
+            ];
+            const color = colors[Math.abs(hash) % colors.length];
+            userColors[auteurId] = color;
+            return color;
+        }
+        
+        // Fonction pour ajuster la luminosité d'une couleur
+        function adjustColor(color, percent) {
+            const num = parseInt(color.replace("#",""), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = Math.min(255, Math.max(0, (num >> 16) + amt));
+            const G = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + amt));
+            const B = Math.min(255, Math.max(0, (num & 0x0000FF) + amt));
+            return "#" + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+        }
+        
+        // Fonction pour échapper le HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function openTicketFollowUp(ticketCard) {
+            const ticketId = ticketCard.getAttribute('data-ticket-id');
+            const entrepriseId = ticketCard.getAttribute('data-entreprise-id') || document.getElementById('entrepriseSelect')?.value;
+            
+            if (!ticketId || !entrepriseId) {
+                alert('Impossible de charger le ticket. Veuillez sélectionner une entreprise.');
+                return;
+            }
+            
+            document.getElementById('chatTicketId').value = ticketId;
+            document.getElementById('chatEntrepriseId').value = entrepriseId;
+            document.getElementById('chatForm').action = '/tickets/' + entrepriseId + '/' + ticketId + '/commentaire';
+            
+            // Charger les informations du ticket et les commentaires
+            loadTicketFollowUp(entrepriseId, ticketId, ticketCard);
+            
+            document.getElementById('followUpModal').classList.add('show');
+        }
+        
+        function loadTicketFollowUp(entrepriseId, ticketId, ticketCard) {
+            // Charger les infos du ticket depuis les data-attributes
+            const titre = ticketCard.getAttribute('data-titre') || 'Sans titre';
+            const description = ticketCard.getAttribute('data-description') || 'Aucune description';
+            const statut = ticketCard.getAttribute('data-statut') || 'a_faire';
+            const priorite = ticketCard.getAttribute('data-priorite') || 'normale';
+            const categorie = ticketCard.getAttribute('data-categorie') || '';
+            
+            // Afficher les infos du ticket
+            document.getElementById('followUpTicketTitle').textContent = 'Suivi: ' + titre;
+            
+            const statutLabels = {
+                'a_faire': 'À faire',
+                'en_cours': 'En cours',
+                'termine': 'Terminé',
+                'archive': 'Archivé'
+            };
+            
+            const prioriteLabels = {
+                'basse': 'Basse',
+                'normale': 'Normale',
+                'haute': 'Haute',
+                'urgente': 'Urgente'
+            };
+            
+            document.getElementById('followUpTicketInfo').innerHTML = `
+                <div class="ticket-info-row">
+                    <span class="ticket-info-label">Statut:</span>
+                    <span class="ticket-info-value">${statutLabels[statut] || statut}</span>
+                </div>
+                <div class="ticket-info-row">
+                    <span class="ticket-info-label">Priorité:</span>
+                    <span class="ticket-info-value">${prioriteLabels[priorite] || priorite}</span>
+                </div>
+                ${categorie ? `<div class="ticket-info-row">
+                    <span class="ticket-info-label">Catégorie:</span>
+                    <span class="ticket-info-value">${categorie}</span>
+                </div>` : ''}
+                <div class="ticket-info-row">
+                    <span class="ticket-info-label">Description:</span>
+                    <span class="ticket-info-value">${description}</span>
+                </div>
+            `;
+            
+            // Charger les commentaires
+            loadChatMessages(entrepriseId, ticketId);
+        }
+        
+        let lastMessageCount = 0;
+        let isUserScrolling = false;
+        let lastScrollTop = 0;
+        
+        function loadChatMessages(entrepriseId, ticketId, preserveScroll = false) {
+            const chatMessages = document.getElementById('chatMessages');
+            const wasAtBottom = !preserveScroll || (chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < 50);
+            
+            fetch('/tickets/api/' + entrepriseId + '/' + ticketId, {
+                credentials: 'include'
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                    }
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        return response.text().then(text => {
+                            console.error('Réponse non-JSON reçue:', text.substring(0, 200));
+                            throw new Error('La réponse n\'est pas au format JSON.');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(ticket => {
+                    if (!ticket) {
+                        chatMessages.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 2rem;">Ticket introuvable.</p>';
+                        return;
+                    }
+                    
+                    // Si le nombre de messages n'a pas changé et qu'on préserve le scroll, ne rien faire
+                    const currentMessageCount = ticket.commentaires ? ticket.commentaires.length : 0;
+                    if (preserveScroll && currentMessageCount === lastMessageCount) {
+                        return;
+                    }
+                    
+                    // Sauvegarder la position de scroll actuelle
+                    const oldScrollTop = chatMessages.scrollTop;
+                    const oldScrollHeight = chatMessages.scrollHeight;
+                    
+                    // Récupérer l'ID de l'utilisateur actuel
+                    const currentUserId = getCurrentUserId();
+                    
+                    // Nettoyer seulement si nécessaire
+                    if (!preserveScroll || currentMessageCount < lastMessageCount) {
+                        chatMessages.innerHTML = '';
+                    }
+                    
+                    if (ticket.commentaires && ticket.commentaires.length > 0) {
+                        // Si on préserve le scroll, on ajoute seulement les nouveaux messages
+                        const startIndex = preserveScroll ? lastMessageCount : 0;
+                        
+                        for (let i = startIndex; i < ticket.commentaires.length; i++) {
+                            const comment = ticket.commentaires[i];
+                            const isOwn = comment.auteurId === currentUserId;
+                            const userColor = getUserColor(comment.auteurId, comment.auteurNom);
+                            
+                            let dateStr = 'Date inconnue';
+                            if (comment.dateCreation) {
+                                try {
+                                    const date = new Date(comment.dateCreation);
+                                    if (!isNaN(date.getTime())) {
+                                        dateStr = date.toLocaleDateString('fr-FR', {
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        });
+                                    }
+                                } catch (e) {
+                                    console.error('Erreur de formatage de date:', e);
+                                }
+                            }
+                            
+                            const messageDiv = document.createElement('div');
+                            messageDiv.className = 'chat-message ' + (isOwn ? 'own' : 'other');
+                            
+                            // Style amélioré pour les messages avec cartes colorées
+                            if (isOwn) {
+                                // Message de l'utilisateur actuel - carte avec dégradé coloré
+                                messageDiv.style.background = `linear-gradient(135deg, ${userColor} 0%, ${adjustColor(userColor, -20)} 100%)`;
+                                messageDiv.style.color = '#ffffff';
+                                messageDiv.style.boxShadow = `0 6px 20px ${userColor}50, 0 2px 8px ${userColor}30`;
+                                messageDiv.style.border = `2px solid ${adjustColor(userColor, 10)}`;
+                            } else {
+                                // Message des autres - carte blanche avec accent coloré
+                                messageDiv.style.backgroundColor = '#ffffff';
+                                messageDiv.style.borderLeft = `5px solid ${userColor}`;
+                                messageDiv.style.borderTop = `2px solid ${userColor}15`;
+                                messageDiv.style.borderRight = `2px solid ${userColor}15`;
+                                messageDiv.style.borderBottom = `2px solid ${userColor}15`;
+                                messageDiv.style.color = '#1f2937';
+                                messageDiv.style.boxShadow = `0 4px 16px ${userColor}20, 0 2px 8px rgba(0, 0, 0, 0.08)`;
+                            }
+                            
+                            let imageHtml = '';
+                            if (comment.imageUrl && comment.imageUrl.trim()) {
+                                // S'assurer que l'URL est correcte
+                                let imageUrl = comment.imageUrl.trim();
+                                // Si l'URL commence par /media/, elle est déjà correcte
+                                // Sinon, on l'ajoute
+                                if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
+                                    imageUrl = '/' + imageUrl;
+                                }
+                                console.log('Affichage de l\'image:', imageUrl);
+                                imageHtml = `<div class="message-image">
+                                    <img src="${imageUrl}" alt="Image du commentaire" onclick="window.open('${imageUrl}', '_blank')" onerror="console.error('Erreur de chargement de l\\'image:', '${imageUrl}'); this.parentElement.style.display='none';">
+                                </div>`;
+                            }
+                            
+                            let textHtml = '';
+                            if (comment.texte && comment.texte.trim()) {
+                                textHtml = `<div class="message-text" style="color: ${isOwn ? '#ffffff' : '#1e293b'}; margin-top: ${comment.imageUrl && comment.imageUrl.trim() ? '0.375rem' : '0'}; line-height: 1.5; font-size: 0.8rem;">${escapeHtml(comment.texte).replace(/\n/g, '<br>')}</div>`;
+                            }
+                            
+                            messageDiv.innerHTML = `
+                                <div class="message-header">
+                                    <span class="message-author" style="color: ${isOwn ? '#ffffff' : userColor}; font-size: 0.75rem; font-weight: 700;">${comment.auteurNom || 'Utilisateur'}</span>
+                                    <span class="message-date" style="color: ${isOwn ? 'rgba(255,255,255,0.9)' : '#64748b'}; font-size: 0.7rem;">${dateStr}</span>
+                                </div>
+                                ${imageHtml}
+                                ${textHtml}
+                            `;
+                            chatMessages.appendChild(messageDiv);
+                        }
+                        
+                        lastMessageCount = ticket.commentaires.length;
+                        
+                        // Restaurer la position de scroll si l'utilisateur n'était pas en bas
+                        if (preserveScroll && !wasAtBottom) {
+                            const newScrollHeight = chatMessages.scrollHeight;
+                            const scrollDiff = newScrollHeight - oldScrollHeight;
+                            chatMessages.scrollTop = oldScrollTop + scrollDiff;
+                        }
+                    } else {
+                        chatMessages.innerHTML = '<div style="text-align: center; padding: 3rem 1rem;"><div style="font-size: 3rem; margin-bottom: 1rem;">💬</div><p style="color: #94a3b8; font-size: 1rem; font-style: italic;">Aucun message pour le moment.<br>Commencez la conversation !</p></div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur lors du chargement des messages:', error);
+                    document.getElementById('chatMessages').innerHTML = '<p style="color: #ef4444; padding: 2rem; text-align: center;">Erreur lors du chargement des messages: ' + error.message + '</p>';
+                });
+        }
+        
+        function getCurrentUserId() {
+            return document.getElementById('currentUserId')?.value || '';
+        }
+        
+        // Gestion de l'upload d'image
+        function handleChatImageSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('chatImagePreviewImg').src = e.target.result;
+                    document.getElementById('chatImagePreview').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        function removeChatImage() {
+            document.getElementById('chatImageInput').value = '';
+            document.getElementById('chatImagePreview').style.display = 'none';
+            document.getElementById('chatImagePreviewImg').src = '';
+        }
+        
+        // Gestion du formulaire de chat
+        document.getElementById('chatForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const entrepriseId = formData.get('entrepriseId');
+            const ticketId = formData.get('ticketId');
+            const texte = formData.get('texte');
+            const imageFile = formData.get('image');
+            
+            if (!texte.trim() && (!imageFile || imageFile.size === 0)) {
+                alert('Veuillez saisir un message ou ajouter une image');
+                return;
+            }
+            
+            fetch('/tickets/api/' + entrepriseId + '/' + ticketId + '/commentaire', {
+                method: 'POST',
+                credentials: 'include',
+                body: formData
+            })
+            .then(response => {
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    return response.json();
+                }
+                // Si ce n'est pas du JSON, c'est probablement une redirection HTML (session expirée)
+                return response.text().then(text => {
+                    if (text.includes('<!DOCTYPE html>') || text.includes('login')) {
+                        throw new Error('Votre session a expiré. Veuillez vous reconnecter.');
+                    }
+                    throw new Error('Réponse inattendue du serveur');
+                });
+            })
+            .then(data => {
+                if (data.error) {
+                    if (data.error === 'Non authentifié' || data.error.includes('authentifié')) {
+                        alert('Votre session a expiré. Veuillez vous reconnecter.');
+                        window.location.href = '/login';
+                        return;
+                    }
+                    alert('Erreur: ' + data.error);
+                    return;
+                }
+                if (data.success) {
+                    document.getElementById('chatMessageInput').value = '';
+                    removeChatImage();
+                    // Recharger les messages sans préserver le scroll (nouveau message)
+                    loadChatMessages(entrepriseId, ticketId, false);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                if (error.message.includes('session') || error.message.includes('expiré')) {
+                    alert('Votre session a expiré. Veuillez vous reconnecter.');
+                    window.location.href = '/login';
+                } else {
+                    alert('Erreur lors de l\'envoi du message: ' + error.message);
+                }
+            });
+        });
+        
+        // Permettre d'envoyer avec Entrée (mais pas Shift+Entrée)
+        document.getElementById('chatMessageInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                document.getElementById('chatForm').dispatchEvent(new Event('submit'));
+            }
+        });
+        
+        // Auto-refresh des messages toutes les 5 secondes si le modal est ouvert
+        let chatRefreshInterval = null;
+        const followUpModal = document.getElementById('followUpModal');
+        
+        function startChatRefresh() {
+            if (chatRefreshInterval) clearInterval(chatRefreshInterval);
+            chatRefreshInterval = setInterval(() => {
+                if (followUpModal.classList.contains('show')) {
+                    const entrepriseId = document.getElementById('chatEntrepriseId').value;
+                    const ticketId = document.getElementById('chatTicketId').value;
+                    if (entrepriseId && ticketId) {
+                        // Préserver le scroll lors de l'auto-refresh
+                        loadChatMessages(entrepriseId, ticketId, true);
+                    }
+                }
+            }, 5000);
+        }
+        
+        function stopChatRefresh() {
+            if (chatRefreshInterval) {
+                clearInterval(chatRefreshInterval);
+                chatRefreshInterval = null;
+            }
+        }
+        
+        // Observer les changements du modal
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.attributeName === 'class') {
+                    if (followUpModal.classList.contains('show')) {
+                        startChatRefresh();
+                    } else {
+                        stopChatRefresh();
+                    }
+                }
+            });
+        });
+        
+        observer.observe(followUpModal, { attributes: true });
+    </script>
+
+<script>
+// Script pour le menu mobile
+(function() {
+    function initMenu() {
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('mainSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (!menuToggle || !sidebar || !overlay) return false;
+        menuToggle.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (sidebar.classList.contains('open')) {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('show');
+                setTimeout(() => overlay.style.display = 'none', 300);
+                document.body.style.overflow = '';
+            } else {
+                sidebar.classList.add('open');
+                overlay.style.display = 'block';
+                setTimeout(() => overlay.classList.add('show'), 10);
+                document.body.style.overflow = 'hidden';
+            }
+        };
+        overlay.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            sidebar.classList.remove('open');
+            overlay.classList.remove('show');
+            setTimeout(() => overlay.style.display = 'none', 300);
+            document.body.style.overflow = '';
+        };
+        return true;
+    }
+    if (!initMenu()) {
+        setTimeout(function() {
+            if (!initMenu()) setTimeout(initMenu, 500);
+        }, 100);
+    }
+})();
+</script>
+
+</body>
+</html>
+

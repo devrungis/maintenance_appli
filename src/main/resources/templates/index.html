@@ -9,7 +9,6 @@
     <link rel="stylesheet" th:href="@{/css/pages/dashboard.css}">
     <link rel="stylesheet" th:href="@{/css/pages/machines.css}">
     <link rel="stylesheet" th:href="@{/css/pages/categories.css}">
-    <link rel="stylesheet" th:href="@{/css/pages/alerts.css}">
     <link rel="stylesheet" th:href="@{/css/pages/repairs.css}">
     <link rel="stylesheet" th:href="@{/css/pages/reports.css}">
     <link rel="stylesheet" th:href="@{/css/pages/calendar.css}">
@@ -49,96 +48,7 @@
     <!-- Application principale -->
     <div id="mainApp" class="page">
         <!-- Sidebar -->
-        <nav class="sidebar">
-            <div class="sidebar-header">
-                <i class="fas fa-wrench"></i>
-                <h2>Maintenance</h2>
-            </div>
-            <div id="currentEnterpriseInfo" style="padding: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.85rem; color: rgba(255, 255, 255, 0.8);">
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                    <i class="fas fa-building"></i>
-                    <strong id="currentEnterpriseName">-</strong>
-                </div>
-                <div id="enterpriseSelector" style="padding: 0.5rem; background: rgba(255, 255, 255, 0.1); border-radius: 4px; cursor: pointer;" onclick="if(typeof window.showEnterpriseSelector === 'function') { window.showEnterpriseSelector(); } else { console.error('showEnterpriseSelector n\'est pas définie'); }">
-                    <i class="fas fa-exchange-alt"></i> Changer d'entreprise
-                </div>
-            </div>
-            <!-- Menu dynamique avec condition pour Entreprises -->
-            <ul class="sidebar-menu">
-                <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/dashboard' ? 'active' : ''}">
-                    <a th:href="@{/dashboard}" style="display: flex; align-items: center; gap: 0.75rem; color: inherit; text-decoration: none;">
-                        <i class="fas fa-tachometer-alt"></i>
-                        <span>Dashboard</span>
-                    </a>
-                </li>
-                <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI != null and #httpServletRequest.requestURI.startsWith('/machines') ? 'active' : ''}">
-                    <a th:href="@{/machines}" style="display: flex; align-items: center; gap: 0.75rem; color: inherit; text-decoration: none;">
-                        <i class="fas fa-cogs"></i>
-                        <span>Machines</span>
-                    </a>
-                </li>
-                <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI != null and #httpServletRequest.requestURI.startsWith('/categories') ? 'active' : ''}">
-                    <a th:href="@{/categories}" style="display: flex; align-items: center; gap: 0.75rem; color: inherit; text-decoration: none;">
-                        <i class="fas fa-tags"></i>
-                        <span>Catégories</span>
-                    </a>
-                </li>
-                <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/alerts' ? 'active' : ''}">
-                    <a th:href="@{/alerts}" style="display: flex; align-items: center; gap: 0.75rem; color: inherit; text-decoration: none;">
-                        <i class="fas fa-bell"></i>
-                        <span>Alertes</span>
-                    </a>
-                </li>
-                <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/reports' ? 'active' : ''}">
-                    <a th:href="@{/reports}" style="display: flex; align-items: center; gap: 0.75rem; color: inherit; text-decoration: none;">
-                        <i class="fas fa-chart-bar"></i>
-                        <span>Rapports</span>
-                    </a>
-                </li>
-                <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/calendar' ? 'active' : ''}">
-                    <a th:href="@{/calendar}" style="display: flex; align-items: center; gap: 0.75rem; color: inherit; text-decoration: none;">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span>Calendrier</span>
-                    </a>
-                </li>
-                <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/inventory' ? 'active' : ''}">
-                    <a th:href="@{/inventory}" style="display: flex; align-items: center; gap: 0.75rem; color: inherit; text-decoration: none;">
-                        <i class="fas fa-boxes"></i>
-                        <span>Stock</span>
-                    </a>
-                </li>
-                <li class="menu-item" th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI == '/tickets' ? 'active' : ''}">
-                    <a th:href="@{/tickets}" style="display: flex; align-items: center; gap: 0.75rem; color: inherit; text-decoration: none;">
-                        <i class="fas fa-ticket-alt"></i>
-                        <span>Tickets</span>
-                    </a>
-                </li>
-                <!-- Afficher "Utilisateurs" uniquement si l'utilisateur est superadmin -->
-                <li class="menu-item" 
-                    th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI != null and #httpServletRequest.requestURI.contains('/users') ? 'active' : ''}"
-                    th:if="${userRole != null and userRole == 'superadmin'}">
-                    <a th:href="@{/users}" style="display: flex; align-items: center; gap: 0.75rem; color: inherit; text-decoration: none;">
-                        <i class="fas fa-user-cog"></i>
-                        <span>Utilisateurs</span>
-                    </a>
-                </li>
-                <!-- Afficher "Entreprises" uniquement si l'utilisateur est superadmin -->
-                <li class="menu-item" 
-                    th:classappend="${#httpServletRequest != null and #httpServletRequest.requestURI != null and #httpServletRequest.requestURI.contains('/ent') ? 'active' : ''}"
-                    th:if="${userRole != null and #strings.equals(userRole, 'superadmin')}">
-                    <a th:href="@{/ent}" style="display: flex; align-items: center; gap: 0.75rem; color: inherit; text-decoration: none;">
-                        <i class="fas fa-building"></i>
-                        <span>Entreprises</span>
-                    </a>
-                </li>
-            </ul>
-            <div class="sidebar-footer">
-                <button id="logoutBtn" class="btn btn-secondary">
-                    <i class="fas fa-sign-out-alt"></i>
-                    Déconnexion
-                </button>
-            </div>
-        </nav>
+        <th:block th:replace="fragments/menu :: menu"></th:block>
 
         <!-- Contenu principal -->
         <main class="main-content">
@@ -153,13 +63,25 @@
                     </div>
                 </div>
                 
+                <div class="filters" style="margin-bottom: 1.5rem; padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                    <label for="dashboardEntrepriseSelect" style="color: #374151; font-size: 0.9rem; font-weight: 500;">Entreprise:</label>
+                    <select id="dashboardEntrepriseSelect" onchange="loadDashboardStats()" style="padding: 0.65rem 1rem; border: 1px solid #e5e7eb; border-radius: 8px; background: white; font-size: 0.95rem;">
+                        <option value="">-- Sélectionner une entreprise --</option>
+                        <option th:each="ent : ${enterprises}" 
+                                th:value="${ent.entrepriseId}" 
+                                th:text="${ent.nom}"
+                                th:selected="${selectedEntrepriseId == ent.entrepriseId}">
+                        </option>
+                    </select>
+                </div>
+                
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon">
                             <i class="fas fa-cogs"></i>
                         </div>
                         <div class="stat-content">
-                            <h3 id="totalMachines">0</h3>
+                            <h3 id="totalMachines" th:text="${stats != null ? stats.totalMachines : 0}">0</h3>
                             <p>Total Machines</p>
                         </div>
                     </div>
@@ -168,7 +90,7 @@
                             <i class="fas fa-ticket-alt"></i>
                         </div>
                         <div class="stat-content">
-                            <h3 id="openTickets">0</h3>
+                            <h3 id="openTickets" th:text="${stats != null ? stats.openTickets : 0}">0</h3>
                             <p>Tickets Ouverts</p>
                         </div>
                     </div>
@@ -177,7 +99,7 @@
                             <i class="fas fa-bell"></i>
                         </div>
                         <div class="stat-content">
-                            <h3 id="pendingMaintenance">0</h3>
+                            <h3 id="pendingMaintenance" th:text="${stats != null ? stats.pendingMaintenance : 0}">0</h3>
                             <p>Maintenances en attente</p>
                         </div>
                     </div>
@@ -186,7 +108,7 @@
                             <i class="fas fa-tools"></i>
                         </div>
                         <div class="stat-content">
-                            <h3 id="activeRepairs">0</h3>
+                            <h3 id="activeRepairs" th:text="${stats != null ? stats.activeRepairs : 0}">0</h3>
                             <p>Réparations actives</p>
                         </div>
                     </div>
@@ -195,7 +117,7 @@
                             <i class="fas fa-check-circle"></i>
                         </div>
                         <div class="stat-content">
-                            <h3 id="completedMaintenance">0</h3>
+                            <h3 id="completedMaintenance" th:text="${stats != null ? stats.completedMaintenance : 0}">0</h3>
                             <p>Maintenances terminées</p>
                         </div>
                     </div>
@@ -204,7 +126,7 @@
                             <i class="fas fa-exclamation-triangle"></i>
                         </div>
                         <div class="stat-content">
-                            <h3 id="urgentTickets">0</h3>
+                            <h3 id="urgentTickets" th:text="${stats != null ? stats.urgentTickets : 0}">0</h3>
                             <p>Tickets Urgents</p>
                         </div>
                     </div>
@@ -276,30 +198,6 @@
                 </div>
             </div>
 
-            <!-- Alerts -->
-            <div id="alerts" class="content-page">
-                <div class="page-header">
-                    <h1>Gestion des Alertes</h1>
-                    <button class="btn btn-primary" onclick="showAddAlertModal()">
-                        <i class="fas fa-plus"></i> Programmer Maintenance
-                    </button>
-                </div>
-
-                <div class="alerts-grid">
-                    <div class="alert-section">
-                        <h2>Maintenances programmées</h2>
-                        <div id="scheduledMaintenance" class="alert-list">
-                            <!-- Maintenances programmées -->
-                        </div>
-                    </div>
-                    <div class="alert-section">
-                        <h2>Historique des maintenances</h2>
-                        <div id="maintenanceHistory" class="alert-list">
-                            <!-- Historique -->
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- Repairs -->
             <div id="repairs" class="content-page">
@@ -701,49 +599,6 @@
         </div>
     </div>
 
-    <!-- Modal Programmer Maintenance -->
-    <div id="addAlertModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Programmer une Maintenance</h2>
-                <span class="close" onclick="closeModal('addAlertModal')">&times;</span>
-            </div>
-            <form id="addAlertForm">
-                <div class="form-group">
-                    <label for="alertMachine">Machine</label>
-                    <select id="alertMachine" required>
-                        <option value="">Sélectionner une machine</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="alertDate">Date de maintenance</label>
-                    <input type="date" id="alertDate" required>
-                </div>
-                <div class="form-group">
-                    <label for="alertTime">Heure</label>
-                    <input type="time" id="alertTime" required>
-                </div>
-                <div class="form-group">
-                    <label for="alertDescription">Description</label>
-                    <textarea id="alertDescription" placeholder="Type de maintenance, instructions..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="alertFrequency">Fréquence de rappel</label>
-                    <select id="alertFrequency">
-                        <option value="monthly">Mensuel</option>
-                        <option value="quarterly">Trimestriel</option>
-                        <option value="biannually">Semestriel</option>
-                        <option value="annually">Annuel</option>
-                        <option value="custom">Personnalisé</option>
-                    </select>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('addAlertModal')">Annuler</button>
-                    <button type="submit" class="btn btn-primary">Programmer</button>
-                </div>
-            </form>
-        </div>
-    </div>
 
     <!-- Modal Ajouter Réparation -->
     <div id="addRepairModal" class="modal">
@@ -1237,7 +1092,6 @@
     <script th:src="@{/js/pages/dashboard.js}"></script>
     <script th:src="@{/js/pages/machines.js}"></script>
     <script th:src="@{/js/pages/categories.js}"></script>
-    <script th:src="@{/js/pages/alerts.js}"></script>
     <script th:src="@{/js/pages/repairs.js}"></script>
     <script th:src="@{/js/pages/reports.js}"></script>
     <script th:src="@{/js/pages/calendar.js}"></script>
@@ -1527,8 +1381,139 @@
             } else {
                 console.log('ℹ️ Aucune entreprise sélectionnée dans localStorage');
             }
+          
+            // Charger les stats du dashboard si la page dashboard est active
+            const dashboard = document.getElementById('dashboard');
+            if (dashboard && dashboard.classList.contains('active')) {
+                setTimeout(function() {
+                    updateDashboard();
+                }, 500);
+            }
+            
+            // Initialiser le sélecteur d'entreprise dans le menu
+            const menuEntrepriseSelect = document.getElementById('menuEntrepriseSelect');
+            if (menuEntrepriseSelect) {
+                const currentEnterprise = localStorage.getItem('currentEnterprise');
+                if (currentEnterprise) {
+                    try {
+                        const enterprise = JSON.parse(currentEnterprise);
+                        menuEntrepriseSelect.value = enterprise.entrepriseId || '';
+                    } catch (e) {
+                        console.error('Erreur lors du parsing:', e);
+                    }
+                }
+            }
         });
+        
+        // Fonction pour changer l'entreprise depuis le menu
+        function changeMenuEnterprise() {
+            const select = document.getElementById('menuEntrepriseSelect');
+            const entrepriseId = select ? select.value : null;
+            
+            if (!entrepriseId) {
+                return;
+            }
+            
+            // Trouver l'entreprise dans la liste
+            const enterprises = document.querySelectorAll('#menuEntrepriseSelect option');
+            let selectedEnterprise = null;
+            enterprises.forEach(opt => {
+                if (opt.value === entrepriseId) {
+                    selectedEnterprise = {
+                        entrepriseId: entrepriseId,
+                        nom: opt.textContent
+                    };
+                }
+            });
+            
+            if (selectedEnterprise) {
+                // Sauvegarder dans localStorage
+                localStorage.setItem('currentEnterprise', JSON.stringify(selectedEnterprise));
+                
+                // Mettre à jour l'affichage
+                const nameElement = document.getElementById('currentEnterpriseName');
+                if (nameElement) {
+                    nameElement.textContent = selectedEnterprise.nom;
+                }
+                
+                const mobileElement = document.getElementById('currentEnterpriseMobile');
+                if (mobileElement) {
+                    mobileElement.textContent = selectedEnterprise.nom;
+                }
+                
+                // Recharger les données de la page actuelle
+                const activePage = document.querySelector('.content-page.active');
+                if (activePage) {
+                    if (activePage.id === 'dashboard') {
+                        window.location.href = '/dashboard?entrepriseId=' + encodeURIComponent(entrepriseId);
+                    } else {
+                        reloadAllData();
+                    }
+                }
+            }
+        }
     </script>
+
+<script>
+// Script pour le menu mobile
+(function() {
+    function closeMenu() {
+        const sidebar = document.getElementById('mainSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (sidebar && overlay) {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('show');
+            setTimeout(() => overlay.style.display = 'none', 300);
+            document.body.style.overflow = '';
+        }
+    }
+    
+    function initMenu() {
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('mainSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (!menuToggle || !sidebar || !overlay) return false;
+        
+        menuToggle.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (sidebar.classList.contains('open')) {
+                closeMenu();
+            } else {
+                sidebar.classList.add('open');
+                overlay.style.display = 'block';
+                setTimeout(() => overlay.classList.add('show'), 10);
+                document.body.style.overflow = 'hidden';
+            }
+        };
+        
+        overlay.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeMenu();
+        };
+        
+        // Fermer le menu au clic sur les liens
+        const menuLinks = sidebar.querySelectorAll('a');
+        menuLinks.forEach(link => {
+            link.onclick = function(e) {
+                if (window.innerWidth <= 768) {
+                    closeMenu();
+                }
+            };
+        });
+        
+        return true;
+    }
+    
+    if (!initMenu()) {
+        setTimeout(function() {
+            if (!initMenu()) setTimeout(initMenu, 500);
+        }, 100);
+    }
+})();
+</script>
+
 </body>
 </html>
 

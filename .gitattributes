@@ -1,2 +1,3 @@
-/mvnw text eol=lf
-*.cmd text eol=crlf
+# Assurer que les fichiers sensibles ne sont pas trackés même s'ils sont ajoutés par erreur
+src/main/resources/application.properties linguist-generated
+src/main/resources/*firebase-adminsdk*.json linguist-generated

@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestion des Alertes</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #1d4ed8;
+            --danger: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --border: #e5e7eb;
+            --bg: #f8fafc;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: #111827;
+            margin: 0;
+            padding: 0;
+        }
+        .page {
+            display: flex;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            height: 100vh;
+            margin-left: 250px;
+            width: calc(100% - 250px);
+        }
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            z-index: 1000;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .page-title {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #111827;
+        }
+        .filters {
+            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .filters select, .filters input {
+            padding: 0.65rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: white;
+            font-size: 0.95rem;
+        }
+        .filters label {
+            color: #374151;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        .btn-success {
+            background: var(--success);
+            color: #fff;
+        }
+        .btn-danger {
+            background: var(--danger);
+            color: #fff;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: #111827;
+        }
+        .alertes-container {
+            margin-top: 1rem;
+        }
+        .alertes-table {
+            width: 100%;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .alertes-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .alertes-table th {
+            background: #f9fafb;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 2px solid var(--border);
+        }
+        .alertes-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .alertes-table tr:hover {
+            background: #f9fafb;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .status-sent {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .status-verified {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .status-overdue {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6b7280;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #374151;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        .form-group input[type="checkbox"] {
+            width: auto;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #10b981;
+        }
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <!-- Sidebar -->
+        <th:block th:replace="fragments/menu :: menu"></th:block>
+        <div class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Gestion des Alertes</h1>
+                <button class="btn btn-primary" onclick="showAddAlerteModal()">
+                    <i class="fas fa-plus"></i> Nouvelle Alerte
+                </button>
+            </div>
+
+            <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+            <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+            <div class="filters">
+                <label for="entrepriseSelect">Entreprise:</label>
+                <select id="entrepriseSelect" onchange="loadAlertes()">
+                    <option value="">-- Sélectionner une entreprise --</option>
+                    <option th:each="ent : ${enterprises}" 
+                            th:value="${ent.entrepriseId}" 
+                            th:text="${ent.nom}"
+                            th:selected="${selectedEntrepriseId == ent.entrepriseId}">
+                    </option>
+                </select>
+            </div>
+
+            <div class="alertes-container">
+                <div class="alertes-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Machine</th>
+                                <th>Description</th>
+                                <th>Date de vérification</th>
+                                <th>Statut</th>
+                                <th>Relances</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alertesList">
+                            <tr th:if="${alertes.isEmpty()}">
+                                <td colspan="6" class="empty-state">
+                                    Aucune alerte trouvée. Créez votre première alerte en cliquant sur "Nouvelle Alerte".
+                                </td>
+                            </tr>
+                            <tr th:each="alerte : ${alertes}">
+                                <td th:text="${alerte.machineNom}"></td>
+                                <td th:text="${alerte.description}"></td>
+                                <td th:text="${#temporals.format(#temporals.createInstant(alerte.dateVerification / 1000), 'dd/MM/yyyy')}"></td>
+                                <td>
+                                    <span class="status-badge" 
+                                          th:classappend="${alerte.verifie ? 'status-verified' : (alerte.envoye ? 'status-sent' : 'status-pending')}"
+                                          th:text="${alerte.verifie ? 'Vérifié' : (alerte.envoye ? 'Envoyé' : 'En attente')}">
+                                    </span>
+                                </td>
+                                <td>
+                                    <span th:if="${alerte.activerRelance}">
+                                        <span th:text="${alerte.nombreRelancesEnvoyees != null ? alerte.nombreRelancesEnvoyees : 0}"></span> / 
+                                        <span th:text="${alerte.nombreRelances != null ? alerte.nombreRelances : 0}"></span>
+                                    </span>
+                                    <span th:unless="${alerte.activerRelance}">-</span>
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button th:if="${!alerte.verifie}" 
+                                                class="btn btn-success btn-sm" 
+                                                th:onclick="'marquerVerifie(\'' + ${alerte.entrepriseId} + '\', \'' + ${alerte.alerteId} + '\')'">
+                                            <i class="fas fa-check"></i> Vérifié
+                                        </button>
+                                        <button class="btn btn-outline btn-sm" 
+                                                th:onclick="'showEditAlerteModal(\'' + ${alerte.entrepriseId} + '\', \'' + ${alerte.alerteId} + '\')'">
+                                            <i class="fas fa-edit"></i> Modifier
+                                        </button>
+                                        <button class="btn btn-danger btn-sm" 
+                                                th:onclick="'deleteAlerteConfirm(\'' + ${alerte.entrepriseId} + '\', \'' + ${alerte.alerteId} + '\')'">
+                                            <i class="fas fa-trash"></i> Supprimer
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ajouter Alerte -->
+    <div id="addAlerteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Nouvelle Alerte</h2>
+                <button class="btn btn-outline" onclick="closeAddAlerteModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="addAlerteForm" method="post" th:action="@{/alertes}">
+                <input type="hidden" name="entrepriseId" th:value="${selectedEntrepriseId}" id="addEntrepriseId">
+                <div class="form-group">
+                    <label for="addMachineId">Machine *</label>
+                    <select name="machineId" id="addMachineId" required>
+                        <option value="">-- Sélectionner une machine --</option>
+                        <option th:each="machine : ${machines}" 
+                                th:value="${machine.machineId}" 
+                                th:text="${machine.nom}">
+                        </option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="addDescription">Description</label>
+                    <textarea name="description" id="addDescription" placeholder="Description de l'alerte..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="addDateVerification">Date de vérification *</label>
+                    <input type="date" name="dateVerification" id="addDateVerification" required>
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="activerRelance" id="addActiverRelance" onchange="toggleRelancesAdd()">
+                        <label for="addActiverRelance">Activer les relances</label>
+                    </div>
+                </div>
+                <div class="form-group" id="addNombreRelancesGroup" style="display: none;">
+                    <label for="addNombreRelances">Nombre de relances</label>
+                    <input type="number" name="nombreRelances" id="addNombreRelances" min="1" value="1">
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-outline" onclick="closeAddAlerteModal()">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Créer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Modifier Alerte -->
+    <div id="editAlerteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Modifier l'Alerte</h2>
+                <button class="btn btn-outline" onclick="closeEditAlerteModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="editAlerteForm" method="post">
+                <div class="form-group">
+                    <label for="editMachineNom">Machine</label>
+                    <input type="text" id="editMachineNom" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="editDescription">Description</label>
+                    <textarea name="description" id="editDescription" placeholder="Description de l'alerte..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editDateVerification">Date de vérification *</label>
+                    <input type="date" name="dateVerification" id="editDateVerification" required>
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="activerRelance" id="editActiverRelance" onchange="toggleRelancesEdit()">
+                        <label for="editActiverRelance">Activer les relances</label>
+                    </div>
+                </div>
+                <div class="form-group" id="editNombreRelancesGroup" style="display: none;">
+                    <label for="editNombreRelances">Nombre de relances</label>
+                    <input type="number" name="nombreRelances" id="editNombreRelances" min="1" value="1">
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-outline" onclick="closeEditAlerteModal()">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function loadAlertes() {
+            const entrepriseId = document.getElementById('entrepriseSelect').value;
+            if (entrepriseId) {
+                window.location.href = '/alertes?entrepriseId=' + entrepriseId;
+            }
+        }
+
+        function showAddAlerteModal() {
+            const entrepriseId = document.getElementById('entrepriseSelect').value;
+            if (!entrepriseId) {
+                alert('Veuillez sélectionner une entreprise d\'abord.');
+                return;
+            }
+            document.getElementById('addEntrepriseId').value = entrepriseId;
+            document.getElementById('addAlerteModal').classList.add('active');
+        }
+
+        function closeAddAlerteModal() {
+            document.getElementById('addAlerteModal').classList.remove('active');
+            document.getElementById('addAlerteForm').reset();
+        }
+
+        function toggleRelancesAdd() {
+            const checkbox = document.getElementById('addActiverRelance');
+            const group = document.getElementById('addNombreRelancesGroup');
+            group.style.display = checkbox.checked ? 'block' : 'none';
+        }
+
+        function showEditAlerteModal(entrepriseId, alerteId) {
+            // Charger les données de l'alerte via API
+            fetch('/alertes/api/list?entrepriseId=' + entrepriseId)
+                .then(response => response.json())
+                .then(alertes => {
+                    const alerte = alertes.find(a => a.alerteId === alerteId);
+                    if (alerte) {
+                        document.getElementById('editMachineNom').value = alerte.machineNom || '';
+                        document.getElementById('editDescription').value = alerte.description || '';
+                        
+                        // Convertir le timestamp en date YYYY-MM-DD
+                        if (alerte.dateVerification) {
+                            const date = new Date(alerte.dateVerification);
+                            const dateStr = date.toISOString().split('T')[0];
+                            document.getElementById('editDateVerification').value = dateStr;
+                        }
+                        
+                        document.getElementById('editActiverRelance').checked = alerte.activerRelance || false;
+                        document.getElementById('editNombreRelances').value = alerte.nombreRelances || 1;
+                        toggleRelancesEdit();
+                        
+                        // Mettre à jour l'action du formulaire
+                        document.getElementById('editAlerteForm').action = '/alertes/' + entrepriseId + '/' + alerteId;
+                        
+                        document.getElementById('editAlerteModal').classList.add('active');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur lors du chargement de l\'alerte:', error);
+                    alert('Erreur lors du chargement de l\'alerte.');
+                });
+        }
+
+        function closeEditAlerteModal() {
+            document.getElementById('editAlerteModal').classList.remove('active');
+        }
+
+        function toggleRelancesEdit() {
+            const checkbox = document.getElementById('editActiverRelance');
+            const group = document.getElementById('editNombreRelancesGroup');
+            group.style.display = checkbox.checked ? 'block' : 'none';
+        }
+
+        function marquerVerifie(entrepriseId, alerteId) {
+            if (confirm('Êtes-vous sûr de vouloir marquer cette alerte comme vérifiée ? Elle sera ajoutée à l\'historique.')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/alertes/' + entrepriseId + '/' + alerteId + '/verifie';
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        function deleteAlerteConfirm(entrepriseId, alerteId) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer cette alerte ?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/alertes/' + entrepriseId + '/' + alerteId + '/delete';
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    </script>
+</body>
+</html>
+

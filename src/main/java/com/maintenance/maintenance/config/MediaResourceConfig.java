@@ -19,9 +19,14 @@ public class MediaResourceConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        String location = Path.of(mediaBasePath).toUri().toString();
+        Path primaryPath = Path.of(mediaBasePath).toAbsolutePath().normalize();
+        Path legacyPath = Path.of("uploads").toAbsolutePath().normalize();
+
+        String primaryLocation = primaryPath.toUri().toString();
+        String legacyLocation = legacyPath.toUri().toString();
+
         registry.addResourceHandler("/media/**")
-            .addResourceLocations(location)
+            .addResourceLocations(primaryLocation, legacyLocation)
             .setCachePeriod(3600);
     }
 }

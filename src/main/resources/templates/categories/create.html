@@ -2,7 +2,9 @@
 <html lang="fr" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Créer une catégorie</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <style>
         body {
@@ -18,12 +20,58 @@
         .main-content {
             flex: 1;
             padding: 2rem;
+            margin-left: 250px;
+            width: calc(100% - 250px);
+            height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            z-index: 1000;
         }
         .page-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2rem;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 20px;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            position: relative;
+            overflow: hidden;
+        }
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+            border-radius: 20px 20px 0 0;
+        }
+        .page-header h1 {
+            color: #111827;
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #111827, #64748b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 0;
+        }
+        .header-actions {
+            display: flex;
+            gap: 1rem;
         }
         .card {
             background: white;
@@ -88,22 +136,161 @@
             display: flex;
             gap: 1rem;
         }
+        
+        /* Responsive pour mobile */
+        @media (max-width: 768px) {
+            /* S'assurer que le header mobile est visible */
+            .mobile-header {
+                display: flex !important;
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                z-index: 1002 !important;
+                background: #ffffff !important;
+                border-bottom: 1px solid #e5e7eb !important;
+                height: 60px !important;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+            }
+            
+            .header-content {
+                display: flex !important;
+                align-items: center !important;
+                width: 100% !important;
+                padding: 0 1rem !important;
+            }
+            
+            .menu-toggle {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                width: 40px !important;
+                height: 40px !important;
+                background: none !important;
+                border: none !important;
+                cursor: pointer !important;
+                padding: 0.5rem !important;
+            }
+            
+            .menu-toggle i {
+                font-size: 1.5rem !important;
+                color: #1f2937 !important;
+                display: block !important;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+                padding-top: 80px; /* Espace pour le header mobile */
+                width: 100%;
+            }
+            
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 1.5rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            .page-header h1 {
+                font-size: 1.75rem;
+            }
+            
+            .header-actions {
+                width: 100%;
+                margin-top: 1rem;
+            }
+            
+            .header-actions .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .card {
+                max-width: 100%;
+                padding: 1.5rem;
+            }
+            
+            .form-group {
+                margin-bottom: 1.25rem;
+            }
+            
+            input, textarea {
+                font-size: 16px; /* Évite le zoom automatique sur iOS */
+                padding: 0.875rem;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+            
+            .form-actions .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .main-content {
+                padding: 0.75rem;
+                padding-top: 70px;
+            }
+            
+            .page-header {
+                padding: 1rem;
+            }
+            
+            .page-header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .card {
+                padding: 1rem;
+            }
+            
+            input, textarea {
+                padding: 0.75rem;
+            }
+        }
     </style>
 </head>
 <body>
+
+    <!-- Header mobile -->
+    <header class="mobile-header">
+        <div class="header-content">
+            <button class="menu-toggle" id="menuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div style="flex: 1;">
+                <h1 class="app-title">
+                    <i class="fas fa-wrench"></i>
+                    Maintenance
+                </h1>
+                <div id="currentEnterpriseMobile" style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                    <!-- Entreprise actuelle -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Overlay pour sidebar mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
 <div class="page">
     <th:block th:replace="fragments/menu :: menu"></th:block>
     <th:block th:replace="fragments/notifications :: notifications"></th:block>
     <main class="main-content">
         <div class="page-header">
             <div>
-                <h1>Nouvelle catégorie</h1>
-                <p>Créez une catégorie pour regrouper vos machines.</p>
+                <h1><i class="fa fa-tags" style="color: #3b82f6;"></i> Nouvelle catégorie</h1>
+                <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 1rem;">Créez une catégorie pour regrouper vos machines.</p>
             </div>
-            <a th:href="@{/categories}" class="btn btn-secondary">
-                <i class="fa fa-arrow-left"></i>
-                Retour
-            </a>
+            <div class="header-actions">
+                <a th:href="@{/categories}" class="btn btn-secondary">
+                    <i class="fa fa-arrow-left"></i> Retour
+                </a>
+            </div>
         </div>
 
         <div class="card">
@@ -133,6 +320,48 @@
         </div>
     </main>
 </div>
+
+<script>
+// Script pour le menu mobile
+(function() {
+    function initMenu() {
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('mainSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (!menuToggle || !sidebar || !overlay) return false;
+        menuToggle.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (sidebar.classList.contains('open')) {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('show');
+                setTimeout(() => overlay.style.display = 'none', 300);
+                document.body.style.overflow = '';
+            } else {
+                sidebar.classList.add('open');
+                overlay.style.display = 'block';
+                setTimeout(() => overlay.classList.add('show'), 10);
+                document.body.style.overflow = 'hidden';
+            }
+        };
+        overlay.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            sidebar.classList.remove('open');
+            overlay.classList.remove('show');
+            setTimeout(() => overlay.style.display = 'none', 300);
+            document.body.style.overflow = '';
+        };
+        return true;
+    }
+    if (!initMenu()) {
+        setTimeout(function() {
+            if (!initMenu()) setTimeout(initMenu, 500);
+        }, 100);
+    }
+})();
+</script>
+
 </body>
 </html>
 

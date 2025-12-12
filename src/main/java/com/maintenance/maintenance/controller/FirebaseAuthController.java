@@ -126,23 +126,89 @@ public class FirebaseAuthController {
                 return "redirect:/login";
             }
             
-            // Créer une session
-            HttpSession session = request.getSession(true);
-            if (userRecord != null) {
-                session.setAttribute("firebaseUser", userRecord);
+            // Nettoyer le contexte Spring Security AVANT de manipuler les sessions
+            SecurityContextHolder.clearContext();
+            
+            // Invalider toute session existante pour créer une session propre
+            // Essayer plusieurs fois pour s'assurer que toutes les sessions sont nettoyées
+            for (int i = 0; i < 3; i++) {
+                HttpSession oldSession = request.getSession(false);
+                if (oldSession != null) {
+                    try {
+                        // Nettoyer tous les attributs avant d'invalider
+                        oldSession.removeAttribute("authenticated");
+                        oldSession.removeAttribute("email");
+                        oldSession.removeAttribute("userId");
+                        oldSession.removeAttribute("role");
+                        oldSession.removeAttribute("idToken");
+                        oldSession.removeAttribute("firebaseUser");
+                        oldSession.removeAttribute("lastSelectedEntrepriseId");
+                        oldSession.removeAttribute("sessionCreated");
+                        oldSession.invalidate();
+                        System.out.println("=== Ancienne session invalidée (tentative " + (i + 1) + ") ===");
+                    } catch (IllegalStateException e) {
+                        // Session déjà invalidée, c'est bon
+                        System.out.println("=== Session déjà invalidée (tentative " + (i + 1) + ") ===");
+                        break;
+                    } catch (Exception e) {
+                        System.err.println("Erreur lors de l'invalidation de l'ancienne session (tentative " + (i + 1) + "): " + e.getMessage());
+                    }
+                } else {
+                    break; // Plus de session à invalider
+                }
             }
+            
+            // Attendre un peu pour que l'invalidation soit complète
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            
+            // Créer une nouvelle session propre
+            HttpSession session = request.getSession(true);
+            session.setMaxInactiveInterval(1800); // 30 minutes
+            
+            // S'assurer que la nouvelle session est vraiment nouvelle
+            String newSessionId = session.getId();
+            System.out.println("=== Nouvelle session créée avec ID: " + newSessionId + " ===");
+            
+            // Définir tous les attributs de session dans l'ordre
+            session.setAttribute("authenticated", true);
             session.setAttribute("email", authResult.getEmail());
             session.setAttribute("userId", userId);
             session.setAttribute("role", role);
             session.setAttribute("idToken", idToken);
-            session.setAttribute("authenticated", true);
+            if (userRecord != null) {
+                session.setAttribute("firebaseUser", userRecord);
+            }
+            
+            // Forcer la sauvegarde de la session avec timestamp
+            long sessionCreatedTime = System.currentTimeMillis();
+            session.setAttribute("sessionCreated", sessionCreatedTime);
+            
+            // Forcer l'écriture de la session
+            try {
+                session.setAttribute("_forceWrite", sessionCreatedTime);
+            } catch (Exception e) {
+                System.err.println("Erreur lors de l'écriture forcée de la session: " + e.getMessage());
+            }
             
             System.out.println("=== Session créée avec succès ===");
             System.out.println("Session ID: " + session.getId());
             System.out.println("User ID: " + userId);
             System.out.println("Email: " + authResult.getEmail());
             System.out.println("Role: " + role);
+            System.out.println("Authenticated: " + session.getAttribute("authenticated"));
+            System.out.println("Session Created Time: " + sessionCreatedTime);
             System.out.println("=== Redirection vers /dashboard ===");
+            
+            // Attendre un peu pour que la session soit bien sauvegardée avant la redirection
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
             
             return "redirect:/dashboard";
             
@@ -180,21 +246,81 @@ public class FirebaseAuthController {
 
     @GetMapping("/logout")
     public String logoutGet(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            session.invalidate();
+        try {
+            // Nettoyer le contexte Spring Security
+            SecurityContextHolder.clearContext();
+            
+            // Invalider toutes les sessions possibles
+            for (int i = 0; i < 3; i++) {
+                HttpSession session = request.getSession(false);
+                if (session != null) {
+                    try {
+                        // Nettoyer tous les attributs avant d'invalider
+                        session.removeAttribute("authenticated");
+                        session.removeAttribute("email");
+                        session.removeAttribute("userId");
+                        session.removeAttribute("role");
+                        session.removeAttribute("idToken");
+                        session.removeAttribute("firebaseUser");
+                        session.removeAttribute("lastSelectedEntrepriseId");
+                        session.removeAttribute("sessionCreated");
+                        session.removeAttribute("_forceWrite");
+                        session.invalidate();
+                        System.out.println("=== Session invalidée avec succès (tentative " + (i + 1) + ") ===");
+                    } catch (IllegalStateException e) {
+                        // Session déjà invalidée, c'est bon
+                        System.out.println("=== Session déjà invalidée (tentative " + (i + 1) + ") ===");
+                        break;
+                    } catch (Exception e) {
+                        System.err.println("Erreur lors de l'invalidation de la session (tentative " + (i + 1) + "): " + e.getMessage());
+                    }
+                } else {
+                    break; // Plus de session à invalider
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur lors du logout: " + e.getMessage());
         }
-        SecurityContextHolder.clearContext();
         return "redirect:/login";
     }
 
     @PostMapping("/logout")
     public String logout(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            session.invalidate();
+        try {
+            // Nettoyer le contexte Spring Security
+            SecurityContextHolder.clearContext();
+            
+            // Invalider toutes les sessions possibles
+            for (int i = 0; i < 3; i++) {
+                HttpSession session = request.getSession(false);
+                if (session != null) {
+                    try {
+                        // Nettoyer tous les attributs avant d'invalider
+                        session.removeAttribute("authenticated");
+                        session.removeAttribute("email");
+                        session.removeAttribute("userId");
+                        session.removeAttribute("role");
+                        session.removeAttribute("idToken");
+                        session.removeAttribute("firebaseUser");
+                        session.removeAttribute("lastSelectedEntrepriseId");
+                        session.removeAttribute("sessionCreated");
+                        session.removeAttribute("_forceWrite");
+                        session.invalidate();
+                        System.out.println("=== Session invalidée avec succès (tentative " + (i + 1) + ") ===");
+                    } catch (IllegalStateException e) {
+                        // Session déjà invalidée, c'est bon
+                        System.out.println("=== Session déjà invalidée (tentative " + (i + 1) + ") ===");
+                        break;
+                    } catch (Exception e) {
+                        System.err.println("Erreur lors de l'invalidation de la session (tentative " + (i + 1) + "): " + e.getMessage());
+                    }
+                } else {
+                    break; // Plus de session à invalider
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur lors du logout: " + e.getMessage());
         }
-        SecurityContextHolder.clearContext();
         return "redirect:/login";
     }
 }

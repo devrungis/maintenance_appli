@@ -827,6 +827,7 @@ public class FirebaseRealtimeService {
      * Récupère l'ensemble des machines pour une entreprise
      */
     public List<Machine> getMachinesForEnterprise(String entrepriseId) throws Exception {
+        System.out.println("=== getMachinesForEnterprise: Début pour entrepriseId: " + entrepriseId + " ===");
         CompletableFuture<List<Machine>> future = new CompletableFuture<>();
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -839,19 +840,38 @@ public class FirebaseRealtimeService {
                     try {
                         List<Machine> machines = new ArrayList<>();
                         if (snapshot.exists()) {
+                            System.out.println("=== Snapshot existe, nombre d'enfants: " + snapshot.getChildrenCount() + " ===");
+                            int processedCount = 0;
+                            int skippedCount = 0;
                             for (DataSnapshot machineSnapshot : snapshot.getChildren()) {
                                 String machineId = machineSnapshot.getKey();
                                 if (machineId != null && !machineId.startsWith("_")) {
-                                    Machine machine = mapMachineSnapshot(machineSnapshot, entrepriseId, machineId);
-                                    // Filtrer les machines supprimées (soft delete)
-                                    if (machine.getSupprime() == null || !machine.getSupprime()) {
-                                        machines.add(machine);
+                                    try {
+                                        Machine machine = mapMachineSnapshot(machineSnapshot, entrepriseId, machineId);
+                                        // Filtrer les machines supprimées (soft delete)
+                                        if (machine.getSupprime() == null || !machine.getSupprime()) {
+                                            machines.add(machine);
+                                            processedCount++;
+                                        } else {
+                                            skippedCount++;
+                                            System.out.println("=== Machine " + machineId + " ignorée (supprimée) ===");
+                                        }
+                                    } catch (Exception e) {
+                                        System.err.println("=== Erreur lors du mapping de la machine " + machineId + ": " + e.getMessage() + " ===");
+                                        e.printStackTrace();
+                                        // Continuer avec les autres machines même si une échoue
                                     }
                                 }
                             }
+                            System.out.println("=== Machines traitées: " + processedCount + ", ignorées: " + skippedCount + " ===");
+                        } else {
+                            System.out.println("=== Aucun snapshot trouvé pour les machines ===");
                         }
+                        System.out.println("=== Total de machines récupérées: " + machines.size() + " ===");
                         future.complete(machines);
                     } catch (Exception e) {
+                        System.err.println("=== Erreur dans onDataChange: " + e.getMessage() + " ===");
+                        e.printStackTrace();
                         future.completeExceptionally(e);
                     } finally {
                         latch.countDown();
@@ -860,6 +880,7 @@ public class FirebaseRealtimeService {
 
                 @Override
                 public void onCancelled(DatabaseError error) {
+                    System.err.println("=== onCancelled appelé: " + error.getMessage() + " ===");
                     future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
                     latch.countDown();
                 }
@@ -870,11 +891,15 @@ public class FirebaseRealtimeService {
             if (!completed) {
                 throw new Exception("Timeout lors de la récupération des machines (15 secondes)");
             }
-            return future.get();
+            List<Machine> result = future.get();
+            System.out.println("=== getMachinesForEnterprise: Fin, " + (result != null ? result.size() : 0) + " machines récupérées ===");
+            return result != null ? result : new ArrayList<>();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new Exception("Interruption lors de la récupération des machines: " + e.getMessage());
         } catch (Exception e) {
+            System.err.println("=== Exception dans getMachinesForEnterprise: " + e.getMessage() + " ===");
+            e.printStackTrace();
             throw new Exception("Erreur lors de la récupération des machines: " + e.getMessage());
         }
     }
@@ -932,6 +957,7 @@ public class FirebaseRealtimeService {
      */
     public String createMachine(String entrepriseId, Machine machine) throws Exception {
         try {
+            System.out.println("=== createMachine: Début pour entrepriseId: " + entrepriseId + " ===");
             String machineId = databaseReference.child("entreprises")
                 .child(entrepriseId)
                 .child("machines")
@@ -942,10 +968,14 @@ public class FirebaseRealtimeService {
                 throw new Exception("Impossible de générer un identifiant pour la machine");
             }
 
+            System.out.println("=== Machine ID généré: " + machineId + " ===");
+
             Map<String, Object> machineData = serializeMachine(machine);
             long now = System.currentTimeMillis();
             machineData.put("dateCreation", now);
             machineData.put("dateMiseAJour", now);
+            
+            System.out.println("=== Données de la machine sérialisées, prêt à sauvegarder ===");
 
             CompletableFuture<Void> future = new CompletableFuture<>();
             CountDownLatch latch = new CountDownLatch(1);
@@ -956,22 +986,36 @@ public class FirebaseRealtimeService {
                 .child(machineId)
                 .setValue(machineData, (error, ref) -> {
                     if (error != null) {
+                        System.err.println("=== Erreur Firebase lors de la sauvegarde: " + error.getMessage() + " ===");
                         future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
                     } else {
+                        System.out.println("=== Machine sauvegardée avec succès dans Firebase ===");
                         future.complete(null);
                     }
                     latch.countDown();
                 });
 
-            boolean completed = latch.await(10, TimeUnit.SECONDS);
+            boolean completed = latch.await(15, TimeUnit.SECONDS);
             if (!completed) {
-                throw new Exception("Timeout lors de la création de la machine (10 secondes)");
+                throw new Exception("Timeout lors de la création de la machine (15 secondes)");
             }
-            future.get();
+            
+            try {
+                future.get();
+                System.out.println("=== Machine créée avec succès, ID: " + machineId + " ===");
+            } catch (Exception e) {
+                System.err.println("=== Erreur lors de la création de la machine: " + e.getMessage() + " ===");
+                throw new Exception("Erreur lors de la création de la machine: " + e.getMessage());
+            }
+            
             return machineId;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new Exception("Interruption lors de la création de la machine: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("=== Exception lors de la création de la machine: " + e.getMessage() + " ===");
+            e.printStackTrace();
+            throw e;
         }
     }
 
@@ -1103,7 +1147,7 @@ public class FirebaseRealtimeService {
         } else {
             machine.setEstMachineEntrepot(false); // Par défaut pas une machine entrepôt
         }
-
+        
         // Suivi des modifications
         machine.setCreePar(readString(snapshot.child("creePar")));
         machine.setCreeLe(readLong(snapshot.child("creeLe")));
@@ -2321,6 +2365,1295 @@ public class FirebaseRealtimeService {
         data.put("name", category.getName() != null ? category.getName() : "");
         data.put("description", category.getDescription() != null ? category.getDescription() : "");
         return data;
+    }
+
+    /**
+     * Gestion des tickets
+     */
+    public List<com.maintenance.maintenance.model.entity.Ticket> getTicketsForEnterprise(String entrepriseId) throws Exception {
+        CompletableFuture<List<com.maintenance.maintenance.model.entity.Ticket>> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises")
+            .child(entrepriseId)
+            .child("tickets")
+            .addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot snapshot) {
+                    try {
+                        List<com.maintenance.maintenance.model.entity.Ticket> tickets = new ArrayList<>();
+                        if (snapshot.exists()) {
+                            for (DataSnapshot ticketSnapshot : snapshot.getChildren()) {
+                                String ticketId = ticketSnapshot.getKey();
+                                if (ticketId != null && !ticketId.startsWith("_")) {
+                                    tickets.add(mapTicketSnapshot(ticketSnapshot, entrepriseId, ticketId));
+                                }
+                            }
+                        }
+                        future.complete(tickets);
+                    } catch (Exception e) {
+                        future.completeExceptionally(e);
+                    } finally {
+                        latch.countDown();
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError error) {
+                    future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
+                    latch.countDown();
+                }
+            });
+
+        try {
+            boolean completed = latch.await(15, TimeUnit.SECONDS);
+            if (!completed) {
+                throw new Exception("Timeout lors de la récupération des tickets (15 secondes)");
+            }
+            return future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Interruption lors de la récupération des tickets: " + e.getMessage());
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la récupération des tickets: " + e.getMessage());
+        }
+    }
+
+    public com.maintenance.maintenance.model.entity.Ticket getTicketById(String entrepriseId, String ticketId) throws Exception {
+        CompletableFuture<com.maintenance.maintenance.model.entity.Ticket> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises")
+            .child(entrepriseId)
+            .child("tickets")
+            .child(ticketId)
+            .addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot snapshot) {
+                    try {
+                        if (snapshot.exists()) {
+                            future.complete(mapTicketSnapshot(snapshot, entrepriseId, ticketId));
+                        } else {
+                            future.complete(null);
+                        }
+                    } catch (Exception e) {
+                        future.completeExceptionally(e);
+                    } finally {
+                        latch.countDown();
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError error) {
+                    future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
+                    latch.countDown();
+                }
+            });
+
+        try {
+            boolean completed = latch.await(10, TimeUnit.SECONDS);
+            if (!completed) {
+                throw new Exception("Timeout lors de la récupération du ticket (10 secondes)");
+            }
+            return future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Interruption lors de la récupération du ticket: " + e.getMessage());
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la récupération du ticket: " + e.getMessage());
+        }
+    }
+
+    public String createTicket(String entrepriseId, com.maintenance.maintenance.model.entity.Ticket ticket) throws Exception {
+        try {
+            String ticketId = databaseReference.child("entreprises")
+                .child(entrepriseId)
+                .child("tickets")
+                .push()
+                .getKey();
+
+            if (ticketId == null) {
+                throw new Exception("Impossible de générer un identifiant pour le ticket");
+            }
+
+            Map<String, Object> ticketData = serializeTicket(ticket);
+            long now = System.currentTimeMillis();
+            ticketData.put("dateCreation", now);
+            ticketData.put("dateModification", now);
+
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            CountDownLatch latch = new CountDownLatch(1);
+
+            databaseReference.child("entreprises")
+                .child(entrepriseId)
+                .child("tickets")
+                .child(ticketId)
+                .setValue(ticketData, (error, ref) -> {
+                    if (error != null) {
+                        future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
+                    } else {
+                        future.complete(null);
+                    }
+                    latch.countDown();
+                });
+
+            boolean completed = latch.await(10, TimeUnit.SECONDS);
+            if (!completed) {
+                throw new Exception("Timeout lors de la création du ticket (10 secondes)");
+            }
+            future.get();
+            return ticketId;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Interruption lors de la création du ticket: " + e.getMessage());
+        }
+    }
+
+    public void updateTicket(String entrepriseId, String ticketId, com.maintenance.maintenance.model.entity.Ticket ticket) throws Exception {
+        try {
+            Map<String, Object> ticketData = serializeTicket(ticket);
+            ticketData.put("dateModification", System.currentTimeMillis());
+
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            CountDownLatch latch = new CountDownLatch(1);
+
+            databaseReference.child("entreprises")
+                .child(entrepriseId)
+                .child("tickets")
+                .child(ticketId)
+                .updateChildren(ticketData, (error, ref) -> {
+                    if (error != null) {
+                        future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
+                    } else {
+                        future.complete(null);
+                    }
+                    latch.countDown();
+                });
+
+            boolean completed = latch.await(10, TimeUnit.SECONDS);
+            if (!completed) {
+                throw new Exception("Timeout lors de la mise à jour du ticket (10 secondes)");
+            }
+            future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Interruption lors de la mise à jour du ticket: " + e.getMessage());
+        }
+    }
+
+    public void deleteTicket(String entrepriseId, String ticketId) throws Exception {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises")
+            .child(entrepriseId)
+            .child("tickets")
+            .child(ticketId)
+            .removeValue((error, ref) -> {
+                if (error != null) {
+                    future.completeExceptionally(new Exception("Erreur Firebase: " + error.getMessage()));
+                } else {
+                    future.complete(null);
+                }
+                latch.countDown();
+            });
+
+        try {
+            boolean completed = latch.await(10, TimeUnit.SECONDS);
+            if (!completed) {
+                throw new Exception("Timeout lors de la suppression du ticket (10 secondes)");
+            }
+            future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Interruption lors de la suppression du ticket: " + e.getMessage());
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la suppression du ticket: " + e.getMessage());
+        }
+    }
+
+    private com.maintenance.maintenance.model.entity.Ticket mapTicketSnapshot(DataSnapshot snapshot, String entrepriseId, String ticketId) {
+        com.maintenance.maintenance.model.entity.Ticket ticket = new com.maintenance.maintenance.model.entity.Ticket();
+        ticket.setTicketId(ticketId);
+        ticket.setEntrepriseId(entrepriseId);
+        ticket.setTitre(readString(snapshot.child("titre")));
+        ticket.setDescription(readString(snapshot.child("description")));
+        ticket.setStatut(readString(snapshot.child("statut")));
+        ticket.setPriorite(readString(snapshot.child("priorite")));
+        ticket.setMachineId(readString(snapshot.child("machineId")));
+        ticket.setMachineNom(readString(snapshot.child("machineNom")));
+        ticket.setAssigneA(readString(snapshot.child("assigneA")));
+        ticket.setAssigneANom(readString(snapshot.child("assigneANom")));
+        ticket.setCreePar(readString(snapshot.child("creePar")));
+        ticket.setCreeParNom(readString(snapshot.child("creeParNom")));
+        ticket.setDateCreation(readLong(snapshot.child("dateCreation")));
+        ticket.setDateModification(readLong(snapshot.child("dateModification")));
+        ticket.setDateTerminaison(readLong(snapshot.child("dateTerminaison")));
+        ticket.setDateArchivage(readLong(snapshot.child("dateArchivage")));
+        ticket.setDateEcheance(readLong(snapshot.child("dateEcheance")));
+        ticket.setCategorie(readString(snapshot.child("categorie")));
+        
+        // Gérer les commentaires
+        Object rawCommentaires = snapshot.child("commentaires").getValue();
+        List<com.maintenance.maintenance.model.entity.Commentaire> commentaires = new ArrayList<>();
+        if (rawCommentaires instanceof List<?> list) {
+            for (Object value : list) {
+                if (value instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> commentMap = (Map<String, Object>) value;
+                    com.maintenance.maintenance.model.entity.Commentaire commentaire = new com.maintenance.maintenance.model.entity.Commentaire();
+                    commentaire.setTexte((String) commentMap.get("texte"));
+                    commentaire.setAuteurId((String) commentMap.get("auteurId"));
+                    commentaire.setAuteurNom((String) commentMap.get("auteurNom"));
+                    commentaire.setImageUrl((String) commentMap.get("imageUrl"));
+                    Object dateObj = commentMap.get("dateCreation");
+                    if (dateObj instanceof Long) {
+                        commentaire.setDateCreation((Long) dateObj);
+                    } else if (dateObj instanceof Number) {
+                        commentaire.setDateCreation(((Number) dateObj).longValue());
+                    }
+                    commentaires.add(commentaire);
+                } else if (value != null) {
+                    // Compatibilité avec l'ancien format (String)
+                    com.maintenance.maintenance.model.entity.Commentaire commentaire = new com.maintenance.maintenance.model.entity.Commentaire();
+                    commentaire.setTexte(value.toString());
+                    commentaire.setAuteurId("unknown");
+                    commentaire.setAuteurNom("Utilisateur");
+                    commentaires.add(commentaire);
+                }
+            }
+        }
+        ticket.setCommentaires(commentaires);
+        
+        return ticket;
+    }
+
+    private Map<String, Object> serializeTicket(com.maintenance.maintenance.model.entity.Ticket ticket) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("titre", ticket.getTitre());
+        data.put("description", ticket.getDescription());
+        data.put("statut", ticket.getStatut());
+        data.put("priorite", ticket.getPriorite());
+        data.put("machineId", ticket.getMachineId());
+        data.put("machineNom", ticket.getMachineNom());
+        data.put("assigneA", ticket.getAssigneA());
+        data.put("assigneANom", ticket.getAssigneANom());
+        data.put("creePar", ticket.getCreePar());
+        data.put("creeParNom", ticket.getCreeParNom());
+        data.put("dateCreation", ticket.getDateCreation());
+        data.put("dateModification", ticket.getDateModification());
+        data.put("dateTerminaison", ticket.getDateTerminaison());
+        data.put("dateArchivage", ticket.getDateArchivage());
+        data.put("dateEcheance", ticket.getDateEcheance());
+        data.put("categorie", ticket.getCategorie());
+        // Sérialiser les commentaires
+        List<Map<String, Object>> commentairesData = new ArrayList<>();
+        if (ticket.getCommentaires() != null) {
+            for (com.maintenance.maintenance.model.entity.Commentaire commentaire : ticket.getCommentaires()) {
+                Map<String, Object> commentaireData = new HashMap<>();
+                commentaireData.put("texte", commentaire.getTexte());
+                commentaireData.put("auteurId", commentaire.getAuteurId());
+                commentaireData.put("auteurNom", commentaire.getAuteurNom());
+                commentaireData.put("imageUrl", commentaire.getImageUrl());
+                commentaireData.put("dateCreation", commentaire.getDateCreation());
+                commentairesData.add(commentaireData);
+            }
+        }
+        data.put("commentaires", commentairesData);
+        return data;
+    }
+
+    // ========== MÉTHODES POUR LES ALERTES ==========
+
+    /**
+     * Récupère toutes les alertes pour une entreprise
+     */
+    public List<com.maintenance.maintenance.model.entity.Alerte> getAlertesForEnterprise(String entrepriseId) throws Exception {
+        CompletableFuture<List<com.maintenance.maintenance.model.entity.Alerte>> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises").child(entrepriseId).child("alertes")
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot snapshot) {
+                        List<com.maintenance.maintenance.model.entity.Alerte> alertes = new ArrayList<>();
+                        if (snapshot.exists()) {
+                            for (DataSnapshot child : snapshot.getChildren()) {
+                                com.maintenance.maintenance.model.entity.Alerte alerte = mapAlerteSnapshot(child);
+                                if (alerte != null) {
+                                    alertes.add(alerte);
+                                }
+                            }
+                        }
+                        future.complete(alertes);
+                        latch.countDown();
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError error) {
+                        future.completeExceptionally(new Exception("Erreur lors de la récupération des alertes: " + error.getMessage()));
+                        latch.countDown();
+                    }
+                });
+
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+            return future.get();
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la récupération des alertes: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Récupère une alerte par son ID
+     */
+    public com.maintenance.maintenance.model.entity.Alerte getAlerteById(String entrepriseId, String alerteId) throws Exception {
+        CompletableFuture<com.maintenance.maintenance.model.entity.Alerte> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises").child(entrepriseId).child("alertes").child(alerteId)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot snapshot) {
+                        if (snapshot.exists()) {
+                            future.complete(mapAlerteSnapshot(snapshot));
+                        } else {
+                            future.complete(null);
+                        }
+                        latch.countDown();
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError error) {
+                        future.completeExceptionally(new Exception("Erreur lors de la récupération de l'alerte: " + error.getMessage()));
+                        latch.countDown();
+                    }
+                });
+
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+            return future.get();
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la récupération de l'alerte: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Crée une nouvelle alerte
+     */
+    public String createAlerte(String entrepriseId, com.maintenance.maintenance.model.entity.Alerte alerte) throws Exception {
+        String alerteId = databaseReference.child("entreprises").child(entrepriseId).child("alertes").push().getKey();
+        if (alerteId == null) {
+            throw new Exception("Impossible de générer un ID pour l'alerte");
+        }
+
+        alerte.setAlerteId(alerteId);
+        long now = System.currentTimeMillis();
+        if (alerte.getDateCreation() == null) {
+            alerte.setDateCreation(now);
+        }
+        alerte.setDateModification(now);
+        if (alerte.getEnvoye() == null) {
+            alerte.setEnvoye(false);
+        }
+
+        Map<String, Object> data = serializeAlerte(alerte);
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises").child(entrepriseId).child("alertes").child(alerteId)
+                .setValue(data, (error, ref) -> {
+                    if (error != null) {
+                        future.completeExceptionally(new Exception("Erreur lors de la création de l'alerte: " + error.getMessage()));
+                    } else {
+                        future.complete(null);
+                    }
+                    latch.countDown();
+                });
+
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+            future.get();
+            return alerteId;
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la création de l'alerte: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Met à jour une alerte
+     */
+    public void updateAlerte(String entrepriseId, String alerteId, com.maintenance.maintenance.model.entity.Alerte alerte) throws Exception {
+        alerte.setDateModification(System.currentTimeMillis());
+        Map<String, Object> data = serializeAlerte(alerte);
+
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises").child(entrepriseId).child("alertes").child(alerteId)
+                .updateChildren(data, (error, ref) -> {
+                    if (error != null) {
+                        future.completeExceptionally(new Exception("Erreur lors de la mise à jour de l'alerte: " + error.getMessage()));
+                    } else {
+                        future.complete(null);
+                    }
+                    latch.countDown();
+                });
+
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+            future.get();
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la mise à jour de l'alerte: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Supprime une alerte
+     */
+    public void deleteAlerte(String entrepriseId, String alerteId) throws Exception {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises").child(entrepriseId).child("alertes").child(alerteId)
+                .removeValue((error, ref) -> {
+                    if (error != null) {
+                        future.completeExceptionally(new Exception("Erreur lors de la suppression de l'alerte: " + error.getMessage()));
+                    } else {
+                        future.complete(null);
+                    }
+                    latch.countDown();
+                });
+
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+            future.get();
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la suppression de l'alerte: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Récupère toutes les alertes à envoyer (date de vérification atteinte et non envoyées)
+     */
+    public List<com.maintenance.maintenance.model.entity.Alerte> getAlertesAEnvoyer() throws Exception {
+        CompletableFuture<List<com.maintenance.maintenance.model.entity.Alerte>> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+        List<com.maintenance.maintenance.model.entity.Alerte> alertesAEnvoyer = new ArrayList<>();
+
+        databaseReference.child("entreprises").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                long now = System.currentTimeMillis();
+                for (DataSnapshot entrepriseSnapshot : snapshot.getChildren()) {
+                    DataSnapshot alertesSnapshot = entrepriseSnapshot.child("alertes");
+                    if (alertesSnapshot.exists()) {
+                        for (DataSnapshot alerteSnapshot : alertesSnapshot.getChildren()) {
+                            com.maintenance.maintenance.model.entity.Alerte alerte = mapAlerteSnapshot(alerteSnapshot);
+                            if (alerte != null 
+                                && alerte.getDateVerification() != null 
+                                && alerte.getDateVerification() <= now
+                                && (alerte.getEnvoye() == null || !alerte.getEnvoye())
+                                && (alerte.getVerifie() == null || !alerte.getVerifie())) {
+                                alertesAEnvoyer.add(alerte);
+                            }
+                        }
+                    }
+                }
+                future.complete(alertesAEnvoyer);
+                latch.countDown();
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {
+                future.completeExceptionally(new Exception("Erreur lors de la récupération des alertes à envoyer: " + error.getMessage()));
+                latch.countDown();
+            }
+        });
+
+        try {
+            latch.await(30, TimeUnit.SECONDS);
+            return future.get();
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la récupération des alertes à envoyer: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Mappe un DataSnapshot vers un objet Alerte
+     */
+    private com.maintenance.maintenance.model.entity.Alerte mapAlerteSnapshot(DataSnapshot snapshot) {
+        try {
+            com.maintenance.maintenance.model.entity.Alerte alerte = new com.maintenance.maintenance.model.entity.Alerte();
+            alerte.setAlerteId(snapshot.getKey());
+            
+            if (snapshot.child("entrepriseId").exists()) {
+                alerte.setEntrepriseId(snapshot.child("entrepriseId").getValue(String.class));
+            }
+            if (snapshot.child("machineId").exists()) {
+                alerte.setMachineId(snapshot.child("machineId").getValue(String.class));
+            }
+            if (snapshot.child("machineNom").exists()) {
+                alerte.setMachineNom(snapshot.child("machineNom").getValue(String.class));
+            }
+            if (snapshot.child("description").exists()) {
+                alerte.setDescription(snapshot.child("description").getValue(String.class));
+            }
+            if (snapshot.child("dateVerification").exists()) {
+                Object dateVerif = snapshot.child("dateVerification").getValue();
+                if (dateVerif instanceof Long) {
+                    alerte.setDateVerification((Long) dateVerif);
+                } else if (dateVerif instanceof Number) {
+                    alerte.setDateVerification(((Number) dateVerif).longValue());
+                }
+            }
+            if (snapshot.child("envoye").exists()) {
+                alerte.setEnvoye(snapshot.child("envoye").getValue(Boolean.class));
+            }
+            if (snapshot.child("dateEnvoi").exists()) {
+                Object dateEnvoi = snapshot.child("dateEnvoi").getValue();
+                if (dateEnvoi instanceof Long) {
+                    alerte.setDateEnvoi((Long) dateEnvoi);
+                } else if (dateEnvoi instanceof Number) {
+                    alerte.setDateEnvoi(((Number) dateEnvoi).longValue());
+                }
+            }
+            if (snapshot.child("creePar").exists()) {
+                alerte.setCreePar(snapshot.child("creePar").getValue(String.class));
+            }
+            if (snapshot.child("creeParNom").exists()) {
+                alerte.setCreeParNom(snapshot.child("creeParNom").getValue(String.class));
+            }
+            if (snapshot.child("dateCreation").exists()) {
+                Object dateCreation = snapshot.child("dateCreation").getValue();
+                if (dateCreation instanceof Long) {
+                    alerte.setDateCreation((Long) dateCreation);
+                } else if (dateCreation instanceof Number) {
+                    alerte.setDateCreation(((Number) dateCreation).longValue());
+                }
+            }
+            if (snapshot.child("dateModification").exists()) {
+                Object dateModif = snapshot.child("dateModification").getValue();
+                if (dateModif instanceof Long) {
+                    alerte.setDateModification((Long) dateModif);
+                } else if (dateModif instanceof Number) {
+                    alerte.setDateModification(((Number) dateModif).longValue());
+                }
+            }
+            if (snapshot.child("activerRelance").exists()) {
+                alerte.setActiverRelance(snapshot.child("activerRelance").getValue(Boolean.class));
+            }
+            if (snapshot.child("nombreRelances").exists()) {
+                Object nbRelances = snapshot.child("nombreRelances").getValue();
+                if (nbRelances instanceof Integer) {
+                    alerte.setNombreRelances((Integer) nbRelances);
+                } else if (nbRelances instanceof Number) {
+                    alerte.setNombreRelances(((Number) nbRelances).intValue());
+                }
+            }
+            if (snapshot.child("nombreRelancesEnvoyees").exists()) {
+                Object nbRelancesEnv = snapshot.child("nombreRelancesEnvoyees").getValue();
+                if (nbRelancesEnv instanceof Integer) {
+                    alerte.setNombreRelancesEnvoyees((Integer) nbRelancesEnv);
+                } else if (nbRelancesEnv instanceof Number) {
+                    alerte.setNombreRelancesEnvoyees(((Number) nbRelancesEnv).intValue());
+                }
+            }
+            if (snapshot.child("dateDerniereRelance").exists()) {
+                Object dateRelance = snapshot.child("dateDerniereRelance").getValue();
+                if (dateRelance instanceof Long) {
+                    alerte.setDateDerniereRelance((Long) dateRelance);
+                } else if (dateRelance instanceof Number) {
+                    alerte.setDateDerniereRelance(((Number) dateRelance).longValue());
+                }
+            }
+            if (snapshot.child("verifie").exists()) {
+                alerte.setVerifie(snapshot.child("verifie").getValue(Boolean.class));
+            }
+            if (snapshot.child("dateVerificationReelle").exists()) {
+                Object dateVerifReelle = snapshot.child("dateVerificationReelle").getValue();
+                if (dateVerifReelle instanceof Long) {
+                    alerte.setDateVerificationReelle((Long) dateVerifReelle);
+                } else if (dateVerifReelle instanceof Number) {
+                    alerte.setDateVerificationReelle(((Number) dateVerifReelle).longValue());
+                }
+            }
+            
+            return alerte;
+        } catch (Exception e) {
+            System.err.println("Erreur lors du mapping de l'alerte: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Sérialise un objet Alerte en Map pour Firebase
+     */
+    private Map<String, Object> serializeAlerte(com.maintenance.maintenance.model.entity.Alerte alerte) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("alerteId", alerte.getAlerteId());
+        data.put("entrepriseId", alerte.getEntrepriseId());
+        data.put("machineId", alerte.getMachineId());
+        data.put("machineNom", alerte.getMachineNom());
+        data.put("description", alerte.getDescription());
+        data.put("dateVerification", alerte.getDateVerification());
+        data.put("envoye", alerte.getEnvoye() != null ? alerte.getEnvoye() : false);
+        data.put("dateEnvoi", alerte.getDateEnvoi());
+        data.put("creePar", alerte.getCreePar());
+        data.put("creeParNom", alerte.getCreeParNom());
+        data.put("dateCreation", alerte.getDateCreation());
+        data.put("dateModification", alerte.getDateModification());
+        data.put("activerRelance", alerte.getActiverRelance() != null ? alerte.getActiverRelance() : false);
+        data.put("nombreRelances", alerte.getNombreRelances() != null ? alerte.getNombreRelances() : 0);
+        data.put("nombreRelancesEnvoyees", alerte.getNombreRelancesEnvoyees() != null ? alerte.getNombreRelancesEnvoyees() : 0);
+        data.put("dateDerniereRelance", alerte.getDateDerniereRelance());
+        data.put("verifie", alerte.getVerifie() != null ? alerte.getVerifie() : false);
+        data.put("dateVerificationReelle", alerte.getDateVerificationReelle());
+        return data;
+    }
+
+    /**
+     * Récupère les alertes à relancer (envoyées mais pas vérifiées et avec relances activées)
+     */
+    public List<com.maintenance.maintenance.model.entity.Alerte> getAlertesARelancer() throws Exception {
+        CompletableFuture<List<com.maintenance.maintenance.model.entity.Alerte>> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+        List<com.maintenance.maintenance.model.entity.Alerte> alertesARelancer = new ArrayList<>();
+
+        databaseReference.child("entreprises").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                long now = System.currentTimeMillis();
+                for (DataSnapshot entrepriseSnapshot : snapshot.getChildren()) {
+                    DataSnapshot alertesSnapshot = entrepriseSnapshot.child("alertes");
+                    if (alertesSnapshot.exists()) {
+                        for (DataSnapshot alerteSnapshot : alertesSnapshot.getChildren()) {
+                            com.maintenance.maintenance.model.entity.Alerte alerte = mapAlerteSnapshot(alerteSnapshot);
+                            if (alerte != null 
+                                && alerte.getDateVerification() != null 
+                                && alerte.getDateVerification() <= now
+                                && (alerte.getEnvoye() == null || alerte.getEnvoye())
+                                && (alerte.getVerifie() == null || !alerte.getVerifie())
+                                && (alerte.getActiverRelance() != null && alerte.getActiverRelance())
+                                && (alerte.getNombreRelances() != null && alerte.getNombreRelances() > 0)
+                                && (alerte.getNombreRelancesEnvoyees() == null || 
+                                    alerte.getNombreRelancesEnvoyees() < alerte.getNombreRelances())) {
+                                // Vérifier si au moins 24h se sont écoulées depuis la dernière relance (ou l'envoi initial)
+                                Long dateDerniereAction = alerte.getDateDerniereRelance() != null ? 
+                                    alerte.getDateDerniereRelance() : alerte.getDateEnvoi();
+                                if (dateDerniereAction != null && (now - dateDerniereAction) >= 86400000) { // 24h en ms
+                                    alertesARelancer.add(alerte);
+                                }
+                            }
+                        }
+                    }
+                }
+                future.complete(alertesARelancer);
+                latch.countDown();
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {
+                future.completeExceptionally(new Exception("Erreur lors de la récupération des alertes à relancer: " + error.getMessage()));
+                latch.countDown();
+            }
+        });
+
+        try {
+            latch.await(30, TimeUnit.SECONDS);
+            return future.get();
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la récupération des alertes à relancer: " + e.getMessage());
+        }
+    }
+
+    // ========== MÉTHODES POUR LES RAPPELS ==========
+
+    /**
+     * Récupère tous les rappels pour une entreprise
+     */
+    public List<com.maintenance.maintenance.model.entity.Rappel> getRappelsForEnterprise(String entrepriseId) throws Exception {
+        CompletableFuture<List<com.maintenance.maintenance.model.entity.Rappel>> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises").child(entrepriseId).child("rappels")
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot snapshot) {
+                        List<com.maintenance.maintenance.model.entity.Rappel> rappels = new ArrayList<>();
+                        if (snapshot.exists()) {
+                            for (DataSnapshot child : snapshot.getChildren()) {
+                                com.maintenance.maintenance.model.entity.Rappel rappel = mapRappelSnapshot(child);
+                                if (rappel != null) {
+                                    rappels.add(rappel);
+                                }
+                            }
+                        }
+                        future.complete(rappels);
+                        latch.countDown();
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError error) {
+                        future.completeExceptionally(new Exception("Erreur lors de la récupération des rappels: " + error.getMessage()));
+                        latch.countDown();
+                    }
+                });
+
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+            return future.get();
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la récupération des rappels: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Récupère un rappel par son ID
+     */
+    public com.maintenance.maintenance.model.entity.Rappel getRappelById(String entrepriseId, String rappelId) throws Exception {
+        CompletableFuture<com.maintenance.maintenance.model.entity.Rappel> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises").child(entrepriseId).child("rappels").child(rappelId)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot snapshot) {
+                        if (snapshot.exists()) {
+                            future.complete(mapRappelSnapshot(snapshot));
+                        } else {
+                            future.complete(null);
+                        }
+                        latch.countDown();
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError error) {
+                        future.completeExceptionally(new Exception("Erreur lors de la récupération du rappel: " + error.getMessage()));
+                        latch.countDown();
+                    }
+                });
+
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+            return future.get();
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la récupération du rappel: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Crée un nouveau rappel
+     */
+    public String createRappel(String entrepriseId, com.maintenance.maintenance.model.entity.Rappel rappel) throws Exception {
+        String rappelId = databaseReference.child("entreprises").child(entrepriseId).child("rappels").push().getKey();
+        if (rappelId == null) {
+            throw new Exception("Impossible de générer un ID pour le rappel");
+        }
+
+        rappel.setRappelId(rappelId);
+        long now = System.currentTimeMillis();
+        if (rappel.getDateCreation() == null) {
+            rappel.setDateCreation(now);
+        }
+        rappel.setDateModification(now);
+        if (rappel.getEnvoye() == null) {
+            rappel.setEnvoye(false);
+        }
+
+        Map<String, Object> data = serializeRappel(rappel);
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises").child(entrepriseId).child("rappels").child(rappelId)
+                .setValue(data, (error, ref) -> {
+                    if (error != null) {
+                        future.completeExceptionally(new Exception("Erreur lors de la création du rappel: " + error.getMessage()));
+                    } else {
+                        future.complete(null);
+                    }
+                    latch.countDown();
+                });
+
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+            future.get();
+            return rappelId;
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la création du rappel: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Met à jour un rappel
+     */
+    public void updateRappel(String entrepriseId, String rappelId, com.maintenance.maintenance.model.entity.Rappel rappel) throws Exception {
+        rappel.setDateModification(System.currentTimeMillis());
+        Map<String, Object> data = serializeRappel(rappel);
+
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises").child(entrepriseId).child("rappels").child(rappelId)
+                .updateChildren(data, (error, ref) -> {
+                    if (error != null) {
+                        future.completeExceptionally(new Exception("Erreur lors de la mise à jour du rappel: " + error.getMessage()));
+                    } else {
+                        future.complete(null);
+                    }
+                    latch.countDown();
+                });
+
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+            future.get();
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la mise à jour du rappel: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Supprime un rappel
+     */
+    public void deleteRappel(String entrepriseId, String rappelId) throws Exception {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises").child(entrepriseId).child("rappels").child(rappelId)
+                .removeValue((error, ref) -> {
+                    if (error != null) {
+                        future.completeExceptionally(new Exception("Erreur lors de la suppression du rappel: " + error.getMessage()));
+                    } else {
+                        future.complete(null);
+                    }
+                    latch.countDown();
+                });
+
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+            future.get();
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la suppression du rappel: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Récupère tous les rappels à envoyer (date de vérification atteinte et non envoyés)
+     */
+    public List<com.maintenance.maintenance.model.entity.Rappel> getRappelsAEnvoyer() throws Exception {
+        CompletableFuture<List<com.maintenance.maintenance.model.entity.Rappel>> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+        List<com.maintenance.maintenance.model.entity.Rappel> rappelsAEnvoyer = new ArrayList<>();
+
+        databaseReference.child("entreprises").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                // Obtenir le début de la journée actuelle (minuit) pour comparer avec la date de vérification
+                java.util.Calendar cal = java.util.Calendar.getInstance();
+                cal.set(java.util.Calendar.HOUR_OF_DAY, 0);
+                cal.set(java.util.Calendar.MINUTE, 0);
+                cal.set(java.util.Calendar.SECOND, 0);
+                cal.set(java.util.Calendar.MILLISECOND, 0);
+                long startOfToday = cal.getTimeInMillis();
+                
+                // Aussi obtenir le timestamp actuel pour une comparaison plus précise
+                long now = System.currentTimeMillis();
+                
+                System.out.println("🔍 [DEBUG] Début de la journée actuelle: " + startOfToday + " (" + new java.util.Date(startOfToday) + ")");
+                System.out.println("🔍 [DEBUG] Timestamp actuel: " + now + " (" + new java.util.Date(now) + ")");
+                
+                for (DataSnapshot entrepriseSnapshot : snapshot.getChildren()) {
+                    DataSnapshot rappelsSnapshot = entrepriseSnapshot.child("rappels");
+                    if (rappelsSnapshot.exists()) {
+                        for (DataSnapshot rappelSnapshot : rappelsSnapshot.getChildren()) {
+                            com.maintenance.maintenance.model.entity.Rappel rappel = mapRappelSnapshot(rappelSnapshot);
+                            if (rappel != null 
+                                && rappel.getDateVerification() != null) {
+                                // La date de vérification est stockée comme timestamp du début de la journée
+                                // Vérifier si la date de vérification est aujourd'hui ou dans le passé
+                                long dateVerif = rappel.getDateVerification();
+                                
+                                System.out.println("🔍 [DEBUG] Rappel trouvé - Machine: " + rappel.getMachineNom() 
+                                    + ", Date vérif: " + dateVerif + " (" + new java.util.Date(dateVerif) + ")"
+                                    + ", Envoyé: " + rappel.getEnvoye() + ", Vérifié: " + rappel.getVerifie());
+                                
+                                // Vérifier si la date de vérification est atteinte ou dépassée
+                                // Comparer avec le début de la journée actuelle (dateVerif est au début de sa journée)
+                                if (dateVerif <= startOfToday
+                                    && (rappel.getEnvoye() == null || !rappel.getEnvoye())
+                                    && (rappel.getVerifie() == null || !rappel.getVerifie())) {
+                                    System.out.println("✅ [DEBUG] Rappel à envoyer détecté: " + rappel.getMachineNom());
+                                    rappelsAEnvoyer.add(rappel);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                System.out.println("🔍 [DEBUG] Total rappels à envoyer: " + rappelsAEnvoyer.size());
+                future.complete(rappelsAEnvoyer);
+                latch.countDown();
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {
+                future.completeExceptionally(new Exception("Erreur lors de la récupération des rappels à envoyer: " + error.getMessage()));
+                latch.countDown();
+            }
+        });
+
+        try {
+            latch.await(30, TimeUnit.SECONDS);
+            return future.get();
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la récupération des rappels à envoyer: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Récupère les rappels à relancer (envoyés mais pas vérifiés et avec relances activées)
+     */
+    public List<com.maintenance.maintenance.model.entity.Rappel> getRappelsARelancer() throws Exception {
+        CompletableFuture<List<com.maintenance.maintenance.model.entity.Rappel>> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+        List<com.maintenance.maintenance.model.entity.Rappel> rappelsARelancer = new ArrayList<>();
+
+        databaseReference.child("entreprises").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                long now = System.currentTimeMillis();
+                for (DataSnapshot entrepriseSnapshot : snapshot.getChildren()) {
+                    DataSnapshot rappelsSnapshot = entrepriseSnapshot.child("rappels");
+                    if (rappelsSnapshot.exists()) {
+                        for (DataSnapshot rappelSnapshot : rappelsSnapshot.getChildren()) {
+                            com.maintenance.maintenance.model.entity.Rappel rappel = mapRappelSnapshot(rappelSnapshot);
+                            if (rappel != null 
+                                && rappel.getDateVerification() != null 
+                                && rappel.getDateVerification() <= now
+                                && (rappel.getEnvoye() == null || rappel.getEnvoye())
+                                && (rappel.getVerifie() == null || !rappel.getVerifie())
+                                && (rappel.getActiverRelance() != null && rappel.getActiverRelance())
+                                && (rappel.getNombreRelances() != null && rappel.getNombreRelances() > 0)
+                                && (rappel.getNombreRelancesEnvoyees() == null || 
+                                    rappel.getNombreRelancesEnvoyees() < rappel.getNombreRelances())) {
+                                // Vérifier si au moins 24h se sont écoulées depuis la dernière relance (ou l'envoi initial)
+                                Long dateDerniereAction = rappel.getDateDerniereRelance() != null ? 
+                                    rappel.getDateDerniereRelance() : rappel.getDateEnvoi();
+                                if (dateDerniereAction != null && (now - dateDerniereAction) >= 86400000) { // 24h en ms
+                                    rappelsARelancer.add(rappel);
+                                }
+                            }
+                        }
+                    }
+                }
+                future.complete(rappelsARelancer);
+                latch.countDown();
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {
+                future.completeExceptionally(new Exception("Erreur lors de la récupération des rappels à relancer: " + error.getMessage()));
+                latch.countDown();
+            }
+        });
+
+        try {
+            latch.await(30, TimeUnit.SECONDS);
+            return future.get();
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la récupération des rappels à relancer: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Mappe un DataSnapshot vers un objet Rappel
+     */
+    private com.maintenance.maintenance.model.entity.Rappel mapRappelSnapshot(DataSnapshot snapshot) {
+        try {
+            com.maintenance.maintenance.model.entity.Rappel rappel = new com.maintenance.maintenance.model.entity.Rappel();
+            rappel.setRappelId(snapshot.getKey());
+            
+            if (snapshot.child("entrepriseId").exists()) {
+                rappel.setEntrepriseId(snapshot.child("entrepriseId").getValue(String.class));
+            }
+            if (snapshot.child("machineId").exists()) {
+                rappel.setMachineId(snapshot.child("machineId").getValue(String.class));
+            }
+            if (snapshot.child("machineNom").exists()) {
+                rappel.setMachineNom(snapshot.child("machineNom").getValue(String.class));
+            }
+            if (snapshot.child("description").exists()) {
+                rappel.setDescription(snapshot.child("description").getValue(String.class));
+            }
+            if (snapshot.child("dateVerification").exists()) {
+                Object dateVerif = snapshot.child("dateVerification").getValue();
+                if (dateVerif instanceof Long) {
+                    rappel.setDateVerification((Long) dateVerif);
+                } else if (dateVerif instanceof Number) {
+                    rappel.setDateVerification(((Number) dateVerif).longValue());
+                }
+            }
+            if (snapshot.child("envoye").exists()) {
+                rappel.setEnvoye(snapshot.child("envoye").getValue(Boolean.class));
+            }
+            if (snapshot.child("dateEnvoi").exists()) {
+                Object dateEnvoi = snapshot.child("dateEnvoi").getValue();
+                if (dateEnvoi instanceof Long) {
+                    rappel.setDateEnvoi((Long) dateEnvoi);
+                } else if (dateEnvoi instanceof Number) {
+                    rappel.setDateEnvoi(((Number) dateEnvoi).longValue());
+                }
+            }
+            if (snapshot.child("creePar").exists()) {
+                rappel.setCreePar(snapshot.child("creePar").getValue(String.class));
+            }
+            if (snapshot.child("creeParNom").exists()) {
+                rappel.setCreeParNom(snapshot.child("creeParNom").getValue(String.class));
+            }
+            if (snapshot.child("dateCreation").exists()) {
+                Object dateCreation = snapshot.child("dateCreation").getValue();
+                if (dateCreation instanceof Long) {
+                    rappel.setDateCreation((Long) dateCreation);
+                } else if (dateCreation instanceof Number) {
+                    rappel.setDateCreation(((Number) dateCreation).longValue());
+                }
+            }
+            if (snapshot.child("dateModification").exists()) {
+                Object dateModif = snapshot.child("dateModification").getValue();
+                if (dateModif instanceof Long) {
+                    rappel.setDateModification((Long) dateModif);
+                } else if (dateModif instanceof Number) {
+                    rappel.setDateModification(((Number) dateModif).longValue());
+                }
+            }
+            if (snapshot.child("activerRelance").exists()) {
+                rappel.setActiverRelance(snapshot.child("activerRelance").getValue(Boolean.class));
+            }
+            if (snapshot.child("nombreRelances").exists()) {
+                Object nbRelances = snapshot.child("nombreRelances").getValue();
+                if (nbRelances instanceof Integer) {
+                    rappel.setNombreRelances((Integer) nbRelances);
+                } else if (nbRelances instanceof Number) {
+                    rappel.setNombreRelances(((Number) nbRelances).intValue());
+                }
+            }
+            if (snapshot.child("nombreRelancesEnvoyees").exists()) {
+                Object nbRelancesEnv = snapshot.child("nombreRelancesEnvoyees").getValue();
+                if (nbRelancesEnv instanceof Integer) {
+                    rappel.setNombreRelancesEnvoyees((Integer) nbRelancesEnv);
+                } else if (nbRelancesEnv instanceof Number) {
+                    rappel.setNombreRelancesEnvoyees(((Number) nbRelancesEnv).intValue());
+                }
+            }
+            if (snapshot.child("dateDerniereRelance").exists()) {
+                Object dateRelance = snapshot.child("dateDerniereRelance").getValue();
+                if (dateRelance instanceof Long) {
+                    rappel.setDateDerniereRelance((Long) dateRelance);
+                } else if (dateRelance instanceof Number) {
+                    rappel.setDateDerniereRelance(((Number) dateRelance).longValue());
+                }
+            }
+            if (snapshot.child("verifie").exists()) {
+                rappel.setVerifie(snapshot.child("verifie").getValue(Boolean.class));
+            }
+            if (snapshot.child("dateVerificationReelle").exists()) {
+                Object dateVerifReelle = snapshot.child("dateVerificationReelle").getValue();
+                if (dateVerifReelle instanceof Long) {
+                    rappel.setDateVerificationReelle((Long) dateVerifReelle);
+                } else if (dateVerifReelle instanceof Number) {
+                    rappel.setDateVerificationReelle(((Number) dateVerifReelle).longValue());
+                }
+            }
+            
+            return rappel;
+        } catch (Exception e) {
+            System.err.println("Erreur lors du mapping du rappel: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Sérialise un objet Rappel en Map pour Firebase
+     */
+    private Map<String, Object> serializeRappel(com.maintenance.maintenance.model.entity.Rappel rappel) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("rappelId", rappel.getRappelId());
+        data.put("entrepriseId", rappel.getEntrepriseId());
+        data.put("machineId", rappel.getMachineId());
+        data.put("machineNom", rappel.getMachineNom());
+        data.put("description", rappel.getDescription());
+        data.put("dateVerification", rappel.getDateVerification());
+        data.put("envoye", rappel.getEnvoye() != null ? rappel.getEnvoye() : false);
+        data.put("dateEnvoi", rappel.getDateEnvoi());
+        data.put("creePar", rappel.getCreePar());
+        data.put("creeParNom", rappel.getCreeParNom());
+        data.put("dateCreation", rappel.getDateCreation());
+        data.put("dateModification", rappel.getDateModification());
+        data.put("activerRelance", rappel.getActiverRelance() != null ? rappel.getActiverRelance() : false);
+        data.put("nombreRelances", rappel.getNombreRelances() != null ? rappel.getNombreRelances() : 0);
+        data.put("nombreRelancesEnvoyees", rappel.getNombreRelancesEnvoyees() != null ? rappel.getNombreRelancesEnvoyees() : 0);
+        data.put("dateDerniereRelance", rappel.getDateDerniereRelance());
+        data.put("verifie", rappel.getVerifie() != null ? rappel.getVerifie() : false);
+        data.put("dateVerificationReelle", rappel.getDateVerificationReelle());
+        return data;
+    }
+
+    /**
+     * Crée une entrée dans l'historique des vérifications
+     */
+    public String createHistoriqueVerification(String entrepriseId, com.maintenance.maintenance.model.entity.HistoriqueVerification historique) throws Exception {
+        String historiqueId = databaseReference.child("entreprises").child(entrepriseId).child("historiqueVerifications").push().getKey();
+        if (historiqueId == null) {
+            throw new Exception("Impossible de générer un ID pour l'historique");
+        }
+
+        historique.setHistoriqueId(historiqueId);
+        if (historique.getDateCreation() == null) {
+            historique.setDateCreation(System.currentTimeMillis());
+        }
+
+        Map<String, Object> data = serializeHistoriqueVerification(historique);
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises").child(entrepriseId).child("historiqueVerifications").child(historiqueId)
+                .setValue(data, (error, ref) -> {
+                    if (error != null) {
+                        future.completeExceptionally(new Exception("Erreur lors de la création de l'historique: " + error.getMessage()));
+                    } else {
+                        future.complete(null);
+                    }
+                    latch.countDown();
+                });
+
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+            future.get();
+            return historiqueId;
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la création de l'historique: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Mappe un DataSnapshot vers un objet HistoriqueVerification
+     */
+    private com.maintenance.maintenance.model.entity.HistoriqueVerification mapHistoriqueVerificationSnapshot(DataSnapshot snapshot) {
+        try {
+            com.maintenance.maintenance.model.entity.HistoriqueVerification historique = new com.maintenance.maintenance.model.entity.HistoriqueVerification();
+            historique.setHistoriqueId(snapshot.getKey());
+            
+            if (snapshot.child("entrepriseId").exists()) {
+                historique.setEntrepriseId(snapshot.child("entrepriseId").getValue(String.class));
+            }
+            if (snapshot.child("machineId").exists()) {
+                historique.setMachineId(snapshot.child("machineId").getValue(String.class));
+            }
+            if (snapshot.child("machineNom").exists()) {
+                historique.setMachineNom(snapshot.child("machineNom").getValue(String.class));
+            }
+            if (snapshot.child("description").exists()) {
+                historique.setDescription(snapshot.child("description").getValue(String.class));
+            }
+            if (snapshot.child("dateVerificationProgrammee").exists()) {
+                Object dateProg = snapshot.child("dateVerificationProgrammee").getValue();
+                if (dateProg instanceof Long) {
+                    historique.setDateVerificationProgrammee((Long) dateProg);
+                } else if (dateProg instanceof Number) {
+                    historique.setDateVerificationProgrammee(((Number) dateProg).longValue());
+                }
+            }
+            if (snapshot.child("dateVerificationReelle").exists()) {
+                Object dateReelle = snapshot.child("dateVerificationReelle").getValue();
+                if (dateReelle instanceof Long) {
+                    historique.setDateVerificationReelle((Long) dateReelle);
+                } else if (dateReelle instanceof Number) {
+                    historique.setDateVerificationReelle(((Number) dateReelle).longValue());
+                }
+            }
+            if (snapshot.child("verifiePar").exists()) {
+                historique.setVerifiePar(snapshot.child("verifiePar").getValue(String.class));
+            }
+            if (snapshot.child("verifieParNom").exists()) {
+                historique.setVerifieParNom(snapshot.child("verifieParNom").getValue(String.class));
+            }
+            if (snapshot.child("dateCreation").exists()) {
+                Object dateCreation = snapshot.child("dateCreation").getValue();
+                if (dateCreation instanceof Long) {
+                    historique.setDateCreation((Long) dateCreation);
+                } else if (dateCreation instanceof Number) {
+                    historique.setDateCreation(((Number) dateCreation).longValue());
+                }
+            }
+            
+            return historique;
+        } catch (Exception e) {
+            System.err.println("Erreur lors du mapping de l'historique: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Sérialise un objet HistoriqueVerification en Map pour Firebase
+     */
+    private Map<String, Object> serializeHistoriqueVerification(com.maintenance.maintenance.model.entity.HistoriqueVerification historique) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("historiqueId", historique.getHistoriqueId());
+        data.put("entrepriseId", historique.getEntrepriseId());
+        data.put("machineId", historique.getMachineId());
+        data.put("machineNom", historique.getMachineNom());
+        data.put("description", historique.getDescription());
+        data.put("dateVerificationProgrammee", historique.getDateVerificationProgrammee());
+        data.put("dateVerificationReelle", historique.getDateVerificationReelle());
+        data.put("verifiePar", historique.getVerifiePar());
+        data.put("verifieParNom", historique.getVerifieParNom());
+        data.put("dateCreation", historique.getDateCreation());
+        return data;
+    }
+
+    /**
+     * Récupère tous les historiques de vérification pour une entreprise
+     */
+    public List<com.maintenance.maintenance.model.entity.HistoriqueVerification> getHistoriqueVerificationsForEnterprise(String entrepriseId) throws Exception {
+        CompletableFuture<List<com.maintenance.maintenance.model.entity.HistoriqueVerification>> future = new CompletableFuture<>();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        databaseReference.child("entreprises").child(entrepriseId).child("historiqueVerifications")
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot snapshot) {
+                        List<com.maintenance.maintenance.model.entity.HistoriqueVerification> historiques = new ArrayList<>();
+                        if (snapshot.exists()) {
+                            for (DataSnapshot child : snapshot.getChildren()) {
+                                com.maintenance.maintenance.model.entity.HistoriqueVerification historique = mapHistoriqueVerificationSnapshot(child);
+                                if (historique != null) {
+                                    historiques.add(historique);
+                                }
+                            }
+                        }
+                        // Trier par date de création décroissante (plus récent en premier)
+                        historiques.sort((h1, h2) -> {
+                            Long date1 = h1.getDateCreation() != null ? h1.getDateCreation() : 0L;
+                            Long date2 = h2.getDateCreation() != null ? h2.getDateCreation() : 0L;
+                            return date2.compareTo(date1);
+                        });
+                        future.complete(historiques);
+                        latch.countDown();
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError error) {
+                        future.completeExceptionally(new Exception("Erreur lors de la récupération de l'historique: " + error.getMessage()));
+                        latch.countDown();
+                    }
+                });
+
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+            return future.get();
+        } catch (Exception e) {
+            throw new Exception("Erreur lors de la récupération de l'historique: " + e.getMessage());
+        }
     }
 }
 
